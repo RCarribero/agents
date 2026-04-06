@@ -434,8 +434,8 @@ rejection_details:
   "memory_curator_invocado": true,
   "modo": "parcial",
   "archivos_modificados": [
-    "c:\\Users\\rcarr\\Documents\\-00\\DPartiture\\.agents\\frontend.agent.md",
-    "c:\\Users\\rcarr\\Documents\\-00\\DPartiture\\.agents\\auditor.agent.md"
+    "c:\\Users\\$User\\Documents\\Project\\DPartiture\\.agents\\frontend.agent.md",
+    "c:\\Users\\$User\\Documents\\Project\\DPartiture\\.agents\\auditor.agent.md"
   ],
   "memoria_global_intacta": true
 }
