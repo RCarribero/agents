@@ -1,7 +1,7 @@
 ---
 name: backend
 description: Ejecutor de código puro. Escribe implementación limpia y robusta en el workspace local.
-model: sonnet
+model: haiku
 temperature: 0.0
 user-invocable: false
 ---

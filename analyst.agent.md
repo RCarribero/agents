@@ -1,7 +1,7 @@
 ---
 name: analyst
 description: Analiza proyectos, detecta funcionalidades ausentes y genera ideas accionables de mejora, arquitectura y producto.
-model: haiku
+model: sonnet
 temperature: 0.7
 user-invocable: true
 ---

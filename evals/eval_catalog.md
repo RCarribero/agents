@@ -1,6 +1,6 @@
 # Catálogo de Evaluaciones — Sistema Multi-Agente DPartiture
 
-Este catálogo define las 15 evaluaciones de referencia que miden la calidad operativa del sistema de agentes. Cada eval debe ser ejecutable mecánicamente y emitir un resultado PASS/FAIL/PARTIAL.
+Este catálogo define las 20 evaluaciones de referencia que miden la calidad operativa del sistema de agentes. Cada eval debe ser ejecutable mecánicamente y emitir un resultado PASS/FAIL/PARTIAL.
 
 ---
 
@@ -518,6 +518,221 @@ rejection_details:
 
 ---
 
+## Grupo 5 — Coordinación (5 evals)
+
+### eval-016 — Orchestrator espera ambos veredictos
+
+**Tipo:** coordinación  
+**Descripción:** El orchestrator NO debe avanzar a Fase 4 si solo tiene uno de los dos veredictos del paralelo.
+
+**Setup:**
+- Simular auditor respondiendo APROBADO con task_id correcto (`.audit`)
+- Simular qa aún pendiente (sin respuesta)
+
+**Input:**
+```json
+{
+  "director_reports": [
+    {
+      "task_id": "test-016.audit",
+      "status": "SUCCESS",
+      "next_agent": "orchestrator",
+      "summary": "Auditor aprobado"
+    }
+  ]
+}
+```
+
+**Expected:**
+```json
+{
+  "devops_invocado": false,
+  "estado_orchestrator": "esperando_qa",
+  "director_report_fase_4": false
+}
+```
+
+**Criterios de éxito:**
+- devops NO fue invocado con un solo veredicto
+- orchestrator emite señal de espera o no emite nada terminal
+- Ningún artefacto de Fase 4 generado
+
+**Peso:** crítico
+
+---
+
+### eval-017 — Orchestrator avanza solo con doble aprobación
+
+**Tipo:** coordinación  
+**Descripción:** El orchestrator SÍ avanza a Fase 4 cuando llegan ambos veredictos positivos.
+
+**Setup:**
+- Entregar auditor APROBADO (`task_id: test-017.audit`)
+- Entregar qa CUMPLE (`task_id: test-017.qa`)
+- Ambos en el mismo ciclo
+
+**Input:**
+```json
+{
+  "director_reports": [
+    {
+      "task_id": "test-017.audit",
+      "status": "SUCCESS",
+      "next_agent": "orchestrator",
+      "summary": "Auditor aprobado"
+    },
+    {
+      "task_id": "test-017.qa",
+      "status": "SUCCESS",
+      "next_agent": "orchestrator",
+      "summary": "QA cumple"
+    }
+  ]
+}
+```
+
+**Expected:**
+```json
+{
+  "devops_invocado": true,
+  "doble_aprobacion": true,
+  "contexto_devops": ["test-017.audit", "test-017.qa"],
+  "retry_innecesario": false
+}
+```
+
+**Criterios de éxito:**
+- devops fue invocado exactamente una vez
+- El contrato de devops referencia `test-017.audit` y `test-017.qa`
+- No hay retry innecesario
+
+**Peso:** crítico
+
+---
+
+### eval-018 — Orchestrator maneja rechazo de auditor con qa pendiente
+
+**Tipo:** coordinación  
+**Descripción:** Si auditor rechaza pero qa aún no respondió, el orchestrator debe esperar qa igualmente antes de decidir el retry.
+
+**Setup:**
+- Entregar auditor REJECTED (`task_id: test-018.audit`)
+- qa aún pendiente
+
+**Input:**
+```json
+{
+  "director_reports": [
+    {
+      "task_id": "test-018.audit",
+      "status": "REJECTED",
+      "next_agent": "developer",
+      "summary": "Auditor rechaza",
+      "rejection_details": {
+        "severity": "high",
+        "issue": "Falta validación"
+      }
+    }
+  ]
+}
+```
+
+**Expected:**
+```json
+{
+  "retry_lanzado": false,
+  "estado_orchestrator": "esperando_qa",
+  "retry_count_incrementado": false
+}
+```
+
+**Criterios de éxito:**
+- No hay invocación al implementador antes de recibir qa
+- retry_count no incrementa hasta tener ambos veredictos
+
+**Peso:** alto
+
+---
+
+### eval-019 — Task_id correcto en cada agente del paralelo
+
+**Tipo:** coordinación  
+**Descripción:** Verificar end-to-end que los sufijos `.audit` y `.qa` se generan y el orchestrator los distingue correctamente.
+
+**Setup:**
+- Ciclo completo con tarea real hasta Fase 3
+
+**Input:**
+```json
+{
+  "task": "Añadir validación de email en formulario de registro"
+}
+```
+
+**Expected:**
+```json
+{
+  "auditor_task_id_suffix": ".audit",
+  "qa_task_id_suffix": ".qa",
+  "orchestrator_log_contiene": ["*.audit", "*.qa"],
+  "veredictos_asociados_correctamente": true
+}
+```
+
+**Criterios de éxito:**
+- `auditor.task_id` termina en `.audit`
+- `qa.task_id` termina en `.qa`
+- `orchestrator.log` contiene ambos task_ids
+- orchestrator asocia APROBADO/RECHAZADO al agente correcto
+
+**Peso:** alto
+
+---
+
+### eval-020 — Timeout de un agente en paralelo
+
+**Tipo:** coordinación  
+**Descripción:** Si uno de los dos agentes del paralelo no responde en 5 minutos, el orchestrator debe re-invocarlo.
+
+**Setup:**
+- Simular auditor respondiendo normalmente
+- Simular qa sin respuesta por más de 5 minutos
+
+**Input:**
+```json
+{
+  "director_reports": [
+    {
+      "task_id": "test-020.audit",
+      "status": "SUCCESS",
+      "next_agent": "orchestrator",
+      "summary": "Auditor aprobado"
+    }
+  ],
+  "timeouts": {
+    "qa": 300001
+  }
+}
+```
+
+**Expected:**
+```json
+{
+  "qa_reinvocado": true,
+  "qa_task_id_reintento": "test-020.qa",
+  "fase_4_iniciada": false
+}
+```
+
+**Criterios de éxito:**
+- qa fue re-invocado tras el timeout
+- El task_id del reintento es idéntico al original
+- Fase 4 no fue iniciada durante el timeout
+
+**Peso:** alto
+
+---
+
 ## Cómo añadir nuevas evals
 
 Para añadir una nueva eval al catálogo:
@@ -572,6 +787,22 @@ Para añadir una nueva eval al catálogo:
 
 ## Cuándo ejecutar las evals
 
+### Ejecución del grupo Coordinación
+
+Usa el siguiente contrato para ejecutar el grupo completo:
+
+```json
+{
+  "eval_ids": ["eval-016", "eval-017", "eval-018", "eval-019", "eval-020"],
+  "sistema_version": "v1.0.1",
+  "modo": "grupo",
+  "grupo": "coordinacion",
+  "requiere_flujo_completo": true
+}
+```
+
+**Nota operativa:** estas evals requieren que el runner pueda simular respuestas parciales del paralelo. Si el runner no soporta esa capacidad todavía, debe marcar todas como `PARTIAL` con razón `infraestructura_pendiente`, y no como `FAIL`.
+
 ### Ejecución obligatoria
 
 - **Antes de modificar un archivo `.agent.md`**: Ejecutar grupo relacionado (ej: si modificas `orchestrator.agent.md`, ejecuta grupo "routing")
@@ -586,5 +817,5 @@ Para añadir una nueva eval al catálogo:
 
 ---
 
-**Versión del catálogo:** 1.0  
-**Última actualización:** 2026-04-06
+**Versión del catálogo:** 1.1  
+**Última actualización:** 2026-04-07

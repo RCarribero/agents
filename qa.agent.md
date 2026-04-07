@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Verificación funcional. Comprueba que la implementación cumple el objetivo definido antes de hacer commit.
-model: sonnet
+model: haiku
 temperature: 0.0
 user-invocable: false
 ---

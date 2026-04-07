@@ -37,8 +37,9 @@ Recibes un JSON con:
   "eval_ids": ["eval-001", "eval-002", "..."] | null,
   "sistema_version": "string (ej: v1.2.3 o commit SHA)",
   "modo": "full" | "grupo" | "single",
-  "grupo": "routing" | "contratos" | "reintentos" | "memoria" | null,
-  "eval_id": "eval-NNN" | null
+  "grupo": "routing" | "contratos" | "reintentos" | "memoria" | "coordinacion" | null,
+  "eval_id": "eval-NNN" | null,
+  "requiere_flujo_completo": true | false | null
 }
 ```
 
@@ -47,6 +48,7 @@ Recibes un JSON con:
 - Si `modo == "grupo"`, `grupo` es obligatorio; `eval_id` se ignora.
 - Si `modo == "single"`, `eval_id` es obligatorio; `grupo` se ignora.
 - `sistema_version` es obligatorio siempre.
+- Si `grupo == "coordinacion"` y no hay capacidad de simular respuestas parciales del paralelo, marca las evals del grupo como `PARTIAL` con razón `infraestructura_pendiente`.
 
 ---
 
@@ -162,7 +164,7 @@ Ejecuta todas las evals del catálogo en orden numérico. Genera un informe comp
 
 ### Modo `grupo`
 
-Ejecuta solo un grupo de evals (routing, contratos, reintentos, memoria). Genera un informe de grupo.
+Ejecuta solo un grupo de evals (routing, contratos, reintentos, memoria, coordinacion). Genera un informe de grupo.
 
 **Duración estimada:** 3-8 minutos  
 **Cuándo usar:** Tras modificar un archivo `.agent.md`, para validar solo el área afectada
@@ -290,8 +292,11 @@ No siempre es posible ejecutar el flujo completo de un agente dentro de una eval
 - **Evals de tipo `contrato`**: Verificar sobre outputs reales de invocaciones o sobre outputs guardados de ejecuciones previas.
 - **Evals de tipo `reintento`**: Simular el flujo de rechazo encadenando invocaciones con `retry_count` incrementado.
 - **Evals de tipo `memoria`**: Verificar inspeccionando los archivos `.agent.md` y `memoria_global.md`.
+- **Evals de tipo `coordinacion`**: Verificar coordinación real del orchestrator en Fase 3 (espera de ambos veredictos, correlación por sufijos `.audit/.qa`, control de timeout y paso a Fase 4).
 
 Si una eval no puede ejecutarse completamente, márcala como `PARTIAL` y documenta el motivo en el informe.
+
+Para el grupo `coordinacion` (eval-016..eval-020), si falta infraestructura de flujo completo, usa motivo estándar `infraestructura_pendiente` y evita marcar `FAIL` por esta limitación.
 
 ### Aislamiento de contexto
 
@@ -326,18 +331,19 @@ Si durante la ejecución de evals descubres:
 ```json
 {
   "modo": "grupo",
-  "grupo": "routing",
-  "sistema_version": "v1.2.3"
+  "grupo": "coordinacion",
+  "sistema_version": "v1.2.3",
+  "requiere_flujo_completo": true
 }
 ```
 
 ### Proceso
 
 1. Lee `evals/eval_catalog.md`
-2. Extrae eval-001, eval-002, eval-003, eval-004, eval-005
+2. Extrae evals del grupo solicitado (por ejemplo, eval-016..eval-020 para `coordinacion`)
 3. Para cada una:
-   - Simula invocación del orchestrator con el input
-   - Captura el plan generado
+  - Ejecuta flujo completo si hay infraestructura disponible
+  - Si no hay infraestructura de flujo completo, marca `PARTIAL` con razón `infraestructura_pendiente`
    - Compara con los criterios de éxito
    - Asigna PASS/FAIL/PARTIAL
 4. Guarda 5 JSON en `eval_outputs/`

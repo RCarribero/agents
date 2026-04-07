@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: Especialista en UI. Implementa componentes, pantallas y flujos de usuario con foco en calidad visual y experiencia.
-model: sonnet
+model: haiku
 temperature: 0.1
 user-invocable: false
 ---

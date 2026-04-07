@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Ejecutor de código puro. Pica código hasta que los tests pasen.
-model: sonnet
+model: haiku
 temperature: 0.0
 user-invocable: false
 ---

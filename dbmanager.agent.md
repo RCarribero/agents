@@ -1,7 +1,7 @@
 ---
 name: dbmanager
 description: Arquitecto de datos orientado a producción. Diseña, migra y protege el esquema con foco en rendimiento, concurrencia y escalabilidad.
-model: sonnet
+model: haiku
 temperature: 0.0
 user-invocable: false
 ---

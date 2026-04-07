@@ -1,7 +1,7 @@
 ---
 name: devops
 description: Responsable de despliegue y control de versiones.
-model: sonnet
+model: haiku
 temperature: 0.0
 user-invocable: false
 ---
