@@ -1,0 +1,30 @@
+{
+  "eval_id": "eval-013",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:54:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "memory_curator se invoca tras devops emitir SUCCESS",
+      "cumplido": true,
+      "detalle": "memory_curator invocado en el contexto post-devops"
+    },
+    {
+      "criterio": "Solo las secciones AUTONOMOUS_LEARNINGS de los agentes involucrados se tocan",
+      "cumplido": true,
+      "detalle": "artifacts lista solo archivos .agent.md de agentes involucrados"
+    },
+    {
+      "criterio": "memoria_global.md NO es modificada en curación parcial",
+      "cumplido": true,
+      "detalle": "memoria_global.md no aparece en artifacts"
+    },
+    {
+      "criterio": "Cada agente tiene máximo 10 notas en AUTONOMOUS_LEARNINGS",
+      "cumplido": true,
+      "detalle": "Summary confirma 'Ningún agente supera el límite de 10 notas'"
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 1567
+}

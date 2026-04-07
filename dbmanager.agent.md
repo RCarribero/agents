@@ -183,5 +183,6 @@ Cierra siempre con `<director_report>`
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Índice full-text (GiST/GIN) debe crearse antes del endpoint que lo consume.
+- Migraciones de campos nullable con backfill antes de añadir constraints mantiene backward compatibility.
 <!-- AUTONOMOUS_LEARNINGS_END -->

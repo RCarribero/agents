@@ -105,5 +105,6 @@ Este formato permite al orchestrator adjuntar los detalles al agente implementad
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Endpoints de búsqueda sin parámetros preparados = vector de inyección SQL crítico.
+- RLS faltante en tablas consultadas públicamente = hallazgo automático de severidad Alta.
 <!-- AUTONOMOUS_LEARNINGS_END -->

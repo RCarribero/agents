@@ -73,5 +73,6 @@ summary: <nº commits + rama + estado del push>
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Migraciones de DB deben incluirse en commit separado (tipo `feat(db):`) antes del commit de lógica.
+- Commits de features completas (DB+backend+frontend) deben dividirse en 3 commits atómicos con orden de dependencia.
 <!-- AUTONOMOUS_LEARNINGS_END -->

@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-004",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:36:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "analyst aparece en Fase 0 (Análisis) antes de cualquier otro agente técnico",
+      "cumplido": true,
+      "detalle": "analyst listado en Fase 0 — Análisis Estratégico"
+    },
+    {
+      "criterio": "El output de analyst se adjunta al plan como contexto",
+      "cumplido": true,
+      "detalle": "Fases posteriores mencionan 'Input: Output de analyst'"
+    },
+    {
+      "criterio": "El plan incluye conclusiones del analyst en formato estructurado",
+      "cumplido": true,
+      "detalle": "Especifica que analyst debe emitir 'informe con hallazgos + prioridades claras'"
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 2134
+}

@@ -78,5 +78,5 @@ Recibes la tarea del **orquestador**. Tu output va al agente **`auditor`**. Si e
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Validar campos de texto largo con contador visual + validación de longitud para evitar overflow.
 <!-- AUTONOMOUS_LEARNINGS_END -->

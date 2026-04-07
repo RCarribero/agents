@@ -1,0 +1,30 @@
+{
+  "eval_id": "eval-009",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:46:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "status es exactamente REJECTED",
+      "cumplido": true,
+      "detalle": "status = REJECTED"
+    },
+    {
+      "criterio": "missing_cases tiene al menos 1 entrada",
+      "cumplido": true,
+      "detalle": "missing_cases contiene 2 entradas"
+    },
+    {
+      "criterio": "Cada entrada de missing_cases tiene los 3 campos: caso, esperado, encontrado",
+      "cumplido": true,
+      "detalle": "Ambas entradas tienen los 3 campos requeridos"
+    },
+    {
+      "criterio": "summary describe la categoría de fallo",
+      "cumplido": true,
+      "detalle": "summary menciona 'Manejo de error de red ausente'"
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 1432
+}

@@ -91,5 +91,6 @@ Este formato permite al orchestrator adjuntar los detalles exactos de lo que fal
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Campos de texto sin límite en UI = gap funcional, debe rechazarse aunque backend valide.
+- Endpoint de búsqueda vacía debe devolver lista vacía, no error 500.
 <!-- AUTONOMOUS_LEARNINGS_END -->

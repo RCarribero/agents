@@ -67,5 +67,6 @@ Si `auditor` devuelve RECHAZADO, el orquestador re-envía el diff de errores par
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- Validar input de búsqueda siempre con parámetros, nunca concatenar strings en queries dinámicas.
+- Paginación por cursor (`id > last_seen`) preferible a OFFSET en tablas grandes.
 <!-- AUTONOMOUS_LEARNINGS_END -->

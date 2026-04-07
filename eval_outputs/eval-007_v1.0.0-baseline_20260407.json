@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-007",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:42:00Z",
+  "resultado": "PARTIAL",
+  "criterios": [
+    {
+      "criterio": "task_id del auditor termina exactamente en .audit",
+      "cumplido": true,
+      "detalle": "task_id = task-20260406-001.audit"
+    },
+    {
+      "criterio": "task_id del qa termina exactamente en .qa",
+      "cumplido": true,
+      "detalle": "task_id = task-20260406-001.qa"
+    },
+    {
+      "criterio": "orchestrator espera ambos reports antes de avanzar a Fase 4",
+      "cumplido": false,
+      "detalle": "No se pudo verificar la coordinación del orchestrator sin ejecutar un flujo completo"
+    },
+    {
+      "criterio": "Ningún agente avanza sin los dos veredictos",
+      "cumplido": false,
+      "detalle": "No se pudo verificar el flujo completo de coordinación"
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 2456,
+  "razon_parcial": "Solo se pudieron verificar los formatos de task_id de auditor y qa. La coordinación del orchestrator requeriría un flujo completo de ejecución."
+}

@@ -1,0 +1,30 @@
+{
+  "eval_id": "eval-011",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:50:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry_count llega exactamente a 2",
+      "cumplido": true,
+      "detalle": "retry_count = 2"
+    },
+    {
+      "criterio": "status final es ESCALATE (no REJECTED)",
+      "cumplido": true,
+      "detalle": "status = ESCALATE"
+    },
+    {
+      "criterio": "escalate_to es exactamente 'human'",
+      "cumplido": true,
+      "detalle": "escalate_to = human"
+    },
+    {
+      "criterio": "historial contiene exactamente 2 intentos previos con sus razones",
+      "cumplido": true,
+      "detalle": "retry_history contiene 2 intentos con razones completas"
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 1678
+}

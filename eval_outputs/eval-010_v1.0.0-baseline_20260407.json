@@ -1,0 +1,30 @@
+{
+  "eval_id": "eval-010",
+  "version": "v1.0.0-baseline",
+  "fecha": "2026-04-07T14:48:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry_count se incrementa exactamente a 1 en el segundo intento",
+      "cumplido": true,
+      "detalle": "retry_count = 1"
+    },
+    {
+      "criterio": "previous_output no está vacío y contiene el director_report del rechazo",
+      "cumplido": true,
+      "detalle": "previous_output contiene el director_report completo del primer rechazo"
+    },
+    {
+      "criterio": "rejection_reason está presente y describe el fallo original",
+      "cumplido": true,
+      "detalle": "rejection_reason = 'Uso de var en lugar de tipos explícitos'"
+    },
+    {
+      "criterio": "El agente de reintento recibe rejection_details si estaba presente",
+      "cumplido": true,
+      "detalle": "rejection_details incluido en el previous_output"
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 1234
+}
