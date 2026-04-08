@@ -69,4 +69,7 @@ Si `auditor` devuelve RECHAZADO, el orquestador re-envía el diff de errores par
 ## Notas operativas aprendidas
 - Validar input de búsqueda siempre con parámetros, nunca concatenar strings en queries dinámicas.
 - Paginación por cursor (`id > last_seen`) preferible a OFFSET en tablas grandes.
+- En PATCH de tarea con `usuarios_ids`, mantener validación estricta de membresía por proyecto y protegerla con test de regresión explícito para evitar reintroducir 400 por asignaciones inválidas.
+- Al mover una tarea fuera de `terminado`, recalcular `completada` desde la columna destino y no conservar el estado previo.
+- En transiciones `terminado`<->no `terminado`, centralizar una única regla de derivación (`completada = destino == terminado`) para evitar regresiones tras recarga.
 <!-- AUTONOMOUS_LEARNINGS_END -->

@@ -79,4 +79,10 @@ Recibes la tarea del **orquestador**. Tu output va al agente **`auditor`**. Si e
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
 - Validar campos de texto largo con contador visual + validación de longitud para evitar overflow.
+- **Migración de SDKs externos:** Al reemplazar un SDK (ej: Supabase Auth → Django Auth), mantener interface de AuthContext idéntica para no romper componentes consumidores. Permite migración sin efectos dominó.
+- **Magic strings de backend:** Si el frontend usa valores hardcodeados que dependen del backend (tipos de columna, estados, roles), verificar los valores reales del backend ANTES de implementar lógica condicional. Un typo causa bugs silenciosos.
+- **Optimistic updates en drag & drop:** Actualizar estado local inmediatamente con `setTasks(updated)` antes de llamar al backend mejora UX. Guardar `oldTasks` para rollback en caso de error de red.
+- **Constantes centralizadas:** Si hay >3 ocurrencias del mismo string literal, crear archivo de constantes (`constants/columns.ts`, `constants/roles.ts`). Previene divergencia.
+- **Edición de asignaciones de tarea:** UI solo debe permitir `usuarios_ids` que pertenezcan al proyecto activo; filtrar opciones por membresía antes de enviar PATCH.
+- **Compatibilidad de payloads:** Normalizar lectura de `usuarios_asignados` (objeto o id) y tipar el mapper frontend con el contrato real del backend para evitar enviar IDs inválidos.
 <!-- AUTONOMOUS_LEARNINGS_END -->

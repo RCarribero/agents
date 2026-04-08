@@ -107,4 +107,12 @@ Este formato permite al orchestrator adjuntar los detalles al agente implementad
 ## Notas operativas aprendidas
 - Endpoints de búsqueda sin parámetros preparados = vector de inyección SQL crítico.
 - RLS faltante en tablas consultadas públicamente = hallazgo automático de severidad Alta.
+- **Console.log en producción:** Búsqueda global de `console.log/error/warn` es obligatoria. Si hay +10 ocurrencias sin config de terser para eliminarlos en build, es hallazgo de severidad MEDIA (puede exponer tokens, payloads, datos de usuario).
+- **Error messages sin sanitizar:** Si `error.message` se renderiza en UI sin mapeo a mensajes genéricos, es hallazgo MEDIA. Stack traces exponen arquitectura interna.
+- **Mensajes de backend expuestos:** Si `error.response?.data?.detail` del backend se muestra directamente en frontend, es hallazgo MEDIA. Backend puede incluir nombres de tablas, queries SQL fallidas, configuración interna.
+- **Magic strings vs backend:** Inconsistencia de constantes hardcodeadas entre frontend y backend no es vulnerabilidad de seguridad, pero es antipatrón. Documentar como observación, no rechazar.
+- **Token blacklist 401 en logout:** Si endpoint de logout devuelve 401 "token en lista negra", es comportamiento esperado de Django token blacklist, NO es un bug. Verificar contexto antes de clasificar como fallo.
+- Si backend valida membresía en asignaciones pero UI permite seleccionar no-miembros, exigir guardia de frontend por proyecto como condición para cerrar incidentes de 400 recurrentes.
+- Reapertura de tareas completas (`terminado` -> no `terminado`) sin rol `editor|owner` es fallo de autorización y debe marcarse al menos como severidad Alta.
+- En endpoints de move/transition, auditar permiso por transición y no solo por estado final para bloquear bypass de viewers en reapertura.
 <!-- AUTONOMOUS_LEARNINGS_END -->

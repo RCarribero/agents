@@ -93,4 +93,11 @@ Este formato permite al orchestrator adjuntar los detalles exactos de lo que fal
 ## Notas operativas aprendidas
 - Campos de texto sin límite en UI = gap funcional, debe rechazarse aunque backend valide.
 - Endpoint de búsqueda vacía debe devolver lista vacía, no error 500.
+- **Testing por prioridad:** Ante múltiples endpoints, verificar primero los críticos (login, register) antes de los secundarios. Si login falla, todo lo demás es irrelevante.
+- **Arquitectura frontend-backend:** Si frontend y backend usan stacks de autenticación diferentes (Supabase vs Django), el sistema es 0% funcional. Esto es un NO CUMPLE inmediato, no solo un warning.
+- **Optimistic updates:** Cuando el frontend actualiza estado local antes de recibir respuesta del backend, verificar que el rollback en caso de error está implementado. Si no, devolver NO CUMPLE.
+- **Pass rate con fallos esperados:** Un 88.9% de pass rate puede ser 100% funcional si el único fallo es comportamiento esperado (ej: logout 401 por token blacklist). Analizar contexto antes de rechazar.
+- En edición de tarea, agregar caso QA obligatorio: intentar asignar usuario fuera del proyecto debe estar bloqueado en UI y no disparar PATCH inválido.
+- Caso QA obligatorio en tablero: mover de `terminado` a otra columna + F5 debe dejar `completada=false` de forma persistente.
+- Validar matriz de permisos en transiciones `terminado`<->no `terminado`: viewer NO reabre, editor/owner SI reabren.
 <!-- AUTONOMOUS_LEARNINGS_END -->

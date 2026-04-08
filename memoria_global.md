@@ -107,3 +107,115 @@ Documentar siempre la decisión en el plan:
 ### Errores a evitar
 - No validar accesibilidad de color en cambios visuales — auditor y qa rechazan si contraste insuficiente.
 - No documentar cambios de token de diseño en sistema centralizado — causa divergencia entre componentes.
+
+---
+
+## [2026-04-07] NetTask — Migración de autenticación y bugfixes
+
+**Agentes:** frontend, qa, auditor, memory_curator
+
+### Hallazgo 1: Migración Django Auth (auth-migration-django-001)
+
+**Contexto:**
+Frontend estaba configurado para usar Supabase Auth SDK, bloqueando completamente login y registro porque backend solo provee Django Auth + JWT.
+
+**Solución aplicada:**
+- Reescritura completa de `frontend/src/api/auth.ts` — eliminó `supabase.auth.signUp/signInWithPassword`, agregó llamadas directas a Django endpoints
+- Reescritura completa de `frontend/src/context/AuthContext.tsx` — eliminó listeners de Supabase session, simplificó a JWT + localStorage
+- `frontend/src/api/supabase.ts` marcado como obsoleto para auth, mantiene funcionalidad real-time
+
+**Arquitectura antes:**
+```
+UI → AuthContext → supabase.auth.signInWithPassword() → Supabase Auth → /sync-supabase → Django
+```
+
+**Arquitectura después:**
+```
+UI → AuthContext → axios POST /api/auth/login → Django → JWT tokens → localStorage
+```
+
+**Buenas prácticas validadas:**
+- Verificar consistencia de stacks de autenticación entre frontend y backend ANTES de deploy
+- Testing de prioridad por criticidad: login/register probados primero (88.9% endpoints verificados)
+- Usar emails únicos con timestamp en testing para evitar colisiones de datos seed
+- Migración sin breaking changes: AuthContext interface idéntica para componentes consumidores
+
+**Antipatrones detectados y documentados:**
+- **Magic strings descentralizados:** Tipos de columna hardcodeados sin constantes compartidas ("done", "completado" vs "terminado")
+- **No verificar comunicación E2E antes de deploy:** Login funcionaba en backend pero frontend nunca lo llamaba
+- **Auth sin fallback = single point of failure:** Frontend dependía 100% de Supabase Auth sin alternativa a Django directo
+
+### Hallazgo 2: Bug de tachado de tareas (task-strikethrough-bug-001)
+
+**Problema:**
+Tareas completadas no se tachaban visualmente al moverlas a columna "Terminado", solo después de recargar página.
+
+**Causa raíz:**
+Frontend verificaba tipos de columna incorrectos: `destCol?.tipo === "done" || destCol?.tipo === "completado"` cuando el backend usa `TIPO_TERMINADO = 'terminado'`
+
+**Corrección:**
+Cambio de 1 línea en `DashboardPage.tsx:218`: `const isCompleting = destCol?.tipo === "terminado";`
+Actualización adicional en líneas 147 y 505 para consistencia.
+
+**Impacto:**
+- Estado local `completada` ahora se actualiza inmediatamente en drag & drop
+- TaskCard renderiza `line-through` sin esperar respuesta del backend (optimistic update)
+- 3 líneas modificadas, 0 breaking changes
+
+**Buenas prácticas:**
+- Verificar constantes de backend antes de implementar lógica condicional en frontend
+- Cambios de valores de constantes (no lógica) = bajo riesgo de regresión
+- Optimistic updates mejoran UX cuando la operación backend es altamente probable que tenga éxito
+
+**Antipatrones detectados:**
+- **3 valores adicionales de tipo de columna también incorrectos:** "todo" debería ser "backlog", "in_progress" → "progreso", "testing" → "testeo" (no bloqueante, deuda técnica documentada)
+- **Magic strings sin archivo de constantes:** Debería existir `frontend/src/constants/columns.ts` con `COLUMN_TYPES = { TERMINADO: 'terminado', ... }`
+
+### Hallazgo 3: Auditoría de seguridad post-migración (auth-migration-django-001.audit)
+
+**Veredicto:** APROBADO CON OBSERVACIONES (severidad MEDIA)
+
+**Hallazgos de severidad MEDIA:**
+1. **Exposición de `error.message` en UI sin sanitizar** (ErrorBoundary.tsx:49) — Stack traces pueden exponer arquitectura interna
+2. **Console.log activo en producción** (20+ ocurrencias) — Puede exponer tokens decodificados o payloads de API
+3. **Mensajes de backend expuestos directamente** (auth.ts:80, LoginPage.tsx:35) — Errores técnicos pueden revelar nombres de tablas o queries SQL
+
+**Hallazgos de severidad BAJA:**
+1. CSP permite `'unsafe-inline'` (nginx.conf:30) — Reduce defensa contra XSS
+2. Validación de contraseña solo en cliente (LoginPage.tsx:48) — Puede bypassearse con peticiones directas
+
+**Verificaciones positivas:**
+- HTTPS en producción ✓
+- JWT en Authorization header (protege contra CSRF) ✓
+- Logout limpia tokens ✓
+- No tokens en URLs ✓
+- Token refresh con cola previene race conditions ✓
+
+**Recomendaciones no bloqueantes:**
+- Implementar logging centralizado (Sentry) en lugar de console.log
+- Mapear errores backend a mensajes user-friendly en frontend
+- Considerar httpOnly cookies + refresh token rotation en el futuro
+
+### Resultados consolidados
+
+**Tarea 1 (Verificación endpoints):**
+- Status: ✅ CUMPLE
+- 8/9 endpoints funcionando (88.9%)
+- Login y register operativos en producción
+
+**Tarea 2 (Migración auth):**
+- Status: ✅ SUCCESS
+- Frontend ahora usa Django Auth directo
+- 0% funcionalidad bloqueada por Supabase Auth
+
+**Tarea 3 (Fix tachado):**
+- Status: ✅ CUMPLE
+- Tareas se tachan inmediatamente
+- Deuda técnica identificada y documentada
+
+### Deuda técnica identificada
+
+1. **Prioridad MEDIA:** Corregir magic strings de tipos de columna ("todo", "in_progress", "testing") → valores backend correctos
+2. **Prioridad MEDIA:** Crear archivo `constants/columns.ts` con tipos centralizados
+3. **Prioridad BAJA:** Deshabilitar console.log en builds de producción (vite.config.ts)
+4. **Prioridad BAJA:** Sanitizar mensajes de error en producción con diccionario de mensajes seguros
