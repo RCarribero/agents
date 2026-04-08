@@ -1,8 +1,7 @@
 ---
 name: devops
 description: Responsable de despliegue y control de versiones.
-model: haiku
-temperature: 0.0
+model: 'Claude Haiku 4.5'
 user-invocable: false
 ---
 

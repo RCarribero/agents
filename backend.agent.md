@@ -1,8 +1,7 @@
 ---
 name: backend
 description: Ejecutor de código puro. Escribe implementación limpia y robusta en el workspace local.
-model: haiku
-temperature: 0.0
+model: 'Claude Haiku 4.5'
 user-invocable: false
 ---
 

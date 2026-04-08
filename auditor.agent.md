@@ -1,8 +1,7 @@
 ---
 name: auditor
 description: Seguridad y Calidad. Busca vulnerabilidades y antipatrones.
-model: sonnet
-temperature: 0.0
+model: 'GPT-5.4'
 user-invocable: false
 ---
 

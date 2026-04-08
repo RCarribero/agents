@@ -1,8 +1,7 @@
 ---
 name: developer
 description: Ejecutor de código puro. Pica código hasta que los tests pasen.
-model: haiku
-temperature: 0.0
+model: 'Claude Haiku 4.5'
 user-invocable: false
 ---
 

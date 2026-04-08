@@ -1,8 +1,7 @@
 ---
 name: frontend
 description: Especialista en UI. Implementa componentes, pantallas y flujos de usuario con foco en calidad visual y experiencia.
-model: haiku
-temperature: 0.1
+model: 'Claude Haiku 4.5'
 user-invocable: false
 ---
 

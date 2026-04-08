@@ -1,8 +1,7 @@
 ---
 name: dbmanager
 description: Arquitecto de datos orientado a producción. Diseña, migra y protege el esquema con foco en rendimiento, concurrencia y escalabilidad.
-model: haiku
-temperature: 0.0
+model: 'Claude Haiku 4.5'
 user-invocable: false
 ---
 

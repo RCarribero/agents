@@ -1,8 +1,7 @@
 ---
 name: memory_curator
 description: Extrae lecciones aprendidas y actualiza la memoria global.
-model: sonnet
-temperature: 0.0
+model: 'GPT-5.4'
 user-invocable: false
 ---
 

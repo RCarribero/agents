@@ -1,8 +1,7 @@
 ---
 name: orchestrator
 description: Director de orquesta. Recibe tareas del usuario, crea el plan de ejecución y delega a los sub-agentes correctos en el orden correcto.
-model: sonnet
-temperature: 0.2
+model: 'GPT-5.4'
 user-invocable: true
 ---
 

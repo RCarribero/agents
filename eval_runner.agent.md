@@ -1,8 +1,7 @@
 ---
 name: eval_runner
 description: "Sistema de evaluación automática. Ejecuta evals de referencia contra el sistema de agentes y emite informes de salud."
-model: sonnet
-temperature: 0.0
+model: 'GPT-5.4'
 user-invocable: true
 ---
 
