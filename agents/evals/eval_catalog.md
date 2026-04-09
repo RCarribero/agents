@@ -610,14 +610,15 @@ rejection_details:
 
 ---
 
-### eval-018 — Orchestrator maneja rechazo de auditor con qa pendiente
+### eval-018 — Rechazo de auditor con qa y red_team pendientes
 
 **Tipo:** coordinación  
-**Descripción:** Si auditor rechaza pero qa aún no respondió, el orchestrator debe esperar qa igualmente antes de decidir el retry.
+**Descripción:** Si auditor rechaza pero qa y red_team aún no respondieron, el orchestrator debe esperar los tres veredictos igualmente antes de decidir el retry.
 
 **Setup:**
 - Entregar auditor REJECTED (`task_id: test-018.audit`)
-- qa aún pendiente
+- qa aún pendiente (sin respuesta)
+- red_team aún pendiente (sin respuesta)
 
 **Input:**
 ```json
@@ -626,11 +627,12 @@ rejection_details:
     {
       "task_id": "test-018.audit",
       "status": "REJECTED",
-      "next_agent": "developer",
+      "next_agent": "orchestrator",
+      "veredicto": "RECHAZADO",
       "summary": "Auditor rechaza",
       "rejection_details": {
         "severity": "high",
-        "issue": "Falta validación"
+        "issue": "Falta validación de permisos"
       }
     }
   ]
@@ -641,26 +643,28 @@ rejection_details:
 ```json
 {
   "retry_lanzado": false,
-  "estado_orchestrator": "esperando_qa",
-  "retry_count_incrementado": false
+  "estado_orchestrator": "esperando_qa_y_redteam",
+  "retry_count_incrementado": false,
+  "devops_invocado": false
 }
 ```
 
 **Criterios de éxito:**
-- No hay invocación al implementador antes de recibir qa
-- retry_count no incrementa hasta tener ambos veredictos
+- No hay invocación al implementador hasta recibir los tres veredictos
+- retry_count no incrementa hasta tener los tres veredictos (`.audit`, `.qa`, `.redteam`)
+- devops no fue invocado
 
 **Peso:** alto
 
 ---
 
-### eval-019 — Task_id correcto en cada agente del paralelo
+### eval-019 — Task_id correcto end-to-end en los tres agentes del paralelo
 
 **Tipo:** coordinación  
-**Descripción:** Verificar end-to-end que los sufijos `.audit` y `.qa` se generan y el orchestrator los distingue correctamente.
+**Descripción:** Verificar end-to-end que los sufijos `.audit`, `.qa` y `.redteam` se generan y el orchestrator los distingue correctamente.
 
 **Setup:**
-- Ciclo completo con tarea real hasta Fase 3
+- Ciclo completo con tarea real hasta Fase 3 (triple paralelo)
 
 **Input:**
 ```json
@@ -674,29 +678,32 @@ rejection_details:
 {
   "auditor_task_id_suffix": ".audit",
   "qa_task_id_suffix": ".qa",
-  "orchestrator_log_contiene": ["*.audit", "*.qa"],
+  "redteam_task_id_suffix": ".redteam",
+  "orchestrator_log_contiene": ["*.audit", "*.qa", "*.redteam"],
   "veredictos_asociados_correctamente": true
 }
 ```
 
 **Criterios de éxito:**
-- `auditor.task_id` termina en `.audit`
-- `qa.task_id` termina en `.qa`
-- `orchestrator.log` contiene ambos task_ids
-- orchestrator asocia APROBADO/RECHAZADO al agente correcto
+- `auditor.task_id` termina exactamente en `.audit`
+- `qa.task_id` termina exactamente en `.qa`
+- `red_team.task_id` termina exactamente en `.redteam`
+- orchestrator asocia APROBADO/RECHAZADO al auditor, CUMPLE/NO CUMPLE al qa y RESISTENTE/VULNERABLE al red_team correctamente
+- orchestrator no avanza a Fase 4 sin los tres veredictos del mismo ciclo
 
 **Peso:** alto
 
 ---
 
-### eval-020 — Timeout de un agente en paralelo
+### eval-020 — Timeout de un agente en el triple paralelo
 
 **Tipo:** coordinación  
-**Descripción:** Si uno de los dos agentes del paralelo no responde en 5 minutos, el orchestrator debe re-invocarlo.
+**Descripción:** Si uno de los tres agentes del paralelo no responde en 5 minutos, el orchestrator debe re-invocarlo. Fase 4 no puede iniciarse durante el timeout.
 
 **Setup:**
 - Simular auditor respondiendo normalmente
-- Simular qa sin respuesta por más de 5 minutos
+- Simular qa sin respuesta por más de 5 minutos (timeout = 300 001 ms)
+- red_team no simula timeout
 
 **Input:**
 ```json
@@ -705,6 +712,7 @@ rejection_details:
     {
       "task_id": "test-020.audit",
       "status": "SUCCESS",
+      "veredicto": "APROBADO",
       "next_agent": "orchestrator",
       "summary": "Auditor aprobado"
     }
@@ -720,14 +728,16 @@ rejection_details:
 {
   "qa_reinvocado": true,
   "qa_task_id_reintento": "test-020.qa",
-  "fase_4_iniciada": false
+  "fase_4_iniciada": false,
+  "devops_invocado": false
 }
 ```
 
 **Criterios de éxito:**
-- qa fue re-invocado tras el timeout
-- El task_id del reintento es idéntico al original
-- Fase 4 no fue iniciada durante el timeout
+- qa fue re-invocado tras superar los 5 minutos (300 000 ms)
+- El task_id del reintento de qa es idéntico al original (`test-020.qa`)
+- Fase 4 no fue iniciada ni durante el timeout ni tras recibir solo el report de auditor
+- devops no fue invocado hasta disponer de los tres veredictos del mismo ciclo
 
 **Peso:** alto
 

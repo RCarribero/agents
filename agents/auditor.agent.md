@@ -49,6 +49,23 @@ summary: <veredicto + nº hallazgos + severidades>
 
 ## Reglas de operación
 
+### REGLA DE DIGEST (obligatoria)
+
+Antes de emitir el veredicto, recomputar `verified_digest` de forma independiente sobre los archivos recibidos en `context.files`:
+
+1. Listar todos los archivos en `context.files`
+2. Para cada archivo: leer contenido actual en disco
+3. Calcular hash SHA-256 de cada contenido
+4. Concatenar todos los hashes en orden alfabético de ruta
+5. El `verified_digest` propio es el SHA-256 de esa concatenación
+
+Si el digest recomputado **no coincide** con el `verified_digest` del contrato de entrada:
+- `status: REJECTED`
+- `rejection_details.issue: "digest_mismatch — artifacts modificados entre implementación y verificación"`
+- **NO emitir veredicto sobre el código** — solo emitir el rechazo por digest mismatch
+
+---
+
 0. **Memoria operativa:** Lee `memoria_global.md` antes de auditar. Prioriza la revisión de antipatrones ya documentados allí — si reaparecen, es un hallazgo de mayor severidad.
 1. Analiza **todo el código entregado** por el desarrollador. Sin excepciones, sin atajos.
 2. Busca activamente:

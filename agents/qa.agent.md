@@ -53,6 +53,23 @@ Este agente se ejecuta simultáneamente con `auditor` y `red_team`. Los tres rec
 
 ## Reglas de operación
 
+### REGLA DE DIGEST (obligatoria)
+
+Antes de emitir el veredicto, recomputar `verified_digest` de forma independiente sobre los archivos recibidos en `context.files`:
+
+1. Listar todos los archivos en `context.files`
+2. Para cada archivo: leer contenido actual en disco
+3. Calcular hash SHA-256 de cada contenido
+4. Concatenar todos los hashes en orden alfabético de ruta
+5. El `verified_digest` propio es el SHA-256 de esa concatenación
+
+Si el digest recomputado **no coincide** con el `verified_digest` del contrato de entrada:
+- `status: REJECTED`
+- `rejection_details.issue: "digest_mismatch — artifacts modificados entre implementación y verificación"`
+- **NO emitir veredicto sobre el código** — solo emitir el rechazo por digest mismatch
+
+---
+
 0. **Lee la memoria antes de verificar.** Revisa `memoria_global.md` y la sección `AUTONOMOUS_LEARNINGS` de este archivo. Si hay errores funcionales recurrentes o gaps conocidos del proyecto, priorizalos en tu verificación.
 1. **Lee el `objective` del plan original** antes de revisar cualquier código. Ese es tu único criterio de verdad.
 2. Para cada criterio de aceptación definido en el plan, verifica: ¿el código implementado lo satisface? Revisa la lógica, los flujos de usuario, los casos borde obvios.
