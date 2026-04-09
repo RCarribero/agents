@@ -1,0 +1,35 @@
+{
+  "task_id": "agents-v21-delta-baseline",
+  "modo": "full",
+  "sistema_version": "aca11a4",
+  "fecha": "2026-04-09 09:59:01",
+  "status": "ESCALATE",
+  "baseline_registered": false,
+  "score": null,
+  "critical_failures_measured": 0,
+  "critical_blockers": 1,
+  "reason": "infraestructura_real_inexistente",
+  "blocking_findings": [
+    "No existe runner, script o endpoint para delegar prompts a los agentes del workspace y capturar sus director_report.",
+    "La API del repo expone solo endpoints de utilidad/product search, no ejecución de orchestrator/eval_runner/sub-agentes.",
+    "El directorio eval_outputs no contiene baselines ni reportes previos; solo .gitkeep."
+  ],
+  "sections": {
+    "routing": "NOT_EXECUTED",
+    "contratos": "NOT_EXECUTED",
+    "reintentos": "NOT_EXECUTED",
+    "memoria": "NOT_EXECUTED",
+    "coordinacion": "NOT_EXECUTED"
+  },
+  "evidence": {
+    "orchestrator_rule": "agents/orchestrator.agent.md#L190",
+    "api_endpoints": [
+      "agents/api/main.py#L73",
+      "agents/api/main.py#L93",
+      "agents/api/main.py#L111",
+      "agents/api/main.py#L135"
+    ],
+    "api_readme": "agents/api/README.md#L1",
+    "output_dir_placeholder": "agents/eval_outputs/.gitkeep"
+  }
+}
