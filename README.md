@@ -60,7 +60,7 @@ flowchart TD
     O --> A[analyst]
     O --> DB[dbmanager]
     O --> TDD[tdd_enforcer]
-    O --> IMP[backend | frontend | developer]
+  O --> IMP[backend / frontend / developer]
     IMP --> AUD[auditor]
     IMP --> QA[qa]
     IMP --> RT[red_team]
