@@ -1,161 +1,93 @@
 # Sistema Multi-Agente — Documentación Completa
 
-**Versión:** v2.1 (inferida del contenido de los contratos y del historial de sesión)
-**Fecha:** 9 de abril de 2026
-**Stack activo:** No existe `.copilot/stack.md` — stack detectado del proyecto de referencia: FastAPI + Supabase (backend), Flutter/Dart (frontend), Python, Dart/Riverpod
+**Versión:** v3.0.0
+**Fecha:** 2026-04-09
+**Stack activo:** FastAPI + Python 3.11 + Supabase (PostgreSQL + pgvector) · Flutter/Dart + Riverpod
 
 ---
 
 ## 1. Flujo de ejecución
 
+### MODO CONSULTA
+
 ```
 Usuario
-  │
-  ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  ORCHESTRATOR  (clasifica la tarea)                                     │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ¿Pregunta, consulta o explicación?                                     │
-│    └─► MODO CONSULTA ──► responde directamente (researcher opcional)    │
-│                                                                         │
-│  ¿Cambio < 3 archivos, sin esquema, bajo riesgo?                        │
-│    └─► MODO RÁPIDO ────► Fase 2b + Fase 4 solamente                     │
-│                           Si el implementador escala ──► MODO COMPLETO │
-│                                                                         │
-│  ¿Feature, migración, multi-módulo o riesgo alto?                       │
-│    └─► MODO COMPLETO ──► flujo completo (abajo)                         │
-└─────────────────────────────────────────────────────────────────────────┘
+  └─► orchestrator (respuesta directa)
+                   └─► [opcional] researcher (si hace falta contexto)
+```
 
-MODO COMPLETO — Flujo completo de fases
+### MODO RÁPIDO
 
-Fase -1   skill_installer
-           └─► skill_context (nunca bloquea; null si falla)
-               │
-Fase 0a   researcher
-           └─► research_brief (solo si hay código afectado)
-               │
-Fase 0    analyst (solo si dominio desconocido o tarea compleja)
-           └─► ideas priorizadas
-               │
-Fase 1    dbmanager (solo si hay cambio de esquema)
-           └─► SQL idempotente + backward-compatible
-               │
-Fase 2a   tdd_enforcer (si aplica lógica nueva)
-           └─► tests en RED + test_output
-               │
-Fase 2    backend | frontend | developer
-  ┌────────────────────────────────────┐
-  │  objetivo: tests en GREEN          │
-  │  (si viene de tdd_enforcer)        │
-  └────────────────────────────────────┘
-               │
-               │  si falla 2 veces ──► ESCALATE → human
-               │
-Fase 3    [PARALELO] auditor ∥ qa ∥ red_team
-  ┌─────────────┬──────────────┬──────────────┐
-  │  auditor    │  qa          │  red_team    │
-  │  APROBADO   │  CUMPLE      │  RESISTENTE  │
-  │  RECHAZADO  │  NO CUMPLE   │  VULNERABLE  │
-  └─────────────┴──────────────┴──────────────┘
-       │               │               │
-       └───────────────┴───────────────┘
-               │  espera los 3 veredictos
-               │
-  ┌────────────────────────────────────────────────────────┐
-  │  auditor  │ qa        │ red_team  │ Acción              │
-  │  APROBADO │ CUMPLE    │RESISTENTE │ → devops (Fase 4)   │
-  │  RECHAZADO│ *         │ *         │ → retry implementador│
-  │  *        │ NO CUMPLE │ *         │ → retry implementador│
-  │  *        │ *         │VULNERABLE │ → retry implementador│
-  │  retry_count ≥ 2      │           │ → ESCALATE → human  │
-  └────────────────────────────────────────────────────────┘
-               │  triple aprobación
-               ▼
-Fase 4    devops
-           └─► commit + push (Conventional Commits)
-               │
-Fase 5    session_logger (tras cada transición relevante)
-           └─► memoria_global.md (append-only)
-          memory_curator parcial (tras cada ciclo exitoso)
-           └─► AUTONOMOUS_LEARNINGS de agentes participantes
-               │
-  [cierre de sesión]
-          memory_curator completo
-           └─► memoria_global.md consolidada
+```
+Usuario
+  └─► orchestrator
+        └─► [Fase 2b] backend | frontend | developer
+                               └─► [Fase 4] devops
+                                             └─► session_logger
+```
 
-MODO RÁPIDO — Flujo mínimo
+### MODO COMPLETO (flujo estándar)
 
-Fase 2b   backend | frontend | developer (sin TDD, sin researcher)
-           └─► lint/analyze antes de entregar
-               │ si detecta complejidad no prevista: ESCALATE → MODO COMPLETO
-               ▼
-Fase 4    devops
+```
+Usuario
+  └─► orchestrator (lee memoria + RAG retrieve_context)
+        │
+        ├─► [Fase -1] skill_installer  →  skill_context (nunca bloquea)
+        │
+        ├─► [Fase 0a] researcher  →  research_brief
+        │
+        ├─► [Fase 0]  analyst  (solo si dominio desconocido)
+        │
+        ├─► [Fase 1]  dbmanager  (solo si cambio de esquema DB)
+        │
+        ├─► [Fase 2a] tdd_enforcer  →  tests en RED
+        │
+        ├─► [Fase 2]  backend | frontend | developer  →  implementación
+        │
+        ├─► [Fase 3 — PARALELO]
+        │         auditor (.audit)   qa (.qa)   red_team (.redteam)
+        │         SI los 3 ──► orchestrator valida verified_digest → Fase 4
+        │         NO alguno ──► retry_count++ → re-invocar implementador
+        │                       retry_count ≥ 2 ──► ESCALATE → human
+        │
+        ├─► [Fase 4]  devops  (triple aprobación + verified_digest)
+        │              └─► [Opcional] MCP GitHub → create_pull_request
+        │
+        └─► [Fase 5]  session_logger  +  memory_curator (parcial)
 
-GESTIÓN DE REINTENTOS Y OVERRIDES
+Al cierre de sesión: memory_curator (completo)
+```
 
-  retry_count < 2:  re-invocar implementador con director_report(s) de rechazo
-  retry_count ≥ 2:  ESCALATE → human
-  override humano:  nuevo ciclo supervisado
-                    verification_cycle = <task_id>.override<N>.r0
-                    EVAL_TRIGGER fresco obligatorio si toca .agent.md
+### Rutas de retry y escalación
+
+```
+Implementador falla ──► auditor | qa | red_team rechazan
+  └─► orchestrator adjunta report(s) de rechazo → re-invoca implementador
+      retry_count = 1 ──► 2do intento
+      retry_count = 2 ──► ESCALATE → human (historial completo adjunto)
+
+override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
+                    EVAL_TRIGGER fresco requerido si toca .agent.md
 ```
 
 ---
 
 ## 2. Clasificador de complejidad
 
-### Señales de clasificación
+| Señal | MODO CONSULTA | MODO RÁPIDO | MODO COMPLETO |
+|---|---|---|---|
+| Tipo de tarea | pregunta, explicación | cambio puntual y acotado | feature nueva, múltiples archivos |
+| Código nuevo | no | mínimo (1-2 archivos) | sí, con dependencias |
+| Cambio de esquema DB | no | no | sí |
+| Tests requeridos | no | no/pocos | sí (TDD) |
+| Riesgo de regresión | ninguno | bajo | medio-alto |
 
-| Señal en la tarea | Modo |
-|---|---|
-| "¿qué", "cómo", "dónde", "explica", "muéstrame" | CONSULTA |
-| "cambia el color", "corrige el texto", "arregla este typo" | RÁPIDO |
-| "añade un campo simple", "cambia este mensaje" | RÁPIDO |
-| "falla", "bug", "error" + cambio localizado obvio | RÁPIDO |
-| "implementa", "crea", "añade feature", "nueva pantalla" | COMPLETO |
-| "migración", "tabla", "RLS", "esquema" | COMPLETO |
-| "refactor", "reestructura", "mueve módulo" | COMPLETO |
-| Ambiguo o no clasificable | COMPLETO (por defecto seguro) |
+**Escalación de RÁPIDO a COMPLETO:** el implementador emite `status: ESCALATE` si detecta que el cambio es más complejo de lo esperado.
 
-### Condiciones de cada modo
-
-**MODO CONSULTA**
-- La tarea es una pregunta, consulta o petición de explicación
-- Acción: responder directamente; `researcher` opcional si hace falta contexto de lectura
-- Sin fases, sin agentes de ejecución
-
-**MODO RÁPIDO**
-- Menos de 3 archivos afectados
-- Sin cambio de esquema ni migraciones
-- Sin nuevos providers, servicios o dependencias
-- El cambio es reversible en menos de 1 minuto
-- Fases activas: Fase 2b + Fase 4
-
-**MODO COMPLETO**
-- Feature nueva, toca esquema, afecta múltiples módulos o riesgo alto
-- Cualquier cosa no clasificable cae aquí (por defecto seguro)
-- Fases activas: flujo completo (-1 a 5)
-
-### Escalación de RÁPIDO a COMPLETO
-
-El implementador puede escalar de MODO RÁPIDO si detecta:
-- Más archivos afectados de los esperados
-- Dependencias no previstas
-- Riesgo no obvio en el cambio
-
-Formato:
-```xml
-<director_report>
-task_id: quick-001
-status: ESCALATE
-next_agent: orchestrator
-escalate_to: none
-summary: Cambio más complejo de lo esperado — requiere MODO COMPLETO
-reason: El fix de UI toca el provider de estado — riesgo de regresión
-</director_report>
-```
-
-El orchestrator recibe la escalación, reclasifica como MODO COMPLETO y reinicia el flujo desde Fase 0a con el contexto acumulado.
+**Señales de clasificación:**
+- BUGFIX: "falla", "bug", "error", "rompe", "no funciona"
+- CONSULTA: "buscar", "consultar", "listar", "filtrar", "obtener"
+- SCHEMA_CHANGE: "añadir campo", "nueva tabla", "migración", "columna", "RLS"
 
 ---
 
@@ -169,64 +101,23 @@ El orchestrator recibe la escalación, reclasifica como MODO COMPLETO y reinicia
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | orchestrator |
-| **Modelo** | GPT-5.4 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | sí |
+| Modelo | GPT-5.4 |
+| user-invocable | sí |
+| Temperatura | por defecto |
 
-**Rol:** Director de orquesta. Recibe tareas del usuario, crea el plan de ejecución y delega a los sub-agentes correctos en el orden correcto.
+**Rol:** Director de orquesta. Planifica y delega. Nunca implementa.
 
-**Cuándo se invoca:** Siempre. Es el punto de entrada de toda tarea.
-
-**Flujo interno:**
-1. Lee `memoria_global.md` antes de planificar
-2. Clasifica la tarea (CONSULTA / RÁPIDO / COMPLETO)
-3. Produce el plan con MODO, Motivo y Fases activas
-4. Delega por fases según el modo
-5. Sincroniza el paralelo de Fase 3 (espera los tres veredictos)
-6. Habilita Fase 4 solo con triple aprobación + verificación de bundle
-7. Gestiona reintentos con `retry_count` y escalación a human
-8. Dispara `session_logger` tras cada transición relevante
-9. Dispara `memory_curator` parcial tras cada ciclo exitoso
+**Cuándo se invoca:** Siempre — es el punto de entrada de toda tarea del usuario.
 
 **Reglas clave:**
-- Nunca implementa código, nunca hace commits, nunca revisa seguridad él mismo
-- Clasifica siempre antes de planificar (primer paso obligatorio)
-- Si retry_count ≥ 2, escala a human con historial completo
-- `devops` solo se habilita con los tres veredictos en el mismo `verification_cycle`
-- Los contratos `.agent.md` solo se modifican bajo regla de protección de agentes (eval antes y después)
-- Conserva autoridad exclusiva para aprobar y revertir cambios en `.agent.md`
+- Nunca implementa — delega siempre en modos de ejecución
+- En Fase 3 define `verification_cycle: <task_id>.r<retry_count>` y propaga `branch_name` a los tres verificadores
+- Valida que `verified_digest` sea idéntico en los tres reports antes de habilitar Fase 4
+- Override humano abre nuevo ciclo con `verification_cycle: <task_id>.override<N>.r0`
+- `session_log.md` es `audit_trail_artifact` — excluido de `verified_files` y del digest
+- Invoca RAG (`retrieve_context` k=5) antes de planificar si la API está disponible
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string (tarea del usuario)",
-  "retry_count": 0,
-  "context": {
-    "files": ["archivos relevantes del proyecto"],
-    "previous_output": "historial de sesión si aplica",
-    "constraints": ["convenciones del proyecto"],
-    "skill_context": { "...": "provisto por skill_installer en Fase -1, opcional" },
-    "research_brief": { "...": "provisto por researcher en Fase 0a, opcional" }
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-agents_invoked: <lista de agentes usados>
-artifacts: <resumen de entregables>
-next_steps: <si aplica>
-escalate_to: human | none
-summary: <qué se hizo + estado final>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS:** No aplica (el orchestrator no tiene sección propia de aprendizajes).
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -234,54 +125,21 @@ summary: <qué se hizo + estado final>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | analyst |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | 0.7 |
-| **Invocable por usuario** | sí |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | 0.7 |
+| user-invocable | sí |
 
-**Rol:** Analista estratégico. Detecta funcionalidades ausentes y genera ideas accionables de mejora, arquitectura y producto.
+**Rol:** Analista estratégico. Detecta features ausentes y genera ideas accionables.
 
-**Cuándo se invoca:** Fase 0 del MODO COMPLETO cuando el dominio es desconocido o la tarea es compleja. También cuando el orchestrator lo activa tras 3+ ciclos de deuda técnica.
+**Cuándo se invoca:** Fase 0 del MODO COMPLETO cuando el dominio es desconocido o hay deuda técnica.
 
 **Reglas clave:**
-- Lee `memoria_global.md` antes de analizar (no repite ideas ya documentadas)
-- Genera ideas en 4 categorías: Arquitectura, Rendimiento, Producto, Features ausentes
+- Lee `memoria_global.md` antes de analizar — no repite ideas ya documentadas
+- Clasifica ideas en 4 categorías: Arquitectura, Rendimiento, Producto, Features ausentes
 - Máximo 10 ideas por sesión, priorizadas por ratio impacto/esfuerzo
-- Solo sugiere features ausentes con evidencia concreta de ausencia en el código
-- Su output alimenta directamente el plan del orchestrator para las fases siguientes
-- Auto-aprendizaje vía campo `notes` con prefijo `APRENDIZAJE:` (el memory_curator lo cura)
+- Solo sugiere con evidencia real del código — no inventa gaps
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "retry_count": 0,
-  "context": {
-    "files": ["archivos relevantes del proyecto a analizar"],
-    "previous_output": "output del orchestrator o contexto adicional",
-    "constraints": ["restricciones o foco del análisis"]
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: <lista de ideas generadas>
-next_agent: orchestrator
-escalate_to: human | none
-summary: <dominio detectado + nº ideas + nº features ausentes>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -289,51 +147,22 @@ summary: <dominio detectado + nº ideas + nº features ausentes>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | eval_runner |
-| **Modelo** | GPT-5.4 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | sí |
+| Modelo | GPT-5.4 |
+| user-invocable | sí |
+| Temperatura | por defecto |
 
-**Rol:** Sistema de evaluación automática. Ejecuta evals de referencia contra el sistema de agentes y emite informes de salud.
+**Rol:** Evaluador del sistema. Mide si los agentes cumplen sus contratos. Solo observa.
 
-**Cuándo se invoca:** Cuando el orchestrator activa la Regla de protección de agentes (antes y después de modificar cualquier `.agent.md`). También invocable directamente por el usuario para medir el estado del sistema.
+**Cuándo se invoca:** Gate de evaluación (antes de Fase 4) o manualmente para health checks.
 
 **Reglas clave:**
-- Nunca modifica el sistema que evalúa — es observador pasivo puro
-- Nunca modifica `.agent.md` ni `memoria_global.md`
-- Timeout estricto de 5 minutos por eval; si supera = FAIL automático
-- Guarda todos los outputs en `eval_outputs/`
-- Compara versiones y genera tendencia histórica
-- Si la invocación directa no es posible, ejecuta en modo simulación (PARTIAL)
+- NUNCA modifica `.agent.md`, `memoria_global.md` ni `AUTONOMOUS_LEARNINGS`
+- Cada eval corre en contexto limpio — sin reutilizar estado
+- Timeout de 5 minutos por eval; si supera → FAIL automático
+- Guarda outputs en `agents/eval_outputs/eval-NNN_v{version}_{fecha}.json`
+- Si infraestructura insuficiente → `PARTIAL` con razón `infraestructura_pendiente`
 
-**Contrato de entrada:**
-```json
-{
-  "eval_ids": ["eval-001", "eval-002"] | null,
-  "sistema_version": "string",
-  "modo": "full | grupo | single",
-  "grupo": "routing | contratos | reintentos | memoria | coordinacion | null",
-  "eval_id": "eval-NNN | null",
-  "requiere_flujo_completo": true | false | null
-}
-```
-
-**Contrato de salida:**
-```xml
-<eval_report>
-version: <sistema_version>
-date: <YYYY-MM-DD HH:MM:SS>
-total: <número de evals ejecutadas>
-pass: <número de PASS>
-fail: <número de FAIL>
-partial: <número de PARTIAL>
-score: <porcentaje de éxito, 0-100>
-critical_failures: <número de fallos críticos>
-report_file: <ruta del informe markdown generado>
-</eval_report>
-```
-
-**AUTONOMOUS_LEARNINGS:** No tiene sección propia.
+**AUTONOMOUS_LEARNINGS:** *(solo lectura)*
 
 ---
 
@@ -345,52 +174,21 @@ report_file: <ruta del informe markdown generado>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | skill_installer |
-| **Modelo** | Claude Haiku 4.5 |
-| **Temperatura** | 0.0 |
-| **Invocable por usuario** | no |
+| Modelo | Claude Haiku 4.5 |
+| Temperatura | 0.0 |
+| user-invocable | no |
 
-**Rol:** Detecta el stack del proyecto e instala/prepara los skills relevantes. Primera acción de cada sesión.
+**Rol:** Detecta el stack y construye el `skill_context`. Primera acción de cada sesión.
 
-**Cuándo se invoca:** Fase -1 del MODO COMPLETO. Primera acción de cada sesión, antes que cualquier otro agente.
+**Cuándo se invoca:** Fase -1, siempre antes de cualquier otro agente.
 
 **Reglas clave:**
-- Verifica el cache (`skills_cache.md`) antes de detectar el stack; si < 24h, usa cache
-- Detecta stack desde `.copilot/stack.md` o manifests (`pubspec.yaml`, `package.json`, etc.)
-- Si `autoskills` no está disponible, no falla: anota `autoskills: unavailable` y continúa
-- Nunca bloquea el flujo: si falla devuelve `status: SKIPPED` con `skill_context: null`
-- El `skill_context` se propaga como campo adicional del context a todos los agentes siguientes
+- Verifica cache en `skills_cache.md` (válido 24 horas)
+- Detecta stack desde `.copilot/stack.md`, luego manifests (`pubspec.yaml`, `package.json`, `requirements.txt`, `go.mod`)
+- Nunca bloquea el flujo — cualquier error devuelve `status: SKIPPED`
+- Registra `autoskills: unavailable` si la herramienta no está disponible
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "context": {
-    "workspace_root": "ruta raíz del proyecto",
-    "constraints": ["convenciones del proyecto"]
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | SKIPPED
-artifacts: ["skills_cache.md"]
-next_agent: researcher
-escalate_to: none
-skill_context: <objeto JSON con skills instalados, o null si falla>
-summary: <skills detectados + estado de cache>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -398,53 +196,21 @@ summary: <skills detectados + estado de cache>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | researcher |
-| **Modelo** | Claude Opus 4.6 |
-| **Temperatura** | 0.3 |
-| **Invocable por usuario** | no |
+| Modelo | Claude Opus 4.6 |
+| Temperatura | 0.3 |
+| user-invocable | no |
 
-**Rol:** Analiza el estado actual del módulo afectado y produce un research_brief con contexto, archivos relevantes y riesgos antes de que comience la implementación.
+**Rol:** Investigación de solo lectura. Mapea el módulo afectado y produce un `research_brief`.
 
-**Cuándo se invoca:** Fase 0a del MODO COMPLETO, cuando hay código existente afectado. También opcional en MODO CONSULTA si el orchestrator necesita contexto de lectura.
+**Cuándo se invoca:** Fase 0a del MODO COMPLETO, siempre que haya código existente afectado.
 
 **Reglas clave:**
-- Solo lectura — nunca crea, modifica ni elimina archivos
-- Mapea el módulo completo (todos los archivos que tocan la funcionalidad, no solo el obvio)
-- Detecta tests existentes; si no hay, marca `test_coverage_estimate: "ninguno"` como riesgo de severidad media
-- Identifica el patrón arquitectónico dominante del módulo
-- Si el riesgo es suficientemente alto, coloca `next_agent: analyst` en el informe
+- Solo lectura — nunca crea ni modifica archivos
+- Llama `retrieve_context` (k=5) vía MCP si `AGENTS_API_URL` disponible
+- Usa `read_file` del MCP filesystem server si disponible
+- Si riesgo alto → coloca `next_agent: analyst` en el informe
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "context": {
-    "files": ["archivos y módulos mencionados en el objetivo"],
-    "skill_context": { "...": "si fue provisto por skill_installer, opcional" },
-    "constraints": ["convenciones del proyecto"]
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: []
-next_agent: analyst (si aplica) | implementador
-escalate_to: human | none
-research_brief: <objeto JSON con el brief completo>
-summary: <módulo investigado + principal riesgo detectado>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -452,50 +218,22 @@ summary: <módulo investigado + principal riesgo detectado>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | dbmanager |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | por defecto |
+| user-invocable | no |
 
-**Rol:** Arquitecto de datos orientado a producción. Diseña, migra y protege el esquema con foco en rendimiento, concurrencia y escalabilidad.
+**Rol:** Arquitecto de datos. Diseña, migra y protege el esquema.
 
-**Cuándo se invoca:** Fase 1 del MODO COMPLETO, solo si la tarea requiere cambios estructurales de esquema (CREATE TABLE, ALTER TABLE, ADD/DROP COLUMN, nueva RLS policy, índice no trivial sobre columna nueva). No se invoca para consultas, bugfixes de lógica ni optimizaciones sin cambio de índices.
+**Cuándo se invoca:** Fase 1, solo cuando hay cambio estructural de esquema (CREATE TABLE, ALTER TABLE, nueva RLS, índice nuevo).
 
 **Reglas clave:**
-- Migraciones solo en `supabase/migrations/*.sql`, idempotentes y backward-compatible
-- RLS obligatoria con ENABLE ROW LEVEL SECURITY + policies basadas en `auth.uid()`
-- Prohibido `USING (true)` salvo caso público documentado
-- Estrategia de migrations: add → backfill → migrate → cleanup (nunca borrar columnas en caliente)
-- Índices solo si hay query concreta que los justifique; documentar motivo en SQL
-- Si falta información, escala a human antes de escribir SQL
+- Migraciones en `supabase/migrations/*.sql` — siempre idempotentes y backward-compatible
+- 3NF por defecto + RLS obligatoria con `ENABLE ROW LEVEL SECURITY`
+- Estrategia segura: `add → backfill → migrate → cleanup`
+- Nunca borrar columnas en caliente
+- PK: `id` (BIGINT o UUIDv4), FK con `ON DELETE` explícito, campos `created_at`/`updated_at`
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "retry_count": 0,
-  "context": {
-    "files": ["supabase/schema.sql", "archivos de migración relevantes"],
-    "previous_output": "output del orchestrator",
-    "constraints": ["convenciones del proyecto", "patrones de acceso esperados"]
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: <lista de archivos SQL creados/modificados>
-next_agent: backend | developer
-escalate_to: human | none
-summary: <entidades afectadas + tipo de cambio>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS:** No tiene sección documentada en el archivo.
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -503,56 +241,44 @@ summary: <entidades afectadas + tipo de cambio>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | tdd_enforcer |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | 0.0 |
-| **Invocable por usuario** | no |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | 0.0 |
+| user-invocable | no |
 
-**Rol:** Garantiza que los tests estén en RED antes de que el implementador escriba código de producción. Solo escribe tests, nunca producción.
+**Rol:** Guardián del TDD. Escribe tests que fallen (RED) antes de que el implementador actúe.
 
-**Cuándo se invoca:** Fase 2a del MODO COMPLETO, cuando aplica lógica nueva.
+**Cuándo se invoca:** Fase 2a, siempre que aplique lógica nueva.
 
 **Reglas clave:**
-- Solo escribe tests, nunca código de producción
-- Los tests deben compilar pero fallar en runtime (RED válido)
-- Cubre: happy path, al menos un caso de error, al menos una validación fallida
-- Si los tests ya existen en RED y son suficientes, certifícalos y pasa el relevo
-- Si los tests ya están en GREEN (funcionalidad ya implementada): ESCALATE → human
-- Usa el framework de tests del proyecto (no introduce nuevos sin declararlo)
+- Solo escribe tests — nunca toca código de producción
+- Tests deben compilar sin errores de sintaxis pero fallar en ejecución (RED válido)
+- Cubre: happy path + caso de error + validación fallida
+- Si tests ya están en GREEN → `status: ESCALATE` con `escalate_to: human`
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "context": {
-    "files": ["archivos relevantes del módulo a testear"],
-    "research_brief": { "...": "si fue provisto por researcher, opcional" },
-    "skill_context": { "...": "si fue provisto por skill_installer, opcional" },
-    "constraints": ["convenciones de tests del proyecto"]
-  }
-}
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: <lista de archivos de test creados/modificados>
-next_agent: backend | frontend | developer
-escalate_to: human | none
-tdd_status: RED
-test_output: <output literal del runner de tests mostrando los fallos>
-summary: <nº tests escritos + qué comportamientos cubren>
-</director_report>
-```
+---
 
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+#### developer
+
+| Campo | Valor |
+|---|---|
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | por defecto |
+| user-invocable | no |
+
+**Rol:** Implementador genérico. Hace pasar los tests de RED a GREEN.
+
+**Cuándo se invoca:** Fase 2, cuando la tarea no es específicamente frontend o backend puro.
+
+**Reglas clave:**
+- Lee el motivo de rechazo antes de modificar código en reintentos
+- No modifica tests — si parecen incorrectos, escala
+- Archivos nuevos en `lib/features/<feature>/` o `lib/shared/`
+- No introduce dependencias externas sin listarlas en el report
+- Escala a human tras dos iteraciones fallidas
+
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -560,64 +286,27 @@ summary: <nº tests escritos + qué comportamientos cubren>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | backend |
-| **Modelo** | haiku |
-| **Temperatura** | 0.0 |
-| **Invocable por usuario** | no |
+| Modelo | Haiku |
+| Temperatura | 0.0 |
+| user-invocable | no |
 
-**Rol:** Desarrollador backend. Implementa lógica de servidor de forma eficiente, limpia y robusta.
+**Rol:** Desarrollador backend. Implementa lógica de API, servicios y persistencia.
 
-**Cuándo se invoca:** Fase 2 del flujo cuando la tarea toca lógica de servidor, APIs o datos.
+**Cuándo se invoca:** Fase 2, en tareas de API / backend / lógica de servidor.
 
 **Reglas clave:**
-- Perímetro solo en workspace local; sin permisos git
-- Lee el motivo de rechazo antes de tocar código en reintentos
-- Cero cháchara: no explica, implementa directamente
-- No modifica tests; si un test parece incorrecto, reporta conflicto y escala
-- Corre `flutter analyze` (o linter equivalente) antes de entregar; corrige errores
-- No introduce dependencias externas sin listarlas en el `director_report`
-- Auto-aprendizaje vía campo `notes` con prefijo `APRENDIZAJE:`
+- Ejecuta análisis estático antes de entregar; si `sandbox-run.sh` disponible → `lint --json`, `exit_code=0`
+- Si `tdd_status: RED`: ejecuta `sandbox-run.sh tests --json` y deriva `test_status` del `exit_code`
+- Sin números ni cadenas mágicas — extrae constantes nombradas
+- Escala a human tras dos iteraciones fallidas
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "retry_count": 0,
-  "context": {
-    "files": ["archivos relevantes"],
-    "branch_name": "string",
-    "previous_output": "output del orchestrator o feedback del auditor",
-    "rejection_reason": "string (solo en reintentos)",
-    "constraints": ["convenciones del proyecto"],
-    "skill_context": { "...": "provisto por skill_installer, opcional" },
-    "research_brief": { "...": "provisto por researcher, opcional" },
-    "tdd_status": "RED (si viene de tdd_enforcer)",
-    "test_output": "output del runner de tests en RED, opcional"
-  }
-}
+**AUTONOMOUS_LEARNINGS (actuales):**
 ```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: <lista de rutas creadas/modificadas>
-next_agent: auditor ∥ qa ∥ red_team (Fase 3, paralelo)
-escalate_to: human | none
-summary: <1-2 líneas>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Validar input de búsqueda siempre con parámetros, nunca concatenar strings en queries dinámicas.
-- Paginación por cursor (`id > last_seen`) preferible a OFFSET en tablas grandes.
-- En PATCH de tarea con `usuarios_ids`, mantener validación estricta de membresía por proyecto y protegerla con test de regresión explícito para evitar reintroducir 400 por asignaciones inválidas.
-- Al mover una tarea fuera de `terminado`, recalcular `completada` desde la columna destino y no conservar el estado previo.
-- En transiciones `terminado`<->no `terminado`, centralizar una única regla de derivación (`completada = destino == terminado`) para evitar regresiones tras recarga.
+- Validar input de búsqueda con parámetros, nunca concatenar strings en queries dinámicas.
+- Paginación por cursor (id > last_seen) preferible a OFFSET en tablas grandes.
+- En PATCH de tarea con usuarios_ids, mantener validación estricta de membresía por proyecto.
+- Al mover una tarea fuera de `terminado`, recalcular `completada` desde la columna destino.
+- En transiciones terminado<->no-terminado, centralizar una única regla de derivación.
 ```
 
 ---
@@ -626,66 +315,22 @@ summary: <1-2 líneas>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | frontend |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | por defecto |
+| user-invocable | no |
 
-**Rol:** Especialista en UI. Implementa componentes, pantallas y flujos de usuario con foco en calidad visual y experiencia.
+**Rol:** Desarrollador frontend. Implementa componentes, pantallas y flujos de usuario.
 
-**Cuándo se invoca:** Fase 2 del flujo cuando la tarea toca UI, componentes visuales o flujos de usuario.
-
-**Reglas clave:**
-- Cero estilos inline; usa el sistema de estilos del proyecto
-- Accesibilidad no es opcional (ARIA, teclado, contraste)
-- No inventa lógica de negocio; si faltan datos o comportamiento, reporta el gap
-- Responsivo por defecto (mobile + desktop)
-- Componentes pequeños y reutilizables; preferred `shared/` si generalizable
-- No introduce dependencias externas sin listarlas en el `director_report`
-
-**Contrato de entrada/salida:** Igual a `backend` con campo adicional `branch_name` en context.
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Validar campos de texto largo con contador visual + validación de longitud para evitar overflow.
-- **Migración de SDKs externos:** Al reemplazar un SDK, mantener interface de AuthContext idéntica para no romper componentes consumidores.
-- **Magic strings de backend:** Verificar los valores reales del backend ANTES de implementar lógica condicional. Un typo causa bugs silenciosos.
-- **Optimistic updates en drag & drop:** Actualizar estado local inmediatamente con `setTasks(updated)` antes de llamar al backend. Guardar `oldTasks` para rollback.
-- **Constantes centralizadas:** Si hay >3 ocurrencias del mismo string literal, crear archivo de constantes.
-- **Edición de asignaciones de tarea:** UI solo debe permitir `usuarios_ids` que pertenezcan al proyecto activo.
-- **Compatibilidad de payloads:** Normalizar lectura de `usuarios_asignados` (objeto o id) y tipar el mapper frontend con el contrato real del backend.
-```
-
----
-
-#### developer
-
-| Campo | Valor |
-|---|---|
-| **Nombre** | developer |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
-
-**Rol:** Desarrollador generalista. Recibe tests en RED y los pasa a GREEN.
-
-**Cuándo se invoca:** Fase 2 cuando la tarea no es específicamente frontend ni backend, o como implementador directo en MODO RÁPIDO (Fase 2b).
+**Cuándo se invoca:** Fase 2, en tareas de UI/UX/componentes.
 
 **Reglas clave:**
-- El único objetivo es hacer que los tests pasen a GREEN
-- No modifica tests; si un test parece incorrecto, reporta y espera instrucciones
-- Si tras dos iteraciones los tests siguen fallando, escala a human
-- Sigue convenciones del proyecto: arquitectura existente, naming, patrones Riverpod
-- Auto-aprendizaje vía campo `notes` con prefijo `APRENDIZAJE:`
+- Cero estilos inline — usa el sistema de estilos del proyecto (Tailwind, CSS Modules, ThemeData)
+- Accesibilidad no es opcional: roles ARIA, teclado, contraste WCAG AA (ratio ≥4.5:1)
+- Responsivo por defecto — mobile y desktop
+- No inventa lógica de negocio — escala si la UI necesita datos no definidos
+- Componentes pequeños y reutilizables; si generalizable → `shared/` o `components/`
 
-**Contrato de entrada/salida:** Igual a `backend`.
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -693,66 +338,24 @@ summary: <1-2 líneas>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | auditor |
-| **Modelo** | sonnet |
-| **Temperatura** | 0.0 |
-| **Invocable por usuario** | no |
+| Modelo | Sonnet |
+| Temperatura | 0.0 |
+| user-invocable | no |
 
-**Rol:** Auditor de seguridad. Busca vulnerabilidades y antipatrones. Veredicto binario: APROBADO o RECHAZADO.
+**Rol:** Auditor de seguridad. Veredicto binario: APROBADO o RECHAZADO.
 
-**Cuándo se invoca:** Fase 3 en paralelo con `qa` y `red_team`.
+**Cuándo se invoca:** Fase 3, en paralelo con `qa` y `red_team`.
 
 **Reglas clave:**
-- Analiza todo el código entregado sin excepciones
-- Busca: SQL/NoSQL injection, XSS, fugas de memoria, secretos hardcodeados, RLS bypass, race conditions, dependencias vulnerables, bucles infinitos
-- Clasificación de severidad: Crítico / Alto / Medio
-- Cualquier fallo crítico = RECHAZADO con explicación técnica precisa (archivo, línea, riesgo, vector, corrección)
-- No opina sobre estilo ni preferencias de formato
-- Debe emitir `branch_name`, `verified_files`, `verified_digest` y `verification_cycle` en su report
+- Recomputa `verified_digest` de forma independiente (SHA-256 por archivo → concatenación alfabética → SHA-256 final)
+- Busca: inyección SQL/NoSQL, XSS, secretos hardcodeados, bypass de RLS, race conditions, dependencias vulnerables
+- Usa MCP filesystem (`read_file`) si disponible
+- Llama `log_agent_event` tras emitir veredicto (fire-and-forget)
+- No opina sobre estilo — solo seguridad y correctitud crítica
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "retry_count": 0,
-  "context": {
-    "files": ["archivos a auditar"],
-    "branch_name": "rama del ciclo propagada por el orchestrator",
-    "previous_output": "output del backend/frontend/developer con status SUCCESS",
-    "constraints": ["convenciones del proyecto"],
-    "skill_context": { "...": "opcional" }
-  }
-}
-```
+**Contrato de salida (sufijo `.audit`):** `veredicto` APROBADO|RECHAZADO, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`, `rejection_reason` si aplica.
 
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>.audit
-status: SUCCESS | REJECTED
-veredicto: APROBADO | RECHAZADO
-artifacts: <lista de hallazgos si rechazado>
-next_agent: orchestrator
-escalate_to: human | none
-verification_cycle: <task_id>.r<retry_count>
-branch_name: <rama del ciclo>
-verified_files: <lista de archivos auditados — excluye session_log.md>
-verified_digest: <hash del contenido exacto verificado>
-rejection_reason: <motivo si REJECTED>
-rejection_details: <estructura detallada si REJECTED>
-summary: <veredicto + nº hallazgos + severidades>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Endpoints de búsqueda sin parámetros preparados = vector de inyección SQL crítico.
-- RLS faltante en tablas consultadas públicamente = hallazgo automático de severidad Alta.
-- **Console.log en producción:** Búsqueda global de `console.log/error/warn` es obligatoria. Si hay +10 ocurrencias sin config de terser para eliminarlos en build, es hallazgo de severidad MEDIA.
-- **Error messages sin sanitizar:** Si `error.message` se renderiza en UI sin mapeo a mensajes genéricos, es hallazgo MEDIA. Stack traces exponen arquitectura interna.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -760,55 +363,23 @@ summary: <veredicto + nº hallazgos + severidades>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | qa |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | por defecto |
+| user-invocable | no |
 
-**Rol:** Verificación funcional. Comprueba que la implementación cumple el objetivo definido. Veredicto binario: CUMPLE o NO CUMPLE.
+**Rol:** QA funcional. Verifica que el código hace lo pedido. Veredicto: CUMPLE o NO CUMPLE.
 
-**Cuándo se invoca:** Fase 3 en paralelo con `auditor` y `red_team`.
+**Cuándo se invoca:** Fase 3, en paralelo con `auditor` y `red_team`.
 
 **Reglas clave:**
-- Solo funcionalidad; no busca vulnerabilidades de seguridad
-- Lee el `objective` del plan original antes de revisar código
-- Ejecuta tests automatizados si existen; establece `test_status: GREEN | FAILED | NOT_APPLICABLE`
-- Precondición: solo actúa si `previous_output` contiene `status: SUCCESS` del implementador
-- Debe emitir `branch_name`, `verified_files`, `verified_digest`, `test_status` y `verification_cycle`
+- Recomputa `verified_digest` de forma independiente (mismo algoritmo que auditor)
+- Solo actúa si `previous_output` contiene `status: SUCCESS` del implementador
+- Si `sandbox-run.sh` disponible → `tests --json`; deriva `test_status` del `exit_code`
+- `test_status` explícito: `GREEN` | `FAILED` | `NOT_APPLICABLE`
 
-**Contrato de entrada:** Similar a `auditor` con `branch_name` requerido.
+**Contrato de salida (sufijo `.qa`):** `veredicto` CUMPLE|NO CUMPLE, `test_status`, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`.
 
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>.qa
-status: SUCCESS | REJECTED | ESCALATE
-veredicto: CUMPLE | NO CUMPLE
-artifacts: none
-next_agent: orchestrator
-escalate_to: human | none
-verification_cycle: <task_id>.r<retry_count>
-branch_name: <rama del ciclo>
-verified_files: <lista de archivos verificados — excluye session_log.md>
-verified_digest: <hash del contenido exacto verificado>
-test_status: GREEN | FAILED | NOT_APPLICABLE
-summary: <veredicto + gaps funcionales>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Campos de texto sin límite en UI = gap funcional, debe rechazarse aunque backend valide.
-- Endpoint de búsqueda vacía debe devolver lista vacía, no error 500.
-- **Testing por prioridad:** Ante múltiples endpoints, verificar primero los críticos (login, register).
-- **Arquitectura frontend-backend:** Si frontend y backend usan stacks de autenticación diferentes, el sistema es 0% funcional. NO CUMPLE inmediato.
-- **Optimistic updates:** Verificar que el rollback en caso de error está implementado.
-- **Pass rate con fallos esperados:** Un 88.9% puede ser 100% funcional si el único fallo es comportamiento esperado. Analizar contexto.
-- En edición de tarea, agregar caso QA obligatorio: intentar asignar usuario fuera del proyecto debe estar bloqueado en UI.
-- Caso QA obligatorio en tablero: mover de `terminado` a otra columna + F5 debe dejar `completada=false` de forma persistente.
-- Validar matriz de permisos en transiciones `terminado`<->no `terminado`: viewer NO reabre, editor/owner SI.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -816,48 +387,23 @@ summary: <veredicto + gaps funcionales>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | red_team |
-| **Modelo** | GPT-5.4 |
-| **Temperatura** | 0.5 |
-| **Invocable por usuario** | no |
+| Modelo | GPT-5.4 |
+| Temperatura | 0.5 |
+| user-invocable | no |
 
-**Rol:** Atacante. Busca inputs maliciosos, edge cases y asunciones rotas. Veredicto binario: RESISTENTE o VULNERABLE.
+**Rol:** Atacante. Busca inputs maliciosos, edge cases y asunciones rotas. Veredicto: RESISTENTE o VULNERABLE.
 
-**Cuándo se invoca:** Fase 3 en paralelo con `auditor` y `qa`.
+**Cuándo se invoca:** Fase 3, en paralelo con `auditor` y `qa`.
 
 **Reglas clave:**
-- Nunca modifica código; es observador hostil puro
-- Busca: inputs maliciosos, edge cases de negocio, race conditions, asunciones rotas, privilege escalation
-- No repite el trabajo del auditor (no cubre OWASP clásico, solo lo referencia)
-- Verdicto VULNERABLE si al menos un hallazgo de severidad crítica o alta
-- Nunca habilita Fase 4 directamente; siempre devuelve al orchestrator
-- Debe emitir `branch_name`, `verified_files`, `verified_digest` y `verification_cycle`
+- Recomputa `verified_digest` de forma independiente (mismo algoritmo)
+- Nunca modifica código — solo ataca e informa
+- Busca: race conditions de negocio, bypass de validaciones, asunciones rotas, edge cases numéricos/vacíos/nulos
+- Report siempre al orchestrator — NUNCA habilita Fase 4 directamente
 
-**Contrato de entrada:** Similar a `auditor` con `branch_name` requerido en context.
+**Contrato de salida (sufijo `.redteam`):** `veredicto` RESISTENTE|VULNERABLE, `vulnerabilities`, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`.
 
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>.redteam
-status: SUCCESS | ESCALATE
-veredicto: RESISTENTE | VULNERABLE
-artifacts: []
-next_agent: orchestrator
-escalate_to: human | none
-verification_cycle: <task_id>.r<retry_count>
-branch_name: <rama del ciclo>
-verified_files: <lista de archivos atacados — excluye session_log.md>
-verified_digest: <hash del contenido exacto verificado>
-vulnerabilities: <lista de hallazgos si VULNERABLE, vacío si RESISTENTE>
-summary: <veredicto + nº vectores probados + hallazgos clave>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -865,59 +411,27 @@ summary: <veredicto + nº vectores probados + hallazgos clave>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | devops |
-| **Modelo** | Claude Sonnet 4.6 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
+| Modelo | Claude Sonnet 4.6 |
+| Temperatura | por defecto |
+| user-invocable | no |
 
-**Rol:** Único agente con permisos para tocar el repositorio. Hace el commit y el push.
+**Rol:** Responsable de despliegue y control de versiones. Único agente con permisos git.
 
-**Cuándo se invoca:** Fase 4, solo cuando se cumplen las cuatro condiciones: `auditor` APROBADO + `qa` CUMPLE + `red_team` RESISTENTE + `test_status` GREEN o NOT_APPLICABLE.
+**Cuándo se invoca:** Fase 4, solo con triple aprobación + `test_status GREEN/NOT_APPLICABLE` + `verified_digest` consensuado.
 
 **Reglas clave:**
-- Solo actúa con cuádruple condición verificada
-- Valida correlación interna del bundle: los tres veredictos deben ser del mismo ciclo (mismo `task_id`, `verification_cycle`, `verified_files`, `branch_name` y `verified_digest`)
-- Pre-validación: `context.files == context.verified_files` (igualdad exacta) antes de aceptar el bundle
-- Recalcula `verified_digest` sobre el working tree antes de ejecutar cualquier commit
-- Index binding: reconstruye staging limpio solo con `verified_files`, recomputa digest del snapshot stageado y lo compara contra `verified_digest`
-- Commits en formato Conventional Commits; incluye trailer Co-authored-by Copilot
-- Commits atómicos (un cambio lógico por commit)
-- Push a `context.branch_name` explícito; nunca asume `main`
+- Ejecuta VERIFICACIÓN DE BRANCH OBLIGATORIA como primera acción (5 pasos: `rev-parse`, `status --porcelain`, `log -1`, `ls-remote`, `pull --rebase`)
+- Valida igualdad exacta: `context.files == context.verified_files == bundle.verified_files`
+- Recalcula `verified_digest` sobre el working tree antes del commit
+- Staging limpio: `reset índice + git add` solo de archivos en `verified_files`
+- Conventional Commits + trailer `Co-authored-by: Copilot`
+- Tras push: `create_pull_request` con `task_id`, `verification_cycle`, `verified_digest`
+- Rechaza cualquier bundle de ciclo anterior (anti-replay)
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "string",
-  "context": {
-    "files": ["archivos a commitear — igualdad exacta con verified_files"],
-    "branch_name": "rama destino (requerido explícito)",
-    "verification_cycle": "identificador del ciclo actual",
-    "verified_files": ["lista exacta de archivos verificados"],
-    "verified_digest": "hash del contenido exacto verificado",
-    "eval_gate_status": "PASSED | SKIPPED_BY_AUTHORIZATION",
-    "previous_output": "bundle consolidado con los tres veredictos"
-  }
-}
+**AUTONOMOUS_LEARNINGS:**
 ```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | REJECTED | ESCALATE
-artifacts: <lista de commits realizados>
-next_agent: session_logger + memory_curator
-escalate_to: human | none
-summary: <nº commits + rama + estado del push>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Migraciones de DB deben incluirse en commit separado (tipo `feat(db):`) antes del commit de lógica.
-- Commits de features completas (DB+backend+frontend) deben dividirse en 3 commits atómicos con orden de dependencia.
+- Migraciones de DB deben ir en commit separado (feat(db):) antes del commit de lógica.
+- Commits de features completas (DB+backend+frontend) deben dividirse en 3 commits atómicos.
 ```
 
 ---
@@ -926,46 +440,20 @@ summary: <nº commits + rama + estado del push>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | session_logger |
-| **Modelo** | Claude Haiku 4.5 |
-| **Temperatura** | 0.0 |
-| **Invocable por usuario** | no |
+| Modelo | Claude Haiku 4.5 |
+| Temperatura | 0.0 |
+| user-invocable | no |
 
-**Rol:** Registra cada transición de agente en `session_log.md` con append-only. No bloquea el flujo si falla.
+**Rol:** Registrador append-only de transiciones en `session_log.md`.
 
-**Cuándo se invoca:** Tras cada transición relevante del orchestrator — especialmente después de Fase 2a, Fase 3, Fase 4 y siempre tras ESCALATE.
+**Cuándo se invoca:** Fase 5a, tras cada transición relevante + EVAL_TRIGGER + ESCALATION.
 
 **Reglas clave:**
-- Append-only estricto; nunca sobreescribe `session_log.md`
-- Cada entrada ocupa exactamente una línea
-- Si falla por cualquier motivo, devuelve `status: SKIPPED` y nunca propaga el error
-- `session_log.md` es audit_trail_artifact: no forma parte de `verified_files` ni del `verified_digest`
-- Para eventos EVAL_TRIGGER y ciclos de override: incluye `retry_count`, `verification_cycle`, `branch_name`, `verified_digest` y `eval_authorization_scope` en `notes`
-- Verifica consistencia `task_id` ↔ `verification_cycle`: el prefijo del ciclo debe coincidir con el `task_id` base
+- Append-only — nunca sobreescribe `session_log.md`
+- Formato: `[YYYY-MM-DD HH:MM] EVENT_TYPE | task: <id> | <from> → <to> | status: <s> | artifacts: [<lista>] | <notes>`
+- Si falla → `status: SKIPPED`, no propaga el error
 
-**Formato de entrada en el log:**
-```
-[YYYY-MM-DD HH:MM] <EVENT_TYPE> | task: <task_id> | <from_agent> → <to_agent> | status: <status> | artifacts: <lista> | <notes>
-```
-
-**Esquema canónico EVAL_TRIGGER:**
-```
-[YYYY-MM-DD HH:MM] EVAL_TRIGGER | task: <id> | orchestrator → eval_runner | status: APROBADO|REJECTED|SKIPPED | artifacts: [<ruta/exacta.agent.md>] | pre: XX% → post: YY% | verification_cycle: <task_id>.r<N> | retry_count: N [| escalado: human]
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | SKIPPED
-artifacts: ["session_log.md"]
-next_agent: none
-escalate_to: none
-summary: <entrada registrada en 1 línea>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS:** No tiene sección propia (no autoedita su `.agent.md`).
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
@@ -973,427 +461,494 @@ summary: <entrada registrada en 1 línea>
 
 | Campo | Valor |
 |---|---|
-| **Nombre** | memory_curator |
-| **Modelo** | GPT-5.4 |
-| **Temperatura** | no especificada |
-| **Invocable por usuario** | no |
+| Modelo | GPT-5.4 |
+| Temperatura | por defecto |
+| user-invocable | no |
 
-**Rol:** Extrae lecciones aprendidas y actualiza la memoria global. Agente terminal del flujo.
+**Rol:** Curador de memoria. Extrae lecciones y actualiza `memoria_global.md` y `AUTONOMOUS_LEARNINGS`.
 
-**Cuándo se invoca:** Modo parcial tras cada ciclo exitoso (post-devops). Modo completo al cierre de sesión.
+**Cuándo se invoca:** Fase 5b (parcial, post-devops) y al cierre de sesión (completo).
 
-**Reglas clave:**
-- Modo parcial: solo toca `AUTONOMOUS_LEARNINGS` de agentes participantes; NO toca `memoria_global.md`
-- Modo completo: consolida a `memoria_global.md`; cura notas de todos los agentes; elimina redundantes
-- Máximo 10 notas por agente en `AUTONOMOUS_LEARNINGS`; archiva las más antiguas si se excede
-- `memoria_global.md` mantiene orden cronológico inverso (más reciente primero)
-- Lee el historial completo antes de escribir (no repite entradas ya existentes)
-- Sé despiadadamente conciso
+**Modos:**
+- **Parcial:** Extrae lecciones del ciclo recién completado, escribe en `AUTONOMOUS_LEARNINGS`. Si agente supera 10 notas → archiva las más antiguas.
+- **Completo:** Lee historial completo y actualiza `memoria_global.md` con entradas `## [YYYY-MM-DD] <id>`.
 
-**Contrato de entrada:**
-```json
-{
-  "task_id": "string",
-  "objective": "curación parcial | curación completa",
-  "context": {
-    "files": ["memoria_global.md", "archivos .agent.md con AUTONOMOUS_LEARNINGS"],
-    "previous_output": "historial completo de la sesión",
-    "constraints": ["concisión", "no repetir entradas existentes"]
-  }
-}
-```
-
-**Contrato de salida:**
-```
-<director_report>
-task_id: <id>
-status: SUCCESS | ESCALATE
-artifacts: ["memoria_global.md", "agentes actualizados si aplica"]
-next_agent: none
-escalate_to: human | none
-summary: <nº entradas añadidas + nº agentes curados>
-</director_report>
-```
-
-**AUTONOMOUS_LEARNINGS actuales:**
-```
-## Notas operativas aprendidas
-- Sin notas curadas todavía.
-```
+**AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
 ---
 
 ## 4. Skills
 
-No se encontró carpeta `.github/skills/` en el repositorio. Las skills disponibles son las instaladas globalmente en `~/.agents/skills/` (gestionadas por `skill_installer`). El sistema detecta las skills del catálogo configurado en `config.json` y las instala via `autoskills`.
+Detectados automáticamente por `skill_installer` en Fase -1. Almacenados en `skills_cache.md`.
 
-Las rutas de skills activas en este workspace son las instaladas en `c:\Users\RBX\.agents\skills\` (inferido de la estructura de sesión). A continuación se documentan las skills que aparecen referenciadas en el sistema:
-
-| Skill | Descripción | Agentes que la usan |
+| Skill | Descripción | Stacks |
 |---|---|---|
-| `flutter-ui-ux` | Desarrollo Flutter UI/UX con animaciones y widgets | `frontend`, `developer` (stack Flutter) |
-| `supabase` | CLI de Supabase, migraciones, RLS, Edge Functions | `backend`, `dbmanager` (stack Supabase) |
-| `supabase-nextjs` | Next.js con Supabase y Drizzle ORM | `frontend`, `backend` (stack Next.js+Supabase) |
-| `i18n-expert` | Internacionalización y localización en React/TS | `frontend` |
-| `tonejs` | Síntesis de audio y música en el navegador | `developer` (si el proyecto usa audio) |
+| flutter-ui-ux | UI/UX Flutter con animaciones y responsive | Flutter/Dart |
+| supabase | CLI Supabase, migraciones, RLS, Edge Functions | cualquier + Supabase |
+| supabase-nextjs | Next.js con Supabase y Drizzle ORM | Next.js + Supabase |
+| i18n-expert | Internacionalización React/TS con i18next | React/TypeScript |
+| i18n-localization | Detección de strings hardcodeados, locales, RTL | multi-stack |
+| code-to-music | Generación de música con código (output .mp3) | Python/Node.js |
+| tonejs | Síntesis de audio en browser con Web Audio API | JavaScript |
+| find-skills | Descubrir e instalar skills disponibles | meta-skill |
+| lottie-animations | Animaciones After Effects en web/React | React/Next.js |
+| voice-note-to-midi | Convertir audio a MIDI con detección de pitch | Python |
+| agent-customization | Crear/editar archivos de customización VS Code | meta-skill |
 
 ---
 
 ## 5. Instruction files
 
-No se encontraron archivos de instrucciones en la carpeta `instructions/` (la carpeta existe pero está vacía). Existe un archivo de backup `instructions/basedatos.instructions.md.bak.20260319-124014` pero no se cargó como archivo activo.
+### global.instructions.md
+
+**Aplica a:** todos los agentes (`applyTo: "**"`)
+
+- Leer `agents/memoria_global.md` y `AUTONOMOUS_LEARNINGS` del propio agente antes de actuar
+- Leer `stack.md` del proyecto; si no existe, invocar `skill_installer`
+- Cerrar siempre con `<director_report>` completo — nunca omitir `next_agent`
+- 2 fallos en la misma tarea → `status: ESCALATE` con `escalate_to: human`
+- No ejecutar acciones fuera del rol propio
+
+---
+
+### readonly.instructions.md
+
+**Aplica a:** `eval_runner`, `auditor`, `qa`, `red_team`, `researcher`, `session_logger`
+
+- NO crear, modificar ni eliminar archivos de código ni contratos de agente
+- NO ejecutar comandos que escriban en disco (`>`, `tee`, `write`, etc.)
+- NO realizar ninguna operación git (`add`, `commit`, `push`, `pull`, `checkout`)
+- SÍ ejecutar comandos de lectura/verificación: `flutter test`, `flutter analyze`, `pytest`
+- Incumplimiento → `status: ESCALATE` con `escalate_to: human`
+
+---
+
+### git.instructions.md
+
+**Aplica a:** `devops` únicamente
+
+- `devops` es el único agente con permisos git
+- Triple aprobación requerida antes de cualquier operación git
+- Ejecutar VERIFICACIÓN DE BRANCH OBLIGATORIA como primera acción
+- Conventional Commits obligatorios con trailer `Co-authored-by: Copilot`
+- Push siempre a `context.branch_name` explícito — nunca asumir `main`
+- Incumplimiento → `status: REJECTED`
+
+---
+
+### stack-override.instructions.md
+
+**Aplica a:** todos los agentes (`applyTo: "**"`)
+
+- Si existe `.copilot/overrides.md` en el proyecto → leerlo antes de actuar
+- Override tiene precedencia en: convenciones de proyecto, build/test/lint, arquitectura
+- Excepción: `readonly.instructions.md` NO puede ser anulada por ningún override
+- Documentar en `summary` del `director_report` qué override se aplicó
+- Si no existe `.copilot/overrides.md` → continuar sin interrumpir
 
 ---
 
 ## 6. Prompt templates
 
-No se encontró carpeta `.github/prompts/` en el repositorio. No hay prompt templates configurados en este sistema.
+*(No se encontraron archivos en `.github/prompts/`. Sección omitida.)*
 
 ---
 
 ## 7. Validation scripts
 
-No se encontraron scripts en la carpeta `scripts/` (la carpeta existe pero está vacía). El archivo `scripts/Start-AutonomousWorkflow.ps1.bak.20260319-124015` es un backup de un script anterior y no está activo.
+### validate-agents.sh
+
+Verifica integridad estructural de cada `.agent.md` en `agents/`.
+
+```bash
+./scripts/validate-agents.sh [ruta/a/agents/]
+```
+
+Verifica: frontmatter con `name` y `description`, bloque `<director_report>`, sección `AUTONOMOUS_LEARNINGS`.
+Output: `OK <agente>` o `FAIL <agente> → <motivo>`. Exit 1 si hay algún FAIL.
+
+---
+
+### validate-stack.sh
+
+Detecta el stack del proyecto y crea `.copilot/stack.md` si no existe.
+
+```bash
+./scripts/validate-stack.sh [ruta/proyecto/]
+```
+
+Detecta: flutter, node, nextjs, react, python, fastapi, go, rust.
+Si ya existe `stack.md` → lo muestra sin sobreescribir.
+
+---
+
+### validate-memory.sh
+
+Valida el estado de la memoria en tres dimensiones.
+
+```bash
+./scripts/validate-memory.sh [ruta/agents/] [ruta/session_log.md]
+```
+
+- `[1/3] memoria_global.md` → OK | WARN (sin entradas) | FAIL (no existe)
+- `[2/3] AUTONOMOUS_LEARNINGS` → OK | WARN (supera 10) | INFO (0 notas)
+- `[3/3] session_log.md` → OK | WARN (supera 500 líneas — archivar)
+
+---
+
+### token-report.sh
+
+Estima el tamaño en tokens de cada `.agent.md` (chars / 4).
+
+```bash
+./scripts/token-report.sh [ruta/agents/]
+```
+
+Tabla: Agente | Tokens est. | Estado. WARN si supera 2000 tokens.
+
+---
+
+### run-tests.sh
+
+Ejecuta los tests detectando el stack automáticamente.
+
+```bash
+./scripts/run-tests.sh [PROJECT_ROOT] [--json]
+```
+
+Stacks: flutter, nextjs, node, python/pytest, go, rust.
+Con `--json`: `{success, exit_code, stdout, stderr, duration_s, stack}`.
+
+---
+
+### run-lint.sh
+
+Ejecuta el linter detectando el stack automáticamente.
+
+```bash
+./scripts/run-lint.sh [PROJECT_ROOT] [--json]
+```
+
+Stacks: flutter (`flutter analyze --no-fatal-infos`), python (`ruff check .`), go (`go vet`), rust (`cargo clippy`).
+
+---
+
+### sandbox-run.sh
+
+Orquesta tests/lint en un contenedor Docker aislado.
+
+```bash
+./scripts/sandbox-run.sh <project_root> <tests|lint> [--json]
+```
+
+Flags Docker: `--network none --cap-drop ALL --memory 512m --read-only --tmpfs /tmp`.
+Fallback a ejecución directa en host si Docker no está disponible.
+
+---
+
+### agent-metrics.sh
+
+Dashboard de métricas desde la API de observabilidad.
+
+```bash
+./scripts/agent-metrics.sh [--json] [--task <task_id>] [--agents]
+```
+
+- Sin flags → resumen global con tabla de éxito por agente
+- `--task <id>` → traza cronológica del ciclo
+- `--agents` → métricas detalladas por agente
+- `--json` → salida JSON directa de la API
+
+---
+
+### Dockerfile.sandbox
+
+Imagen multi-stack para ejecución aislada. Incluye: Python 3.11, Flutter 3.19.6, Node.js 20, ruff, pytest.
+
+```bash
+docker build -f scripts/Dockerfile.sandbox -t agents-sandbox:latest .
+```
+
+---
+
+### rag_indexer.py
+
+Indexa documentos en el vector store (pgvector/OpenAI).
+
+```bash
+python scripts/rag_indexer.py --all --api-url http://localhost:8000
+```
+
+Indexa: `memoria_global.md`, `session_log.md`, secciones `AUTONOMOUS_LEARNINGS` de todos los agentes.
 
 ---
 
 ## 8. MCP servers
 
-No se encontró archivo `.mcp.json` en el repositorio. No hay servidores MCP explícitamente configurados.
+Configuración en `.mcp.json` (versión 1.0):
 
-La API de utilidad disponible en `agents/api/` no es un servidor MCP — es un microservicio FastAPI con endpoints de salud y búsqueda:
+### filesystem
 
-| Endpoint | Descripción |
+| Campo | Valor |
 |---|---|
-| `GET /health` | Estado del servicio |
-| `GET /ping` | Verificar conectividad |
-| `GET /` | Información de la API |
-| `POST /products/search` | Búsqueda de productos (requiere Supabase configurado) |
+| Tipo | stdio |
+| Comando | `npx -y @modelcontextprotocol/server-filesystem ${workspaceFolder}` |
+| Agentes con acceso | researcher, auditor, backend, dbmanager, skill_installer |
 
-**Ejecución:**
-```bash
-# Activar entorno
-python -m venv venv && venv\Scripts\activate
-pip install -r requirements.txt
+Permite leer archivos del workspace sin depender de `context.files` manual.
+Herramientas: `read_file`, `write_file`, `list_directory`, `search_files`, `create_directory`, `move_file`, `get_file_info`.
 
-# Desarrollo
-python main.py
+---
 
-# Producción
-uvicorn main:app --host 0.0.0.0 --port 8000
+### github
+
+| Campo | Valor |
+|---|---|
+| Tipo | stdio |
+| Comando | `npx -y @modelcontextprotocol/server-github` |
+| Env requerida | `GITHUB_TOKEN` |
+| Agentes con acceso | devops |
+
+Para crear PRs automáticamente tras push. Descripción del PR incluye `task_id`, `verification_cycle`, `verified_digest`.
+
+---
+
+### postgres
+
+| Campo | Valor |
+|---|---|
+| Tipo | stdio |
+| Comando | `npx -y @modelcontextprotocol/server-postgres ${env:SUPABASE_DB_URL}` |
+| Env requerida | `SUPABASE_DB_URL` |
+| Agentes con acceso | dbmanager, backend |
+
+Queries directas y migraciones contra Supabase/Postgres sin pasar por la API REST.
+
+---
+
+### agents-api
+
+| Campo | Valor |
+|---|---|
+| Tipo | http |
+| URL | `${env:AGENTS_API_URL:-http://localhost:8000}` |
+| Env requerida | `AGENTS_API_KEY` |
+| Agentes con acceso | orchestrator, researcher, auditor |
+
+Herramientas: `health_check`, `embed_document`, `retrieve_context` (RAG k=5), `log_agent_event`, `search_products`.
+
+---
+
+### Override de MCP por proyecto
+
+Crear `.copilot/overrides.md` en la raíz del proyecto:
+
+```markdown
+## MCP Override
+
+- agents-api.url: http://mi-servidor:9000
+- filesystem.root: /ruta/custom
 ```
 
-**Variables de entorno requeridas:**
-- `SUPABASE_URL` — URL del proyecto Supabase
-- `SUPABASE_KEY` — Clave anon o service role
+Las restricciones de `readonly.instructions.md` no pueden ser anuladas por overrides.
 
 ---
 
 ## 9. Sistema de memoria
 
-### Ciclo completo de memoria
+### Ciclo completo
 
 ```
-1. LECTURA (antes de actuar)
-   Cada agente lee memoria_global.md y su propia sección
-   AUTONOMOUS_LEARNINGS antes de planificar, implementar o
-   verificar. Esto evita repetir errores documentados.
+1. LECTURA (inicio de cada agente)
+   └─► Lee memoria_global.md + AUTONOMOUS_LEARNINGS propio
 
-2. ESCRITURA DURANTE EJECUCIÓN (campo notes)
-   Los agentes escriben aprendizajes con prefijo APRENDIZAJE:
-   en el campo notes de su director_report. No autoeditan
-   sus archivos .agent.md.
+2. ESCRITURA durante ciclo
+   └─► session_logger → session_log.md (append-only)
 
-3. CURACIÓN PARCIAL (tras cada ciclo exitoso, post-devops)
-   memory_curator modo parcial:
-   - Extrae los notes con APRENDIZAJE: del historial del ciclo
-   - Los añade a AUTONOMOUS_LEARNINGS de los agentes
-     que participaron en el ciclo
-   - NO toca memoria_global.md
+3. CURACIÓN PARCIAL (Fase 5b, post-devops)
+   └─► memory_curator extrae lecciones del ciclo → AUTONOMOUS_LEARNINGS
+       Si agente supera 10 notas → archiva las más antiguas
 
-4. CURACIÓN COMPLETA (al cierre de sesión)
-   memory_curator modo completo:
-   - Lee historial completo de la sesión
-   - Consolida entradas nuevas en memoria_global.md
-   - Promueve notas genéricas de AUTONOMOUS_LEARNINGS a
-     memoria_global.md
-   - Elimina notas redundantes o incorrectas
-   - Mantiene máximo 10 notas por agente
+4. CURACIÓN COMPLETA (cierre de sesión)
+   └─► memory_curator lee historial completo → actualiza memoria_global.md
 ```
 
-### Estructura de `memoria_global.md`
+### Estructura de memoria_global.md
 
 ```markdown
----
-user-invocable: false
----
-# Memoria Global del Sistema de Agentes
+## [YYYY-MM-DD] <id-del-ciclo> — Descripción corta
 
-Historial de lecciones aprendidas durante sesiones de trabajo.
-Consulta este archivo antes de cada implementación para evitar
-errores conocidos y respetar convenciones establecidas.
-
----
-
-## [YYYY-MM-DD] task_id — Título del ciclo
-
-**Agentes:** <lista de agentes que participaron>
-
-### Buenas prácticas
-- ...
-
-### Errores a evitar
-- ...
+**Agentes:** <lista>
+### Problema detectado / Causa raíz / Fix aplicado / Resultado
+### Antipatrón (a evitar) / Patrón correcto
 ```
 
-### Estructura de `AUTONOMOUS_LEARNINGS` en cada agente
+### Límites del sistema
 
-```markdown
-<!-- AUTONOMOUS_LEARNINGS_START -->
-## Notas operativas aprendidas
-- <bullet conciso de la lección aprendida>
-- <otro bullet>
-<!-- AUTONOMOUS_LEARNINGS_END -->
+| Recurso | Límite | Acción si se supera |
+|---|---|---|
+| AUTONOMOUS_LEARNINGS por agente | 10 notas | memory_curator archiva las más antiguas |
+| session_log.md | 500 líneas | validate-memory.sh emite WARN — archivar manualmente |
+
+### Últimas 5 entradas de memoria_global.md
+
 ```
-
-### Límites del sistema de memoria
-
-| Límite | Valor |
-|---|---|
-| Máximo notas por agente en AUTONOMOUS_LEARNINGS | 10 |
-| Líneas máximas recomendadas para session_log.md | ~500 (inferido de la práctica) |
-| session_log.md como artefacto | audit_trail_artifact — excluido de verified_files y verified_digest |
-
-### Últimas 5 entradas de `memoria_global.md`
-
-```markdown
-## [2026-04-07] routing-fix-v1.0.1 — Reglas de routing para dbmanager
-
-**Agentes:** orchestrator (corregido)
-
-### Fix aplicado
-[...]
-Score grupo Routing: 60% → 100%
-Score general: 80% → 93%
-
----
-
-## [2026-04-07] ciclo3-bio-perfil — Campo bio en perfil de usuario
-
-**Agentes:** dbmanager, backend, frontend, auditor, qa, devops
-
-### Buenas prácticas
-- Flujo completo DB→Backend→UI funciona sin fricción cuando la migración precede a la lógica.
-- Campo de texto largo requiere validación a tres niveles: DB (CHECK length), backend (max chars), frontend (contador visual).
-- Migración idempotente con backward compatibility: agregar columna nullable primero.
-
----
-
-## [2026-04-07] ciclo2-busqueda-endpoint — Endpoint de búsqueda
-
-**Agentes:** dbmanager, backend, auditor, qa, devops
-
-### Buenas prácticas
-- Índice de búsqueda full-text debe preceder al endpoint.
-- Paginación por cursor > OFFSET en tablas con crecimiento esperado.
-- RLS obligatoria en tablas consultadas.
-
----
-
-## [2026-04-07] ciclo1-color-boton — Cambio de color en botón primario
-
-**Agentes:** frontend, auditor, qa, devops
-
-### Buenas prácticas
-- Cambios cosméticos simples aprobables en un solo ciclo cuando respetan sistema de diseño.
-- Verificación de contraste WCAG AA obligatoria antes de entregar a auditor (ratio ≥4.5:1).
-
----
-
-## [2026-04-07] NetTask — Migración de autenticación y bugfixes
-
-**Agentes:** frontend, qa, auditor, memory_curator
-
-### Hallazgo 1: Migración Django Auth
-- Frontend reescrito de Supabase Auth SDK a Django endpoints directos.
-- Arquitectura resultante: UI → AuthContext → axios POST /api/auth/login → Django → JWT.
+[2026-04-07] routing-fix-v1.0.1 — Score Routing: 60% → 100%. Fix: reglas explícitas para dbmanager.
+[2026-04-07] ciclo3-bio-perfil — Flujo DB→Backend→UI. Migración precede a implementación de lógica.
+[2026-04-07] ciclo2-busqueda-endpoint — Índice GiST/GIN antes del endpoint. Cursor-pagination > OFFSET.
+[2026-04-07] ciclo1-color-boton — Verificación WCAG AA obligatoria antes de entregar a auditor.
+[2026-04-07] NetTask — Migración Django Auth + bugfix tachado de tareas + auditoría post-migración.
 ```
 
 ---
 
 ## 10. Session log
 
-### Formato de cada entrada
+### Formato de entrada
 
 ```
-[YYYY-MM-DD HH:MM] <EVENT_TYPE> | task: <task_id> | <from_agent> → <to_agent> | status: <status> | artifacts: <lista> | <notes>
+[YYYY-MM-DD HH:MM] EVENT_TYPE | task: <task_id> | <from> → <to> | status: <s> | artifacts: [<lista>] | <notes>
 ```
 
-**Tipos de evento:**
-- `AGENT_TRANSITION` — cambio de agente en el flujo
-- `EVAL_TRIGGER` — activación o bypass del gate de evals
-- `PHASE_COMPLETE` — fase completada
-- `ERROR` — error ocurrido
-- `ESCALATION` — escalación a human o override de usuario
+EVENT_TYPE: `AGENT_TRANSITION` | `EVAL_TRIGGER` | `PHASE_COMPLETE` | `ERROR` | `ESCALATION`
+`session_log.md` es `audit_trail_artifact` — excluido de `verified_files` y del digest.
 
-### Cuándo se archiva
+### Cuándo archivar
 
-`session_log.md` es un artefacto append-only. No se archiva ni se rota automáticamente. Se recomienda archivar manualmente cuando supera ~500 líneas. No forma parte de `verified_files` ni contribuye al `verified_digest` de ningún ciclo.
+Cuando `validate-memory.sh` detecta > 500 líneas: renombrar a `session_log_YYYY-MM-DD.md` y crear nuevo.
 
-### Últimas 10 entradas del `session_log.md` actual
+### Últimas 10 entradas del session_log.md actual
 
 ```
-[2026-04-09 10:03] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | artifacts: [agents/orchestrator.agent.md, agents/auditor.agent.md, agents/developer.agent.md, agents/devops.agent.md, agents/session_logger.agent.md, agents/red_team.agent.md, agents/backend.agent.md, agents/frontend.agent.md, agents/qa.agent.md, agents/skill_installer.agent.md, agents/researcher.agent.md, agents/tdd_enforcer.agent.md] | APROBAR_SIN_EVAL — autorización explícita del usuario por falta de infraestructura baseline | retry_count: 4 | verification_cycle: delta-v2.1.r4
-
-[2026-04-09 10:58] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | artifacts: [agents/red_team.agent.md, agents/auditor.agent.md, agents/qa.agent.md, agents/devops.agent.md, agents/orchestrator.agent.md, agents/session_logger.agent.md, session_log.md] | verification_cycle: delta-v2.1.r4 | retry_count: 4 | Pase 5: verification_cycle + verified_files añadidos a contratos Fase 3
-
-[2026-04-09 11:00] ESCALATION | task: delta-v2.1 | user → orchestrator | status: OVERRIDE | artifacts: [] | instrucción explícita del usuario ("intentalo") tras ciclo con retry_count: 4; nuevo ciclo supervisado abierto con retry_count_reset: 4→0; verification_cycle: delta-v2.1.override1.r0
-
-[2026-04-09 11:05] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | artifacts: [agents/qa.agent.md, agents/devops.agent.md, agents/orchestrator.agent.md, agents/session_logger.agent.md, session_log.md] | verification_cycle: delta-v2.1.override1.r0 | retry_count: 0 | Pase 6: test_status estructurado + bundle binding estricto en devops
-
-[2026-04-09 11:25] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | artifacts: [agents/orchestrator.agent.md, agents/auditor.agent.md, agents/qa.agent.md, agents/red_team.agent.md, agents/devops.agent.md, agents/session_logger.agent.md, session_log.md] | APROBAR_SIN_EVAL — autorización explícita del usuario | verification_cycle: delta-v2.1.override2.r0 | retry_count: 0 | eval_gate_status: SKIPPED_BY_AUTHORIZATION
-
-[2026-04-09 11:30] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | artifacts: [agents/orchestrator.agent.md, agents/auditor.agent.md, agents/qa.agent.md, agents/red_team.agent.md, agents/devops.agent.md, agents/session_logger.agent.md, session_log.md] | verification_cycle: delta-v2.1.override2.r0 | retry_count: 0 | branch_name: main | Pase 7: verification_cycle único no reutilizable + campo verified_digest en contratos Fase 3
-
-[2026-04-09 11:35] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | agents/orchestrator.agent.md, ... | APROBAR_SIN_EVAL — autorización explícita | verification_cycle: delta-v2.1.override2.r1 | retry_count: 1 | eval_gate_status: SKIPPED_BY_AUTHORIZATION
-
-[2026-04-09 11:40] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | ... | verification_cycle: delta-v2.1.override2.r1 | branch_name: main | verified_digest: 781757fe... | Pase 8: context.files==verified_files==bundle; verified_digest recalculado sobre working tree
-
-[2026-04-09 12:15] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | artifacts: [agents/orchestrator.agent.md, agents/devops.agent.md, agents/auditor.agent.md, agents/qa.agent.md, agents/red_team.agent.md, agents/session_logger.agent.md] | APROBAR_SIN_EVAL — autorización explícita del usuario | verification_cycle: delta-v2.1.override4.r0 | retry_count: 0 | eval_gate_status: SKIPPED_BY_AUTHORIZATION | eval_authorization_scope: { task_id: delta-v2.1, verification_cycle: delta-v2.1.override4.r0, branch_name: main, verified_digest: ee3b5c50... }
-
-[2026-04-09 12:20] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | artifacts: [agents/orchestrator.agent.md, agents/devops.agent.md, agents/auditor.agent.md, agents/qa.agent.md, agents/red_team.agent.md, agents/session_logger.agent.md] | verification_cycle: delta-v2.1.override4.r0 | branch_name: main | verified_digest: ee3b5c505331241a0de9ce1aaae16b037952b4a0291949d1f3d1b93a2500ca78 | Pase 11: verified_digest consenso exigido entre los tres reports; session_log.md declarado audit_trail_artifact
+[2026-04-09 10:03] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | APROBAR_SIN_EVAL | verification_cycle: delta-v2.1.r4
+[2026-04-09 10:58] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | verification_cycle: delta-v2.1.r4 | Pase 5
+[2026-04-09 11:00] ESCALATION | task: delta-v2.1 | user → orchestrator | status: OVERRIDE | retry_count_reset: 4→0 | verification_cycle: delta-v2.1.override1.r0
+[2026-04-09 11:05] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | verification_cycle: delta-v2.1.override1.r0 | Pase 6
+[2026-04-09 11:25] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | APROBAR_SIN_EVAL | verification_cycle: delta-v2.1.override2.r0
+[2026-04-09 11:30] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | verification_cycle: delta-v2.1.override2.r0 | Pase 7
+[2026-04-09 11:35] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | verification_cycle: delta-v2.1.override2.r1
+[2026-04-09 11:40] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | verified_digest: 781757fe... | Pase 8: index binding
+[2026-04-09 11:50] EVAL_TRIGGER | task: delta-v2.1 | orchestrator → eval_runner | status: SKIPPED | verification_cycle: delta-v2.1.override3.r0
+[2026-04-09 12:20] AGENT_TRANSITION | task: delta-v2.1 | developer → auditor ∥ qa ∥ red_team | status: SUCCESS | verified_digest: ee3b5c50... | Pase 11: verdified_digest consenso exigido
 ```
 
 ---
 
 ## 11. Arquitectura de archivos
 
-### Árbol del repositorio `.copilot`
-
 ```
-.copilot/                              ← Raíz del sistema de agentes
-├── .git/                              ← Repositorio git del sistema
-├── .gitignore                         ← Excluye artefactos locales de VS Code
-├── config.json                        ← Configuración global (usuario, effortLevel, etc.)
-├── command-history-state.json         ← Estado interno del historial de comandos
-├── session_log.md                     ← Audit trail append-only de todas las transiciones
-├── SISTEMA_COMPLETO.md                ← Este documento
-│
-├── agents/                            ← Contratos de todos los agentes del sistema
-│   ├── orchestrator.agent.md          ← Director: planifica y coordina todo
-│   ├── analyst.agent.md               ← Análisis estratégico y detección de features (Fase 0)
-│   ├── researcher.agent.md            ← Investigación de código existente (Fase 0a)
-│   ├── skill_installer.agent.md       ← Instalación de skills del stack (Fase -1)
-│   ├── tdd_enforcer.agent.md          ← Tests en RED antes de implementar (Fase 2a)
-│   ├── backend.agent.md               ← Implementador backend (Fase 2)
-│   ├── frontend.agent.md              ← Implementador frontend (Fase 2)
-│   ├── developer.agent.md             ← Implementador generalista (Fase 2/2b)
-│   ├── dbmanager.agent.md             ← Arquitecto de datos (Fase 1)
-│   ├── auditor.agent.md               ← Auditor de seguridad (Fase 3, paralelo)
-│   ├── qa.agent.md                    ← Verificación funcional (Fase 3, paralelo)
-│   ├── red_team.agent.md              ← Atacante: edge cases y race conditions (Fase 3, paralelo)
-│   ├── devops.agent.md                ← Commit y push (Fase 4)
-│   ├── session_logger.agent.md        ← Registro append-only (Fase 5)
-│   ├── memory_curator.agent.md        ← Curación de memoria (Fase 5 / cierre)
-│   ├── eval_runner.agent.md           ← Evaluación automática del sistema
-│   ├── memoria_global.md              ← Memoria compartida de lecciones aprendidas
-│   │
-│   ├── evals/                         ← Catálogo y plantillas de evaluación
-│   │   ├── eval_catalog.md            ← 20 evals de referencia (5 grupos)
-│   │   └── eval_report_template.md    ← Plantilla para informes de eval
-│   │
-│   ├── eval_outputs/                  ← Resultados de evals ejecutadas
-│   │   ├── .gitkeep
-│   │   ├── baseline_attempt_aca11a4_20260409_095901.json
-│   │   └── eval_report_aca11a4_20260409_095901.md
-│   │
-│   ├── api/                           ← Microservicio FastAPI de utilidad
-│   │   ├── main.py                    ← Endpoints: /health, /ping, /products/search
-│   │   ├── README.md
-│   │   ├── requirements.txt           ← fastapi, uvicorn, supabase, pydantic, python-dotenv
-│   │   ├── .env.example
-│   │   ├── models/                    ← Modelos Pydantic
-│   │   └── repositories/             ← Patrón Repository sobre Supabase
-│   │
-│   └── lib/                           ← Librería Dart de referencia
-│       └── service.dart
-│
-├── instructions/                      ← Instruction files (.instructions.md) — actualmente vacía
-├── scripts/                           ← Scripts de automatización — actualmente vacío
-├── logs/                              ← Logs del sistema
-├── restart/                           ← Artefactos de reinicio
-├── runs/                              ← Historial de ejecuciones
-├── ide/                               ← Configuración específica del IDE
-└── session-state/                     ← Estado de sesiones del orquestador
-    └── <uuid>/                        ← Una carpeta por sesión
-        ├── events.jsonl
-        ├── vscode.metadata.json
-        ├── workspace.yaml
-        ├── checkpoints/
-        ├── files/
-        └── research/
+.copilot/
+├── .github/
+│   ├── copilot-instructions.md         Instrucciones de stack para GitHub Copilot
+│   └── workflows/
+│       ├── ci.yml                       Pipeline CI (python, flutter, security, validate-agents)
+│       └── rollback.yml                 Auto-revert en fallos de CI en main
+├── .mcp.json                            Configuración de 4 servidores MCP
+├── agents/
+│   ├── analyst.agent.md
+│   ├── auditor.agent.md
+│   ├── backend.agent.md
+│   ├── dbmanager.agent.md
+│   ├── developer.agent.md
+│   ├── devops.agent.md
+│   ├── eval_runner.agent.md
+│   ├── frontend.agent.md
+│   ├── memoria_global.md               Memoria compartida persistente
+│   ├── memory_curator.agent.md
+│   ├── orchestrator.agent.md
+│   ├── qa.agent.md
+│   ├── red_team.agent.md
+│   ├── researcher.agent.md
+│   ├── session_logger.agent.md
+│   ├── skill_installer.agent.md
+│   ├── tdd_enforcer.agent.md
+│   ├── api/
+│   │   ├── main.py                      FastAPI app v3.0.0
+│   │   ├── mcp_tools.py                 MCP tools layer (5 herramientas)
+│   │   ├── observability.py             Logging JSON + /metrics endpoints
+│   │   ├── requirements.txt
+│   │   └── migrations/
+│   │       └── 20260409_001_rag_memory_vectors.sql
+│   ├── evals/
+│   │   ├── eval_catalog.md              20 evaluaciones de referencia
+│   │   └── eval_report_template.md
+│   └── eval_outputs/                    Outputs de evals anteriores
+├── instructions/
+│   ├── git.instructions.md
+│   ├── global.instructions.md
+│   ├── readonly.instructions.md
+│   └── stack-override.instructions.md
+├── scripts/
+│   ├── agent-metrics.sh
+│   ├── Dockerfile.sandbox
+│   ├── rag_indexer.py
+│   ├── run-lint.sh
+│   ├── run-tests.sh
+│   ├── sandbox-run.sh
+│   ├── token-report.sh
+│   ├── validate-agents.sh
+│   ├── validate-memory.sh
+│   └── validate-stack.sh
+├── config.json
+├── session_log.md                       Audit trail append-only
+└── SISTEMA_COMPLETO.md                  Este archivo
 ```
 
-### Árbol `.copilot` recomendado por proyecto
+**Estructura en cada proyecto gestionado:**
 
-Cada proyecto que use este sistema debe tener:
 ```
 <proyecto>/
-└── .copilot/
-    ├── stack.md          ← Stack del proyecto (detectado por skill_installer)
-    ├── overrides.md      ← Overrides MCP o configuración específica del proyecto
-    └── skills_cache.md   ← Cache de skills instalados (generado por skill_installer, TTL 24h)
+├── .copilot/
+│   ├── stack.md          Stack detectado + comandos de test y lint
+│   └── overrides.md      (opcional) Override de instrucciones globales
+└── skills_cache.md       (generado por skill_installer, con timestamp 24h)
 ```
 
 ---
 
 ## 12. Eval system
 
-### Estado actual (último informe disponible)
+### Estado actual
 
-El único informe ejecutado hasta la fecha (`eval_report_aca11a4_20260409_095901.md`) es un **baseline fallido** — no existe infraestructura automatizada para correr evals end-to-end.
+Último reporte: `baseline_attempt_aca11a4_20260409_095901` → `status: ESCALATE`
+Score: N/A. Evals correctas ejecutadas: **0/20**.
+Motivo: sin infraestructura de runner end-to-end.
 
-| Sección | Estado | Motivo |
-|---|---|---|
-| Routing | NOT_EXECUTED | Sin invocación real al orchestrator |
-| Contratos | NOT_EXECUTED | Sin outputs reales de agentes |
-| Reintentos | NOT_EXECUTED | Sin runner que encadene rechazos y retry_count |
-| Memoria | NOT_EXECUTED | Sin ciclos reales para observar curación |
-| Coordinación | NOT_EXECUTED | Sin infraestructura para paralelos |
+### Catálogo de 20 evaluaciones
 
-**Score general:** N/A (0/20 evals ejecutadas)
-
-### Catálogo de evals (20 evals en 5 grupos)
-
-| Eval | Grupo | Descripción | Peso |
+| ID | Grupo | Descripción | Peso |
 |---|---|---|---|
-| eval-001 | Routing | Tarea solo UI — dbmanager omitido | alto |
-| eval-002 | Routing | Tarea solo backend — dbmanager y frontend omitidos | alto |
-| eval-003 | Routing | Tarea con esquema — dbmanager invocado antes de backend | alto |
-| eval-004 | Routing | Tarea ambigua — analyst invocado primero | medio |
-| eval-005 | Routing | Tarea de bugfix — dbmanager nunca invocado | alto |
-| eval-006 | Contratos | Formato de director_report con campos obligatorios | alto |
-| eval-007 | Contratos | Sufijos `.audit` y `.qa` en Fase 3 paralela | alto |
-| eval-008 | Contratos | Rechazo estructurado de auditor con rejection_details | crítico |
-| eval-009 | Contratos | Rechazo estructurado de qa con missing_cases | crítico |
-| eval-010 | Reintentos | Reintento con previous_output y rejection_reason completos | alto |
-| eval-011 | Reintentos | Escalación a human tras 2 rechazos consecutivos | crítico |
-| eval-012 | Reintentos | devops rechaza sin los tres veredictos | crítico |
-| eval-013 | Memoria | Curación parcial post-devops invocada y correcta | medio |
-| eval-014 | Memoria | Curación completa al cierre con entradas en memoria_global | medio |
-| eval-015 | Memoria | Agentes leen memoria antes de actuar | alto |
-| eval-016 | Coordinación | Orchestrator NO avanza con solo un veredicto | crítico |
-| eval-017 | Coordinación | Orchestrator SÍ avanza con triple aprobación | alto |
-| eval-018 | Coordinación | (no documentada en el extracto disponible) | — |
-| eval-019 | Coordinación | (no documentada en el extracto disponible) | — |
-| eval-020 | Coordinación | (no documentada en el extracto disponible) | — |
+| eval-001 | routing | Tarea solo UI → solo frontend, sin dbmanager | alto |
+| eval-002 | routing | Tarea solo backend → backend, sin dbmanager ni frontend | alto |
+| eval-003 | routing | Tarea con cambio de esquema → dbmanager antes de backend | alto |
+| eval-004 | routing | Tarea ambigua → analyst en Fase 0 | medio |
+| eval-005 | routing | Bugfix → developer/backend, nunca dbmanager | alto |
+| eval-006 | contratos | Formato director_report: campos obligatorios correctos | alto |
+| eval-007 | contratos | Sufijos en paralelo: .audit, .qa, .redteam correctos | alto |
+| eval-008 | contratos | Rechazo estructurado de auditor con archivo/línea/vector/sugerencia | alto |
+| eval-009 | contratos | Rechazo estructurado de qa con missing_cases detallados | alto |
+| eval-010 | reintentos | Reintento enriquecido: previous_output adjunto + corrección precisa | alto |
+| eval-011 | reintentos | Escalación correcta: status ESCALATE tras 2 reintentos | alto |
+| eval-012 | reintentos | devops rechaza sin triple aprobación (solo auditor) | alto |
+| eval-013 | memoria | Curación parcial post-devops escribe en AUTONOMOUS_LEARNINGS | medio |
+| eval-014 | memoria | Curación completa al cierre actualiza memoria_global.md | medio |
+| eval-015 | memoria | Agente lee memoria antes de actuar (log visible en output) | medio |
+| eval-016 | coordinación | orchestrator espera los tres veredictos (no avanza con dos) | alto |
+| eval-017 | coordinación | orchestrator avanza solo con triple aprobación (no con doble) | alto |
+| eval-018 | coordinación | Rechazo de auditor con qa y red_team pendientes → orchestrator no avanza | alto |
+| eval-019 | coordinación | task_id correcto end-to-end en los tres agentes del paralelo | alto |
+| eval-020 | coordinación | Timeout de un agente en el triple paralelo → orchestrator espera o escala | medio |
 
-### Pendientes y próximos pasos
+### Estado por eval (baseline)
 
-1. **Construir runner end-to-end** que permita invocar agentes y capturar `director_report`
-2. **Ejecutar eval-001 a eval-017** para obtener el primer PRE_CHANGE_SCORE válido
-3. **Resolver los 2 hallazgos estructurales abiertos** (ver sección 13)
-4. **Hacer commit** de todos los cambios acumulados en el working tree
+Todos: `NOT_EXECUTED` — sin runner end-to-end instalado.
+
+### Próximos pasos
+
+- Implementar runner que invoque agentes reales en secuencia con fixtures de inputs
+- Validador de outputs vs `Expected` para cada eval
+- Establecer score baseline real antes de aplicar mejoras
+- CI: ejecutar `modo: grupo` (routing + contratos) en cada PR
 
 ---
 
@@ -1401,42 +956,68 @@ El único informe ejecutado hasta la fecha (`eval_report_aca11a4_20260409_095901
 
 | Versión | Fecha | Cambios principales |
 |---|---|---|
-| v1.0 | 2026-04-07 | Sistema base: orchestrator, analyst, backend, frontend, developer, dbmanager, auditor, qa, devops, memory_curator, eval_runner |
-| v1.0.1 | 2026-04-07 | Fix routing-fix-v1.0.1: reglas explícitas de cuándo NO invocar dbmanager; score Routing 60%→100%, score general 80%→93% |
-| v2.0 | 2026-04-07 | Ciclos reales con NetTask: migración Django Auth, bugfix tachado, auditoría post-migración; entradas en memoria_global consolidadas |
-| v2.1 | 2026-04-09 | Delta v2.1: 5 nuevos agentes (skill_installer, researcher, tdd_enforcer, red_team, session_logger); orchestrator reescrito con Fases -1/0a/2a/3-triple/5; contratos endurecidos con verification_cycle, verified_files, verified_digest, branch_name; devops cuádruple condición + index binding + staged-payload digest; APROBAR_SIN_EVAL ligado a eval_authorization_scope completo; session_log.md declarado audit_trail_artifact excluido del digest |
-| v2.1 + classifier | 2026-04-09 | Clasificador de complejidad integrado en orchestrator: MODO CONSULTA, MODO RÁPIDO (Fase 2b + Fase 4), MODO COMPLETO (flujo completo); Rules 1/3/4 reestructuradas; tabla de clasificación rápida; escalación de modo durante ejecución |
-
-**2 hallazgos estructurales abiertos (alto — no bloqueantes según QA):**
-1. `verified_digest` no tiene receta canónica ni recomputación local obligatoria en auditor/qa/red_team (el consenso puede converger sobre un valor heredado sin prueba determinista)
-2. devops no exige que el HEAD local sea exactamente el tip de `context.branch_name` (replay cross-branch via historia local)
+| v1.0.0 | 2026-04-07 | Sistema base: orchestrator, backend, frontend, developer, auditor, qa, devops, session_logger, memory_curator |
+| v1.0.1 | 2026-04-07 | Fix routing para dbmanager (Score 60% → 100%) |
+| v2.0.0 | 2026-04-07 | Añadido: red_team (verificador paralelo), tdd_enforcer, researcher, skill_installer, analyst |
+| v2.1.0 | 2026-04-09 | verified_digest canónico; VERIFICACIÓN DE BRANCH OBLIGATORIA; 4 instruction files; 4 scripts de validación; evals 018-020 para triple paralelo |
+| v2.1.x | 2026-04-09 | Pases 5-11: verification_cycle único irrepetible; igualdad exacta verified_files; branch_name requerido; verified_digest consensuado; index binding en devops |
+| v3.0.0 | 2026-04-09 | Integración MCP (4 servidores); RAG con pgvector; sandbox Docker aislado; copilot-instructions.md; CI/CD (ci.yml + rollback.yml); Observabilidad (logging JSON, /metrics); contratos de 6 agentes actualizados |
 
 ---
 
 ## 14. Guía de inicio rápido
 
-**Requisitos:** VS Code Insiders con GitHub Copilot Chat habilitado y agentes configurados.
+1. **Clona el repositorio** `RCarribero/agents` y abre `.copilot/` en VS Code.
 
-1. **Clona el repositorio de agentes** en `~/.copilot` o donde tengas configurado el workspace de agentes.
+2. **Crea `.env`** en la raíz con las variables requeridas:
+   ```
+   SUPABASE_URL=https://tu-proyecto.supabase.co
+   SUPABASE_KEY=tu-service-role-key
+   SUPABASE_DB_URL=postgresql://...
+   AGENTS_API_URL=http://localhost:8000
+   AGENTS_API_KEY=tu-clave-interna
+   GITHUB_TOKEN=tu-github-pat
+   OPENAI_API_KEY=sk-...
+   ```
 
-2. **Abre el workspace `.copilot`** en VS Code. Los agentes estarán disponibles en el panel de Copilot Chat.
+3. **Instala la API interna:**
+   ```bash
+   cd agents/api && pip install -r requirements.txt
+   uvicorn api.main:app --reload
+   ```
 
-3. **Activa el orchestrator** seleccionando el agente `orchestrator` en el chat (modo `orchestrator`).
+4. **Aplica la migración DB** (`agents/api/migrations/20260409_001_rag_memory_vectors.sql`) en Supabase.
 
-4. **Describe tu tarea en lenguaje natural.** El orchestrator la clasificará automáticamente: si es una pregunta, responde directamente; si es un cambio pequeño, usa el flujo mínimo; si es una feature, usa el flujo completo.
+5. **Detecta el stack** de tu proyecto:
+   ```bash
+   ./scripts/validate-stack.sh /ruta/a/tu/proyecto
+   ```
 
-5. **Para tareas de implementación**, el orchestrator generará un plan antes de ejecutar. Revisa el plan y confirma si hay ambigüedad.
+6. **Verifica la integridad del sistema:**
+   ```bash
+   ./scripts/validate-agents.sh
+   ./scripts/validate-memory.sh
+   ./scripts/token-report.sh
+   ```
 
-6. **El flujo es automático:** skill_installer detecta el stack, researcher mapea el código afectado, tdd_enforcer escribe tests, los implementadores escriben código, y auditor/qa/red_team verifican en paralelo.
+7. **Indexa documentación existente** en el vector store:
+   ```bash
+   python scripts/rag_indexer.py --all --api-url http://localhost:8000
+   ```
 
-7. **Si hay un rechazo**, el orchestrator lo gestiona automáticamente con hasta 2 reintentos. Si el problema persiste, te pedirá instrucciones.
+8. **Envía tu primera tarea:**
+   ```
+   @orchestrator Implementa [tu tarea aquí]
+   ```
 
-8. **Los commits los hace devops** solo cuando los tres agentes de verificación aprueban. Nunca hay un commit sin triple aprobación.
+9. **Monitorea en tiempo real:**
+   ```bash
+   tail -f session_log.md
+   ./scripts/agent-metrics.sh
+   ```
 
-9. **Al terminar la sesión**, el orchestrator invoca `memory_curator` en modo completo para consolidar las lecciones aprendidas en `memoria_global.md`.
-
-10. **Consulta `memoria_global.md`** antes de empezar una sesión nueva para ver decisiones de arquitectura previas, antipatrones documentados y buenas prácticas validadas del proyecto.
+10. **Al cerrar la sesión**, invoca `memory_curator` (modo completo) para consolidar lecciones en `memoria_global.md`.
 
 ---
 
-*Generado automáticamente el 9 de abril de 2026 por analyst (GitHub Copilot / Claude Sonnet 4.6)*
+*Generado automáticamente el 2026-04-09 por GitHub Copilot (Claude Sonnet 4.6)*

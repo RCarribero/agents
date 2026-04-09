@@ -1,6 +1,6 @@
 """
-API de Utilidad Simple
-Endpoints básicos de salud y diagnóstico
+API de Utilidad — v3.0
+Endpoints de salud, diagnóstico y MCP tools para el sistema multi-agente.
 """
 
 import os
@@ -14,9 +14,12 @@ from dotenv import load_dotenv
 
 from api.models.product import ProductSearchParams, ProductSearchResponse
 from api.repositories.product_repository import ProductRepository
+from api.mcp_tools import router as mcp_router
+from api.observability import configure_json_logging, metrics_router
 
-# Cargar variables de entorno
+# Cargar variables de entorno y configurar logging estructurado
 load_dotenv()
+configure_json_logging()
 
 
 # Modelos de respuesta
@@ -36,10 +39,14 @@ class PingResponse(BaseModel):
 
 # Configuración de la aplicación
 app = FastAPI(
-    title="API de Utilidad",
-    description="Endpoints de salud y diagnóstico",
-    version="1.0.0"
+    title="Agents API",
+    description="API del sistema multi-agente v3. Incluye health checks, búsqueda de productos y MCP tools para RAG y observabilidad.",
+    version="3.0.0"
 )
+
+# Montar router MCP y observabilidad
+app.include_router(mcp_router)
+app.include_router(metrics_router)
 
 
 # Dependency injection para Supabase client

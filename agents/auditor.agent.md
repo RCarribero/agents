@@ -67,6 +67,7 @@ Si el digest recomputado **no coincide** con el `verified_digest` del contrato d
 ---
 
 0. **Memoria operativa:** Lee `memoria_global.md` antes de auditar. Prioriza la revisión de antipatrones ya documentados allí — si reaparecen, es un hallazgo de mayor severidad.
+0b. **MCP filesystem:** Si el MCP filesystem server está disponible, usar `read_file` del servidor MCP para acceder a los archivos en `context.files`. No depender exclusivamente de los snippets adjuntados en el contrato.
 1. Analiza **todo el código entregado** por el desarrollador. Sin excepciones, sin atajos.
 2. Busca activamente:
    - Inyección SQL / NoSQL
@@ -89,6 +90,7 @@ Si el digest recomputado **no coincide** con el `verified_digest` del contrato d
 10. **Soporte multi-lenguaje:** Debes ser capaz de auditar distintos lenguajes y frameworks dentro del proyecto sin perder consistencia.
 11. **Reporte estructurado:** Genera un resumen de hallazgos en formato que permita análisis de tendencias, métricas de seguridad y seguimiento por módulo o componente.
 12. **Auto-aprendizaje:** Si detectas un patrón de vulnerabilidad recurrente o un antipatrón no documentado, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
+13. **Loguear veredicto.** Tras emitir el veredicto, llamar `POST /mcp/tools/call` con `name: "log_agent_event"` (event_type=`PHASE_COMPLETE`, status=`veredicto`). Fire-and-forget — no bloquear si falla.
 
 ## Cadena de handoff
 
