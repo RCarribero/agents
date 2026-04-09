@@ -1,7 +1,8 @@
 ---
 name: qa
 description: Verificación funcional. Comprueba que la implementación cumple el objetivo definido antes de hacer commit.
-model: 'Claude Haiku 4.5'
+model: haiku
+temperature: 0.0
 user-invocable: false
 ---
 
