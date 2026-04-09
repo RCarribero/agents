@@ -18,6 +18,7 @@ Swarm de agentes con estado compartido, verificación por fases, trazabilidad op
 - [Agentes](#agentes)
 - [Estructura](#estructura)
 - [Manual de uso](#manual-de-uso)
+- [Prompts disponibles](#prompts-disponibles)
 - [Archivos ejecutables](#archivos-ejecutables)
 - [Comandos útiles](#comandos-útiles)
 - [API embebida](#api-embebida)
@@ -202,7 +203,7 @@ Bootstrap manual del repo actual:
 - PowerShell: `./scripts/start/start.ps1 .`
 - Bash: `bash ./scripts/start/start.sh .`
 
-`install-copilot-layout` instala los prompts globales en la carpeta de usuario de VS Code y deja un toolkit en el perfil del usuario. Después, `/start` usa ese toolkit para instalar la configuración canónica en el repo actual, crear `stack.md` si falta y generar `.env` y `agents/api/.env` a partir de sus plantillas cuando aún no existen.
+`install-copilot-layout` instala los prompts globales en la carpeta de usuario de VS Code y deja un toolkit en el perfil del usuario. Después, `/start` usa ese toolkit para hacer un bootstrap mínimo del repo actual: copiar `.github/copilot-instructions.md` si falta, crear `stack.md` si falta e intentar descargar skills con `autoskills` si está disponible. `/start` no materializa `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` dentro del repo destino.
 
 ### 2. Validar el workspace
 
@@ -306,6 +307,22 @@ Estas utilidades sirven para indexado RAG, observabilidad y gates automáticos d
 6. correr `run_eval_gate.py` si tocaste contratos de agentes
 7. revisar `session_log.md` y memoria al cierre del ciclo
 
+## Prompts disponibles
+
+Los slash commands disponibles en este workspace son estos:
+
+- `/start`: bootstrap mínimo del repo actual, crea `copilot-instructions`, detecta el stack e intenta descargar skills.
+- `/validar`: ejecuta `validate-stack`, `validate-agents` y `validate-memory`.
+- `/tests`: ejecuta el runner de tests del workspace.
+- `/lint`: ejecuta el runner de lint del workspace.
+- `/sandbox-tests`: ejecuta los tests en sandbox Docker o en host si Docker no está disponible.
+- `/sandbox-lint`: ejecuta el lint en sandbox Docker o en host si Docker no está disponible.
+- `/rag-index`: indexa memoria y contratos en el vector store.
+- `/metrics`: consulta métricas del sistema multi-agente.
+- `/eval-gate`: corre el gate automático de contratos de agentes.
+
+Estos prompts viven en `.github/prompts/` y también pueden instalarse como prompts globales con `install-copilot-layout`.
+
 ## Archivos ejecutables
 
 Los entrypoints operativos reales del repositorio son estos:
@@ -315,8 +332,8 @@ Nota para Windows PowerShell: cada script `.sh` listado abajo tiene un wrapper `
 | Archivo | Qué hace | Uso principal |
 |---|---|---|
 | `scripts/install-copilot-layout/install-copilot-layout.sh` | Instala prompts globales y un toolkit portable en el perfil de usuario de VS Code para que los slash commands funcionen en cualquier workspace. | `bash ./scripts/install-copilot-layout/install-copilot-layout.sh --force` |
-| `scripts/install-repo-layout/install-repo-layout.sh` | Instala la configuración canónica del repo actual en `.github/` y copia los scripts de soporte necesarios. Es un entrypoint interno usado por `start.sh`. | `bash ./scripts/install-repo-layout/install-repo-layout.sh .` |
-| `scripts/start/start.sh` | Bootstrap del proyecto: instala la configuración canónica en `.github/`, crea `stack.md`, `.env` y `agents/api/.env` si faltan, sin sobrescribir archivos existentes. | `bash ./scripts/start/start.sh .` |
+| `scripts/install-repo-layout/install-repo-layout.sh` | Instala el layout canónico completo del repo actual en `.github/` y copia los scripts de soporte necesarios. Úsalo solo si quieres materializar el toolkit dentro del repositorio. | `bash ./scripts/install-repo-layout/install-repo-layout.sh .` |
+| `scripts/start/start.sh` | Bootstrap mínimo del proyecto: copia `.github/copilot-instructions.md` si falta, crea `stack.md` si falta e intenta descargar skills con `autoskills` sin bloquear si falla. No copia prompts, workflows, scripts ni `.env*`. | `bash ./scripts/start/start.sh .` |
 | `scripts/validate-stack/validate-stack.sh` | Detecta el stack activo, resuelve el subproyecto real y genera/actualiza `stack.md` en raíz. Si existe el layout legado, también lo reutiliza. | `bash ./scripts/validate-stack/validate-stack.sh .` |
 | `scripts/validate-agents/validate-agents.sh` | Valida que cada `*.agent.md` tenga frontmatter, `director_report`, `AUTONOMOUS_LEARNINGS` y `timeout_seconds` cuando declara `TASK_STATE`. | `bash ./scripts/validate-agents/validate-agents.sh` |
 | `scripts/validate-memory/validate-memory.sh` | Verifica `agents/memoria_global.md`, el tamaño de `AUTONOMOUS_LEARNINGS` por agente y el estado de `session_log.md`. | `bash ./scripts/validate-memory/validate-memory.sh` |
@@ -391,7 +408,7 @@ Archivo de soporte relacionado:
 | Bootstrap del proyecto por chat | `/start` |
 | Instalar prompts y toolkit globales | `./scripts/install-copilot-layout/install-copilot-layout.ps1 --force` en PowerShell, `bash ./scripts/install-copilot-layout/install-copilot-layout.sh --force` en Bash |
 | Bootstrap del proyecto | `/start` o `./scripts/start/start.ps1 .` en PowerShell, `bash ./scripts/start/start.sh .` en Bash |
-| Instalar layout canónico en el repo actual | `./scripts/install-repo-layout/install-repo-layout.ps1 .` en PowerShell, `bash ./scripts/install-repo-layout/install-repo-layout.sh .` en Bash. Uso interno del toolkit. |
+| Instalar layout canónico completo en el repo actual | `./scripts/install-repo-layout/install-repo-layout.ps1 .` en PowerShell, `bash ./scripts/install-repo-layout/install-repo-layout.sh .` en Bash. Úsalo solo si quieres copiar el toolkit completo al repositorio. |
 | Detectar stack | `./scripts/validate-stack/validate-stack.ps1 .` en PowerShell, `bash ./scripts/validate-stack/validate-stack.sh .` en Bash |
 | Validar contratos | `./scripts/validate-agents/validate-agents.ps1` en PowerShell, `bash ./scripts/validate-agents/validate-agents.sh` en Bash |
 | Validar memoria | `./scripts/validate-memory/validate-memory.ps1` en PowerShell, `bash ./scripts/validate-memory/validate-memory.sh` en Bash |

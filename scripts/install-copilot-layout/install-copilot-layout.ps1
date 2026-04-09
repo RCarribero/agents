@@ -41,6 +41,49 @@ function Detect-UserPromptsDirectory {
     throw 'No se pudo detectar la carpeta global de prompts. Define VSCODE_USER_PROMPTS_FOLDER.'
 }
 
+function Get-PromptInstallDirectories {
+    param(
+        [string]$PrimaryDirectory
+    )
+
+    $directories = [System.Collections.Generic.List[string]]::new()
+    $directories.Add($PrimaryDirectory)
+
+    if (-not $env:VSCODE_USER_PROMPTS_FOLDER) {
+        $userRootDir = Split-Path $PrimaryDirectory -Parent
+        $profilesDir = Join-Path $userRootDir 'profiles'
+
+        if (Test-Path $profilesDir -PathType Container) {
+            Get-ChildItem -Path $profilesDir -Directory | Sort-Object Name | ForEach-Object {
+                $directories.Add((Join-Path $_.FullName 'prompts'))
+            }
+        }
+    }
+
+    return $directories | Select-Object -Unique
+}
+
+function Get-PromptScopeLabel {
+    param(
+        [string]$UserRootDir,
+        [string]$PromptDirectory,
+        [string]$PromptName
+    )
+
+    $defaultPromptDir = Join-Path $UserRootDir 'prompts'
+    if ($PromptDirectory -eq $defaultPromptDir) {
+        return "prompt:user:$PromptName"
+    }
+
+    $profilesRoot = Join-Path $UserRootDir 'profiles'
+    if ($PromptDirectory.StartsWith($profilesRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $profileId = Split-Path (Split-Path $PromptDirectory -Parent) -Leaf
+        return "prompt:profile:${profileId}:$PromptName"
+    }
+
+    return "prompt:$PromptName"
+}
+
 function Get-BashFriendlyPath {
     param(
         [string]$Path
@@ -91,6 +134,7 @@ function Write-GlobalPrompt {
     param(
         [string]$TargetPath,
         [string]$Name,
+        [string]$Label,
         [string]$Content,
         [bool]$Overwrite,
         [System.Collections.Generic.List[string]]$Created,
@@ -105,17 +149,17 @@ function Write-GlobalPrompt {
 
     $exists = Test-Path $TargetPath -PathType Leaf
     if ($exists -and -not $Overwrite) {
-        $Skipped.Add("prompt:$Name")
+        $Skipped.Add($Label)
         return
     }
 
     Set-Content -Path $TargetPath -Value $Content -Encoding UTF8
 
     if ($exists) {
-        $Updated.Add("prompt:$Name")
+        $Updated.Add($Label)
     }
     else {
-        $Created.Add("prompt:$Name")
+        $Created.Add($Label)
     }
 }
 
@@ -169,6 +213,7 @@ function New-GlobalPromptContent {
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $userPromptsDir = Detect-UserPromptsDirectory
+$promptInstallDirs = Get-PromptInstallDirectories -PrimaryDirectory $userPromptsDir
 $userRootDir = Split-Path $userPromptsDir -Parent
 $copilotToolsDir = if ($env:COPILOT_GLOBAL_TOOLS_DIR) { $env:COPILOT_GLOBAL_TOOLS_DIR } else { Join-Path $userRootDir 'copilot-tools' }
 $toolsScriptsDir = Join-Path $copilotToolsDir 'scripts'
@@ -180,7 +225,9 @@ $updated = [System.Collections.Generic.List[string]]::new()
 $skipped = [System.Collections.Generic.List[string]]::new()
 $missing = [System.Collections.Generic.List[string]]::new()
 
-New-Item -ItemType Directory -Path $userPromptsDir -Force | Out-Null
+foreach ($promptDir in $promptInstallDirs) {
+    New-Item -ItemType Directory -Path $promptDir -Force | Out-Null
+}
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/prompts') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/workflows') -Force | Out-Null
 
@@ -265,7 +312,7 @@ $globalPrompts = @(
     @{
         FileName = 'start.prompt.md'
         Name = 'start'
-        Description = 'Bootstrap global del proyecto: instala el layout canónico en el repo actual, crea stack.md y los .env necesarios'
+        Description = 'Bootstrap global mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills'
         Intro = 'Inicializa el repositorio actual usando el toolkit global y resume el resultado.'
         WindowsCommands = @(
             ('& "{0}" .' -f (Join-Path $toolsScriptsDir 'start/start.ps1'))
@@ -274,9 +321,13 @@ $globalPrompts = @(
             ('bash "{0}/start/start.sh" .' -f $bashScriptsDir)
         )
         ExpectedBehavior = @(
-            'Ejecuta solo el bootstrap del proyecto actual.',
+            'Ejecuta solo el bootstrap mínimo del proyecto actual.',
             'No sobrescribas archivos existentes.',
-            'Resume qué archivos se crearon, cuáles ya existían y qué valores debe completar manualmente el usuario.'
+            'Crea .github/copilot-instructions.md si falta.',
+            'Crea stack.md si falta.',
+            'Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.',
+            'No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.',
+            'Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.'
         )
     },
     @{
@@ -425,12 +476,19 @@ $globalPrompts = @(
 
 foreach ($prompt in $globalPrompts) {
     $content = New-GlobalPromptContent -Name $prompt.Name -Description $prompt.Description -Intro $prompt.Intro -WindowsCommands $prompt.WindowsCommands -BashCommands $prompt.BashCommands -ExpectedBehavior $prompt.ExpectedBehavior
-    Write-GlobalPrompt -TargetPath (Join-Path $userPromptsDir $prompt.FileName) -Name $prompt.Name -Content $content -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    foreach ($promptDir in $promptInstallDirs) {
+        $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $prompt.Name
+        Write-GlobalPrompt -TargetPath (Join-Path $promptDir $prompt.FileName) -Name $prompt.Name -Label $label -Content $content -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    }
 }
 
 Write-Output '=== install-copilot-layout.ps1 ==='
 Write-Output "Origen:           $sourceRoot"
-Write-Output "Prompts globales: $userPromptsDir"
+Write-Output "Prompts base:     $userPromptsDir"
+if ($promptInstallDirs.Count -gt 1) {
+    Write-Output 'Prompts de perfil:'
+    $promptInstallDirs | Where-Object { $_ -ne $userPromptsDir } | ForEach-Object { Write-Output "  - $_" }
+}
 Write-Output "Toolkit global:   $copilotToolsDir"
 Write-Output ''
 

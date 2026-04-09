@@ -1,6 +1,6 @@
 ---
 name: "start"
-description: "Bootstrap del proyecto: instala la configuración canónica de .github, crea stack.md y archivos .env necesarios si faltan, luego resume el estado"
+description: "Bootstrap mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills sin instalar el layout completo"
 agent: "agent"
 ---
 
@@ -15,10 +15,10 @@ Reglas de ejecución:
 
 Comportamiento esperado:
 
-- Ejecuta solo el bootstrap del proyecto.
+- Ejecuta solo el bootstrap mínimo del proyecto.
 - No sobrescribas archivos existentes.
-- Crea `.github/copilot-instructions.md`, `.github/prompts/*` y `.github/workflows/*` si faltan.
+- Crea `.github/copilot-instructions.md` si falta.
 - Crea `stack.md` si falta.
-- Crea `.env` desde `.env.example` si falta.
-- Crea `agents/api/.env` desde `agents/api/.env.example` si falta.
-- Resume qué archivos se crearon, cuáles ya existían y qué valores debe completar manualmente el usuario.
+- Intenta descargar skills con `autoskills` si está disponible, sin bloquear si falla.
+- No copies `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` al repo destino.
+- Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.

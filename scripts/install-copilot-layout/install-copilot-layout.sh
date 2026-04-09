@@ -91,6 +91,42 @@ detect_user_prompts_dir() {
   echo "${candidates[0]}"
 }
 
+collect_prompt_install_dirs() {
+  USER_PROMPTS_DIR="$(detect_user_prompts_dir)"
+  USER_ROOT_DIR="$(dirname "$USER_PROMPTS_DIR")"
+  PROMPT_INSTALL_DIRS=("$USER_PROMPTS_DIR")
+
+  if [ -z "${VSCODE_USER_PROMPTS_FOLDER:-}" ]; then
+    local profiles_dir="$USER_ROOT_DIR/profiles"
+    if [ -d "$profiles_dir" ]; then
+      while IFS= read -r -d '' profile_dir; do
+        PROMPT_INSTALL_DIRS+=("$profile_dir/prompts")
+      done < <(find "$profiles_dir" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
+    fi
+  fi
+}
+
+prompt_label() {
+  local prompt_dir="$1"
+  local name="$2"
+
+  if [ "$prompt_dir" = "$USER_PROMPTS_DIR" ]; then
+    echo "prompt:user:$name"
+    return 0
+  fi
+
+  case "$prompt_dir" in
+    "$USER_ROOT_DIR"/profiles/*/prompts)
+      local profile_id
+      profile_id="$(basename "$(dirname "$prompt_dir")")"
+      echo "prompt:profile:$profile_id:$name"
+      return 0
+      ;;
+  esac
+
+  echo "prompt:$name"
+}
+
 copy_file() {
   local source="$1"
   local target="$2"
@@ -121,6 +157,7 @@ write_prompt() {
   local name="$1"
   local target="$2"
   local content="$3"
+  local label="$4"
   local existed=0
 
   mkdir -p "$(dirname "$target")"
@@ -130,21 +167,20 @@ write_prompt() {
   fi
 
   if [ "$existed" -eq 1 ] && [ "$FORCE" -ne 1 ]; then
-    skipped+=("prompt:$name")
+    skipped+=("$label")
     return 0
   fi
 
   printf "%s\n" "$content" > "$target"
 
   if [ "$existed" -eq 1 ]; then
-    updated+=("prompt:$name")
+    updated+=("$label")
   else
-    created+=("prompt:$name")
+    created+=("$label")
   fi
 }
 
-USER_PROMPTS_DIR="$(detect_user_prompts_dir)"
-USER_ROOT_DIR="$(dirname "$USER_PROMPTS_DIR")"
+collect_prompt_install_dirs
 COPILOT_TOOLS_DIR="${COPILOT_GLOBAL_TOOLS_DIR:-$USER_ROOT_DIR/copilot-tools}"
 TOOLS_SCRIPTS_DIR="$COPILOT_TOOLS_DIR/scripts"
 TOOLS_TEMPLATES_DIR="$COPILOT_TOOLS_DIR/repo-templates"
@@ -154,7 +190,9 @@ if command -v cygpath >/dev/null 2>&1; then
   BASH_SCRIPTS_DIR="$(cygpath -u "$TOOLS_SCRIPTS_DIR")"
 fi
 
-mkdir -p "$USER_PROMPTS_DIR"
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+  mkdir -p "$prompt_dir"
+done
 mkdir -p "$TOOLS_SCRIPTS_DIR"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/prompts"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/workflows"
@@ -228,9 +266,10 @@ do
   fi
 done
 
-write_prompt "start" "$USER_PROMPTS_DIR/start.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "start" "$prompt_dir/start.prompt.md" "---
 name: \"start\"
-description: \"Bootstrap global del proyecto: instala el layout canónico en el repo actual, crea stack.md y los .env necesarios\"
+description: \"Bootstrap global mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills\"
 agent: \"agent\"
 ---
 
@@ -245,12 +284,18 @@ Reglas de ejecución:
 
 Comportamiento esperado:
 
-- Ejecuta solo el bootstrap del proyecto actual.
+- Ejecuta solo el bootstrap mínimo del proyecto actual.
 - No sobrescribas archivos existentes.
-- Resume qué archivos se crearon, cuáles ya existían y qué valores debe completar manualmente el usuario.
-"
+- Crea .github/copilot-instructions.md si falta.
+- Crea stack.md si falta.
+- Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.
+- No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.
+- Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.
+" "$(prompt_label "$prompt_dir" "start")"
+done
 
-write_prompt "validar" "$USER_PROMPTS_DIR/validar.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "validar" "$prompt_dir/validar.prompt.md" "---
 name: \"validar\"
 description: \"Ejecuta las validaciones del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -274,9 +319,11 @@ Comportamiento esperado:
 - Ejecuta las tres validaciones en orden.
 - No modifiques archivos.
 - Resume el resultado de cada script con exit code y hallazgos relevantes.
-"
+" "$(prompt_label "$prompt_dir" "validar")"
+done
 
-write_prompt "tests" "$USER_PROMPTS_DIR/tests.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "tests" "$prompt_dir/tests.prompt.md" "---
 name: \"tests\"
 description: \"Ejecuta los tests del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -296,9 +343,11 @@ Comportamiento esperado:
 - Ejecuta solo el runner de tests.
 - No modifiques archivos.
 - Resume exit code, stack detectado y fallos relevantes si existen.
-"
+" "$(prompt_label "$prompt_dir" "tests")"
+done
 
-write_prompt "lint" "$USER_PROMPTS_DIR/lint.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "lint" "$prompt_dir/lint.prompt.md" "---
 name: \"lint\"
 description: \"Ejecuta el lint del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -318,9 +367,11 @@ Comportamiento esperado:
 - Ejecuta solo el runner de lint.
 - No modifiques archivos.
 - Resume exit code, stack detectado y problemas relevantes si existen.
-"
+" "$(prompt_label "$prompt_dir" "lint")"
+done
 
-write_prompt "sandbox-tests" "$USER_PROMPTS_DIR/sandbox-tests.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "sandbox-tests" "$prompt_dir/sandbox-tests.prompt.md" "---
 name: \"sandbox-tests\"
 description: \"Ejecuta los tests del workspace actual en sandbox con el toolkit global\"
 agent: \"agent\"
@@ -341,9 +392,11 @@ Comportamiento esperado:
 - No modifiques archivos.
 - Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.
 - Resume exit code y fallos relevantes si existen.
-"
+" "$(prompt_label "$prompt_dir" "sandbox-tests")"
+done
 
-write_prompt "sandbox-lint" "$USER_PROMPTS_DIR/sandbox-lint.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "sandbox-lint" "$prompt_dir/sandbox-lint.prompt.md" "---
 name: \"sandbox-lint\"
 description: \"Ejecuta el lint del workspace actual en sandbox con el toolkit global\"
 agent: \"agent\"
@@ -364,9 +417,11 @@ Comportamiento esperado:
 - No modifiques archivos.
 - Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.
 - Resume exit code y problemas relevantes si existen.
-"
+" "$(prompt_label "$prompt_dir" "sandbox-lint")"
+done
 
-write_prompt "rag-index" "$USER_PROMPTS_DIR/rag-index.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "rag-index" "$prompt_dir/rag-index.prompt.md" "---
 name: \"rag-index\"
 description: \"Indexa memoria y contratos del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -384,9 +439,11 @@ Comportamiento esperado:
 - Ejecuta solo el indexador RAG.
 - No modifiques archivos del workspace.
 - Aclara si hubo chunks indexados, skips o errores.
-"
+" "$(prompt_label "$prompt_dir" "rag-index")"
+done
 
-write_prompt "metrics" "$USER_PROMPTS_DIR/metrics.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "metrics" "$prompt_dir/metrics.prompt.md" "---
 name: \"metrics\"
 description: \"Consulta las métricas del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -406,9 +463,11 @@ Comportamiento esperado:
 - Ejecuta solo la consulta de métricas.
 - No modifiques archivos.
 - Resume los datos relevantes disponibles o el error de conexión si falla.
-"
+" "$(prompt_label "$prompt_dir" "metrics")"
+done
 
-write_prompt "eval-gate" "$USER_PROMPTS_DIR/eval-gate.prompt.md" "---
+for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+write_prompt "eval-gate" "$prompt_dir/eval-gate.prompt.md" "---
 name: \"eval-gate\"
 description: \"Ejecuta el gate automático de contratos del workspace actual con el toolkit global\"
 agent: \"agent\"
@@ -426,11 +485,20 @@ Comportamiento esperado:
 - Ejecuta solo el eval gate.
 - No modifiques archivos salvo el reporte generado por el propio script.
 - Resume qué checks pasaron o fallaron y el exit code.
-"
+" "$(prompt_label "$prompt_dir" "eval-gate")"
+done
 
 echo "=== install-copilot-layout.sh ==="
 echo "Origen:           $SOURCE_ROOT"
-echo "Prompts globales: $USER_PROMPTS_DIR"
+echo "Prompts base:     $USER_PROMPTS_DIR"
+if [ ${#PROMPT_INSTALL_DIRS[@]} -gt 1 ]; then
+  echo "Prompts de perfil:"
+  for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+    if [ "$prompt_dir" != "$USER_PROMPTS_DIR" ]; then
+      echo "  - $prompt_dir"
+    fi
+  done
+fi
 echo "Toolkit global:   $COPILOT_TOOLS_DIR"
 echo ""
 
