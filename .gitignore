@@ -1,0 +1,12 @@
+# Local VS Code / Copilot state
+/config.json
+/command-history-state.json
+/ide/
+/logs/
+/restart/
+/runs/
+/session-state/
+
+# Local backup files
+/instructions/*.bak.*
+/scripts/*.bak.*
