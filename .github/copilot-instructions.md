@@ -3,8 +3,8 @@
 ## Stack y arquitectura
 
 Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
-- **Backend:** FastAPI + Python 3.11 + Supabase (PostgreSQL + pgvector)
-- **Frontend:** Flutter/Dart con Riverpod
+- **Workspace local:** sistema de orquestación multi-agente + API embebida en `agents/api` (FastAPI + Python 3.11 + Supabase)
+- **Repos frontend objetivo:** Flutter/Dart con Riverpod, solo cuando el proyecto activo contenga `pubspec.yaml`
 - **Agentes:** definidos en `agents/*.agent.md` — NO modificar sin autorización del orchestrator + eval gate
 - **MCP:** configurado en `.mcp.json`; usar tools MCP en lugar de acceso directo al filesystem cuando sea posible
 
@@ -19,6 +19,7 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - Imports en orden: stdlib → terceros → locales
 
 ### Dart/Flutter
+- Estas reglas aplican solo cuando el proyecto activo sea Flutter/Dart
 - Riverpod para gestión de estado — no usar Provider directamente
 - No estilos inline — usar `ThemeData` y `TextStyle` del sistema de diseño
 - Widgets pequeños y reutilizables — preferred `shared/` si generalizable
@@ -62,7 +63,7 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica.
 
 - No exponer stack traces en responses de la API — mapear a mensajes genéricos
 - No loguear tokens, keys ni PII en stdout/stderr
-- Eliminar `console.log/warn/error` en código de producción Flutter (configurar tree-shaking)
+- En proyectos Flutter, eliminar `console.log/warn/error` en código de producción (configurar tree-shaking)
 - RLS debe estar activa en todas las tablas Supabase antes de cualquier query
 
 ## RAG y memoria

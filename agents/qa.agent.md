@@ -22,7 +22,9 @@ Eres el QA. Tu trabajo es verificar que el código implementado **hace lo que se
     "branch_name": "rama del ciclo propagada por el orchestrator — debe coincidir exactamente con la rama del ciclo en curso",
     "previous_output": "output de backend, frontend o developer con status SUCCESS",
     "constraints": ["criterios de aceptación del plan original"],
-    "skill_context": { "...": "opcional, si fue adjuntado por el orchestrator" }
+    "skill_context": { "...": "opcional, si fue adjuntado por el orchestrator" },
+    "risk_level": "LOW | MEDIUM | HIGH (propagado por el orchestrator desde Fase 0c)",
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```
@@ -45,6 +47,23 @@ verified_digest: <hash/huella del contenido exacto verificado para verified_file
 test_status: GREEN | FAILED | NOT_APPLICABLE
 summary: <veredicto + gaps funcionales en 1-2 líneas>
 </director_report>
+```
+
+```
+<agent_report>
+status: SUCCESS | REJECTED | ESCALATE
+summary: <veredicto + gaps funcionales>
+goal: <task_state.goal>
+current_step: <task_state.current_step actualizado para QA>
+risk_level: <risk_level recibido de la entrada>
+files: <TASK_STATE.files o context.files>
+changes: <verificación funcional completada y tests ejecutados>
+issues: <gaps funcionales o casos de uso incumplidos>
+attempts: <TASK_STATE.attempts>
+tests: GREEN | FAILED | N/A
+next_step: orchestrator
+task_state: <TASK_STATE JSON actualizado con el resultado de QA>
+</agent_report>
 ```
 
 ## Ejecución en paralelo
@@ -71,6 +90,7 @@ Si el digest recomputado **no coincide** con el `verified_digest` del contrato d
 ---
 
 0. **Lee la memoria antes de verificar.** Revisa `memoria_global.md` y la sección `AUTONOMOUS_LEARNINGS` de este archivo. Si hay errores funcionales recurrentes o gaps conocidos del proyecto, priorizalos en tu verificación.
+0b. **Respeta TASK_STATE.** Usa `task_state.goal`, `task_state.files` y `task_state.history` como shared state del ciclo. Tras verificar, añade a `history` el resultado funcional y el `test_status` real.
 1. **Lee el `objective` del plan original** antes de revisar cualquier código. Ese es tu único criterio de verdad.
 2. Para cada criterio de aceptación definido en el plan, verifica: ¿el código implementado lo satisface? Revisa la lógica, los flujos de usuario, los casos borde obvios.
 3. **No repitas trabajo del auditor.** No buscas vulnerabilidades de seguridad. No opinas sobre estilo. Solo funcionalidad.

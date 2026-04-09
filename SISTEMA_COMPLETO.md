@@ -1,8 +1,8 @@
 # Sistema Multi-Agente — Documentación Completa
 
-**Versión:** v3.0.0
+**Versión:** v3.1.0
 **Fecha:** 2026-04-09
-**Stack activo:** FastAPI + Python 3.11 + Supabase (PostgreSQL + pgvector) · Flutter/Dart + Riverpod
+**Stack activo:** workspace local de orquestación multi-agente + Agents API (FastAPI + Python 3.11 + Supabase). Las tareas frontend pueden apuntar a repos externos Flutter/Dart + Riverpod cuando el proyecto activo tenga `pubspec.yaml`.
 
 ---
 
@@ -111,11 +111,16 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 
 **Reglas clave:**
 - Nunca implementa — delega siempre en modos de ejecución
+- **Rule 0c (v3.1):** Inicializa `TASK_STATE` y clasifica `risk_level` (LOW/MEDIUM/HIGH) antes de crear el plan
+- Propaga `risk_level` y snapshot de `TASK_STATE` en el contrato de entrada de cada sub-agente
+- **Core de `TASK_STATE`:** `task_id`, `goal`, `plan`, `current_step`, `files`, `risk_level`, `attempts`, `history`. El proyecto añade `constraints`, `risks` y `artifacts` como extensiones compatibles.
+- Tabla de routing de verificadores según `risk_level`: LOW→ninguno (MODO RÁPIDO), MEDIUM→`auditor`+`qa`, HIGH→`auditor`+`qa`+`red_team`
 - En Fase 3 define `verification_cycle: <task_id>.r<retry_count>` y propaga `branch_name` a los tres verificadores
 - Valida que `verified_digest` sea idéntico en los tres reports antes de habilitar Fase 4
 - Override humano abre nuevo ciclo con `verification_cycle: <task_id>.override<N>.r0`
 - `session_log.md` es `audit_trail_artifact` — excluido de `verified_files` y del digest
 - Invoca RAG (`retrieve_context` k=5) antes de planificar si la API está disponible
+- **Salida dual (v3.1):** emite AMBOS `<director_report>` (control legacy) y `<agent_report>` (nuevo, incluye `goal`, `current_step`, `files`, `attempts`, `issues` y `task_state` JSON actualizado)
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -227,7 +232,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 **Cuándo se invoca:** Fase 1, solo cuando hay cambio estructural de esquema (CREATE TABLE, ALTER TABLE, nueva RLS, índice nuevo).
 
 **Reglas clave:**
-- Migraciones en `supabase/migrations/*.sql` — siempre idempotentes y backward-compatible
+- Migraciones en la ruta de migraciones del proyecto activo; en este workspace `agents/api/migrations/*.sql` — siempre idempotentes y backward-compatible
 - 3NF por defecto + RLS obligatoria con `ENABLE ROW LEVEL SECURITY`
 - Estrategia segura: `add → backfill → migrate → cleanup`
 - Nunca borrar columnas en caliente
@@ -274,9 +279,10 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 **Reglas clave:**
 - Lee el motivo de rechazo antes de modificar código en reintentos
 - No modifica tests — si parecen incorrectos, escala
-- Archivos nuevos en `lib/features/<feature>/` o `lib/shared/`
+- Archivos nuevos en la ruta real del proyecto activo; `lib/features/<feature>/` o `lib/shared/` solo cuando el proyecto sea Flutter/Dart
 - No introduce dependencias externas sin listarlas en el report
 - Escala a human tras dos iteraciones fallidas
+- **Entrada v3.1:** recibe `risk_level` y `task_state` del orchestrator; propaga en salida vía `<agent_report>`
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -299,6 +305,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - Si `tdd_status: RED`: ejecuta `sandbox-run.sh tests --json` y deriva `test_status` del `exit_code`
 - Sin números ni cadenas mágicas — extrae constantes nombradas
 - Escala a human tras dos iteraciones fallidas
+- **Entrada v3.1:** recibe `risk_level` y `task_state` del orchestrator; propaga en salida vía `<agent_report>`
 
 **AUTONOMOUS_LEARNINGS (actuales):**
 ```
@@ -329,6 +336,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - Responsivo por defecto — mobile y desktop
 - No inventa lógica de negocio — escala si la UI necesita datos no definidos
 - Componentes pequeños y reutilizables; si generalizable → `shared/` o `components/`
+- **Entrada v3.1:** recibe `risk_level` y `task_state` del orchestrator; propaga en salida vía `<agent_report>`
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -354,6 +362,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - No opina sobre estilo — solo seguridad y correctitud crítica
 
 **Contrato de salida (sufijo `.audit`):** `veredicto` APROBADO|RECHAZADO, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`, `rejection_reason` si aplica.
+- **Entrada v3.1:** recibe `risk_level` (propagado por orchestrator); lo incluye en `<agent_report>` de salida
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -378,6 +387,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - `test_status` explícito: `GREEN` | `FAILED` | `NOT_APPLICABLE`
 
 **Contrato de salida (sufijo `.qa`):** `veredicto` CUMPLE|NO CUMPLE, `test_status`, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`.
+- **Entrada v3.1:** recibe `risk_level` (propagado por orchestrator); lo incluye en `<agent_report>` de salida
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -402,6 +412,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - Report siempre al orchestrator — NUNCA habilita Fase 4 directamente
 
 **Contrato de salida (sufijo `.redteam`):** `veredicto` RESISTENTE|VULNERABLE, `vulnerabilities`, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`.
+- **Entrada v3.1:** recibe `risk_level`; HIGH garantiza invocación obligatoria de `red_team`; lo incluye en `<agent_report>` de salida
 
 **AUTONOMOUS_LEARNINGS:** *(sin notas curadas todavía)*
 
@@ -506,6 +517,7 @@ Detectados automáticamente por `skill_installer` en Fase -1. Almacenados en `sk
 - Leer `agents/memoria_global.md` y `AUTONOMOUS_LEARNINGS` del propio agente antes de actuar
 - Leer `stack.md` del proyecto; si no existe, invocar `skill_installer`
 - Cerrar siempre con `<director_report>` completo — nunca omitir `next_agent`
+- **v3.1:** Cerrar también con `<agent_report>` (salida dual obligatoria con core de shared state)
 - 2 fallos en la misma tarea → `status: ESCALATE` con `escalate_to: human`
 - No ejecutar acciones fuera del rol propio
 
@@ -863,7 +875,7 @@ Cuando `validate-memory.sh` detecta > 500 líneas: renombrar a `session_log_YYYY
 │   ├── skill_installer.agent.md
 │   ├── tdd_enforcer.agent.md
 │   ├── api/
-│   │   ├── main.py                      FastAPI app v3.0.0
+│   │   ├── main.py                      FastAPI app v3.1.0
 │   │   ├── mcp_tools.py                 MCP tools layer (5 herramientas)
 │   │   ├── observability.py             Logging JSON + /metrics endpoints
 │   │   ├── requirements.txt
@@ -961,7 +973,7 @@ Todos: `NOT_EXECUTED` — sin runner end-to-end instalado.
 | v2.0.0 | 2026-04-07 | Añadido: red_team (verificador paralelo), tdd_enforcer, researcher, skill_installer, analyst |
 | v2.1.0 | 2026-04-09 | verified_digest canónico; VERIFICACIÓN DE BRANCH OBLIGATORIA; 4 instruction files; 4 scripts de validación; evals 018-020 para triple paralelo |
 | v2.1.x | 2026-04-09 | Pases 5-11: verification_cycle único irrepetible; igualdad exacta verified_files; branch_name requerido; verified_digest consensuado; index binding en devops |
-| v3.0.0 | 2026-04-09 | Integración MCP (4 servidores); RAG con pgvector; sandbox Docker aislado; copilot-instructions.md; CI/CD (ci.yml + rollback.yml); Observabilidad (logging JSON, /metrics); contratos de 6 agentes actualizados |
+| v3.1.0 | 2026-04-09 | Integración MCP (4 servidores); RAG con pgvector; sandbox Docker aislado; copilot-instructions.md; Observabilidad (logging JSON, /metrics); contratos v3.1 y alineación del workspace local con `agents/api` |
 
 ---
 

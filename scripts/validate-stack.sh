@@ -10,6 +10,47 @@ set -euo pipefail
 PROJECT_ROOT="${1:-$(pwd)}"
 STACK_FILE="$PROJECT_ROOT/.copilot/stack.md"
 
+is_stack_root() {
+  local root="$1"
+  [ -f "$root/pubspec.yaml" ] || \
+  [ -f "$root/package.json" ] || \
+  [ -f "$root/requirements.txt" ] || \
+  [ -f "$root/pyproject.toml" ] || \
+  [ -f "$root/go.mod" ] || \
+  [ -f "$root/Cargo.toml" ] || \
+  [ -f "$root/pom.xml" ] || \
+  [ -f "$root/build.gradle" ]
+}
+
+resolve_project_root() {
+  local requested_root="$1"
+  local -a candidates=()
+
+  if is_stack_root "$requested_root"; then
+    echo "$requested_root"
+    return 0
+  fi
+
+  while IFS= read -r candidate; do
+    candidates+=("$candidate")
+  done < <(
+    find "$requested_root" -maxdepth 3 \
+      \( -name pubspec.yaml -o -name package.json -o -name requirements.txt -o -name pyproject.toml -o -name go.mod -o -name Cargo.toml -o -name pom.xml -o -name build.gradle \) \
+      -not -path '*/.git/*' \
+      -not -path '*/node_modules/*' \
+      -not -path '*/venv/*' \
+      -not -path '*/.venv/*' \
+      -printf '%h\n' | sort -u
+  )
+
+  if [ ${#candidates[@]} -eq 1 ]; then
+    echo "${candidates[0]}"
+    return 0
+  fi
+
+  echo "$requested_root"
+}
+
 detect_stack() {
   local root="$1"
   local stacks=()
@@ -63,19 +104,24 @@ get_lint_cmd() {
     *nextjs*)     echo "npm run lint" ;;
     *react*)      echo "npm run lint" ;;
     *node*)       echo "npm run lint" ;;
-    *fastapi*)    echo "ruff check . && mypy ." ;;
-    *python*)     echo "ruff check ." ;;
+    *fastapi*)    echo "python -m ruff check ." ;;
+    *python*)     echo "python -m ruff check ." ;;
     *go*)         echo "golangci-lint run" ;;
     *rust*)       echo "cargo clippy" ;;
     *)            echo "# no lint command detected" ;;
   esac
 }
 
+EFFECTIVE_ROOT="$(resolve_project_root "$PROJECT_ROOT")"
+
 echo "=== validate-stack.sh ==="
 echo "Proyecto: $PROJECT_ROOT"
+if [ "$EFFECTIVE_ROOT" != "$PROJECT_ROOT" ]; then
+  echo "Subproyecto detectado: $EFFECTIVE_ROOT"
+fi
 echo ""
 
-stacks_raw=$(detect_stack "$PROJECT_ROOT")
+stacks_raw=$(detect_stack "$EFFECTIVE_ROOT")
 read -ra stacks <<< "$stacks_raw"
 
 if [ ${#stacks[@]} -eq 0 ]; then
@@ -103,6 +149,11 @@ else
 # Stack del Proyecto
 
 **Detectado automáticamente por validate-stack.sh** — $(date +%Y-%m-%d)
+
+## Scope detectado
+
+- Workspace raíz: $PROJECT_ROOT
+- Subproyecto con manifests: $EFFECTIVE_ROOT
 
 ## Stack activo
 

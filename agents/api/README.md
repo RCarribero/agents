@@ -1,6 +1,6 @@
-# API de Utilidad
+# Agents API
 
-API simple con endpoints de salud y diagnóstico.
+API auxiliar del sistema multi-agente. Expone health checks, búsqueda de productos y tools MCP para observabilidad y RAG.
 
 ## Endpoints Disponibles
 
@@ -12,8 +12,8 @@ Retorna el estado de salud del servicio.
 {
   "status": "healthy",
   "timestamp": "2026-04-07T12:34:56.789Z",
-  "service": "api-utilidad",
-  "version": "1.0.0"
+  "service": "agents-api",
+  "version": "3.1.0"
 }
 ```
 
@@ -34,6 +34,9 @@ Endpoint raíz con información de la API.
 ## Instalación
 
 ```bash
+# Entrar al subproyecto de API
+cd agents/api
+
 # Crear entorno virtual
 python -m venv venv
 
@@ -50,12 +53,16 @@ pip install -r requirements.txt
 ## Ejecución
 
 ```bash
+# Desde agents/api
+
 # Desarrollo (con auto-reload)
 python main.py
 
 # Producción
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
+
+Desde la raíz del repositorio, los scripts `scripts/run-tests.sh` y `scripts/run-lint.sh` detectan automáticamente este subproyecto.
 
 ## Documentación
 
@@ -66,6 +73,10 @@ Una vez ejecutado el servidor, la documentación interactiva está disponible en
 ## Tests
 
 ```bash
+# Desde la raíz del repositorio
+./scripts/run-tests.sh . --json
+./scripts/run-lint.sh . --json
+
 # Verificar salud del servicio
 curl http://localhost:8000/health
 

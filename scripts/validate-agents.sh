@@ -45,14 +45,14 @@ check_agent() {
 
   if [ ${#file_errors[@]} -eq 0 ]; then
     echo "OK   $name"
-    ((ok_count++))
+    ok_count=$((ok_count + 1))
   else
     echo "FAIL $name"
     for e in "${file_errors[@]}"; do
       echo "     → $e"
       errors+=("$name: $e")
     done
-    ((fail_count++))
+    fail_count=$((fail_count + 1))
   fi
 }
 

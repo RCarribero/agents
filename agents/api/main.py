@@ -1,25 +1,40 @@
 """
-API de Utilidad — v3.0
+Agents API — v3.1
 Endpoints de salud, diagnóstico y MCP tools para el sistema multi-agente.
 """
 
+import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, status, HTTPException, Depends
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-from api.models.product import ProductSearchParams, ProductSearchResponse
-from api.repositories.product_repository import ProductRepository
-from api.mcp_tools import router as mcp_router
-from api.observability import configure_json_logging, metrics_router
+try:
+    from api.models.product import ProductSearchParams, ProductSearchResponse
+    from api.repositories.product_repository import ProductRepository
+    from api.mcp_tools import router as mcp_router
+    from api.observability import configure_json_logging, metrics_router
+except ModuleNotFoundError:
+    from models.product import ProductSearchParams, ProductSearchResponse
+    from repositories.product_repository import ProductRepository
+    from mcp_tools import router as mcp_router
+    from observability import configure_json_logging, metrics_router
+
+
+DEFAULT_SERVICE_NAME = "agents-api"
+DEFAULT_SERVICE_VERSION = "3.1.0"
+PRODUCT_SEARCH_ERROR_MESSAGE = "No se pudo completar la búsqueda de productos."
 
 # Cargar variables de entorno y configurar logging estructurado
 load_dotenv()
 configure_json_logging()
+
+SERVICE_NAME = os.getenv("SERVICE_NAME", DEFAULT_SERVICE_NAME)
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", DEFAULT_SERVICE_VERSION)
+logger = logging.getLogger("agents.api.main")
 
 
 # Modelos de respuesta
@@ -41,7 +56,7 @@ class PingResponse(BaseModel):
 app = FastAPI(
     title="Agents API",
     description="API del sistema multi-agente v3. Incluye health checks, búsqueda de productos y MCP tools para RAG y observabilidad.",
-    version="3.0.0"
+    version=SERVICE_VERSION
 )
 
 # Montar router MCP y observabilidad
@@ -91,9 +106,9 @@ async def health_check() -> HealthResponse:
     """
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow().isoformat(),
-        service="api-utilidad",
-        version="1.0.0"
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        service=SERVICE_NAME,
+        version=SERVICE_VERSION
     )
 
 
@@ -111,7 +126,7 @@ async def ping() -> PingResponse:
     """
     return PingResponse(
         message="pong",
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
 
 
@@ -127,8 +142,8 @@ async def root() -> dict:
         Diccionario con información del servicio y endpoints disponibles
     """
     return {
-        "service": "API de Utilidad",
-        "version": "1.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "endpoints": {
             "health": "/health",
             "ping": "/ping",
@@ -181,10 +196,11 @@ async def search_products(
             total=total
         )
     
-    except Exception as e:
+    except Exception:
+        logger.exception("Product search failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error en búsqueda de productos: {str(e)}"
+            detail=PRODUCT_SEARCH_ERROR_MESSAGE
         )
 
 

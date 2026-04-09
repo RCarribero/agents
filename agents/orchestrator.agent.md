@@ -40,10 +40,38 @@ summary: <qué se hizo + estado final>
 </director_report>
 ```
 
+```
+<agent_report>
+status: SUCCESS | RETRY | ESCALATE
+summary: <qué se hizo + estado final>
+goal: <TASK_STATE.goal>
+current_step: <TASK_STATE.current_step>
+risk_level: LOW | MEDIUM | HIGH
+files: <TASK_STATE.files>
+changes: <plan generado, agentes invocados y artefactos consolidados>
+issues: <riesgos identificados durante el ciclo o "none">
+attempts: <TASK_STATE.attempts>
+next_step: <siguiente acción o agente>
+task_state: <TASK_STATE JSON actualizado al cierre del ciclo>
+</agent_report>
+```
+
 ## Reglas de operación
 
 0. **Lee la memoria antes de planificar.** Revisa `memoria_global.md` en la raíz del proyecto antes de crear cualquier plan. Las lecciones aprendidas, antipatrones y decisiones previas deben influir en el plan actual. Si una tarea toca un área con notas en memoria, inclúyelas como restricciones para el sub-agente correspondiente.
 0b. **Enriquecer contexto con RAG.** Si `AGENTS_API_URL` está disponible, llamar `POST /mcp/tools/call` con `name: "retrieve_context"` y la descripción del objetivo como `query` (k=5). Adjuntar los resultados como `rag_context` en el plan y en el contrato de entrada del implementador, researcher y otros agentes que lo reciban. Si la llamada falla, continuar sin bloquear.
+0c. **Inicializar TASK_STATE y clasificar riesgo (v3.1).** Antes de crear el plan, inicializa el objeto `TASK_STATE` que se propagará a todos los sub-agentes del ciclo, e infiere el `risk_level`:
+- **LOW** — cambio aislado sin impacto sistémico (estilo, texto, configuración puntual)
+- **MEDIUM** — lógica de negocio, múltiples archivos, flujos de usuario
+- **HIGH** — base de datos, autenticación, seguridad, infraestructura, migraciones
+
+| risk_level | Verificadores requeridos en Fase 3 |
+|---|---|
+| LOW | ninguno (aplica solo en MODO RÁPIDO) |
+| MEDIUM | `auditor` + `qa` |
+| HIGH | `auditor` + `qa` + `red_team` (obligatorio sin excepción) |
+
+Campos mínimos del TASK_STATE: `task_id`, `goal`, `plan`, `current_step`, `files`, `risk_level`, `attempts`, `history`. Campos extendidos del proyecto: `constraints`, `risks`, `artifacts`. Propaga `risk_level` y el snapshot del `TASK_STATE` en el contrato de entrada de cada sub-agente. En Fase 0 actualiza `goal` y `files`; en Fase 1 actualiza `plan` y `current_step`; tras cada agente añade una entrada a `history` sin sobrescribir las anteriores; en cada retry sincroniza `TASK_STATE.attempts` con `retry_count`; tras cada implementación exitosa actualiza `artifacts`.
 1. **Clasifica antes de planificar.** Antes de cualquier otra decisión, clasifica la tarea usando la **Regla de decisión de fases**: `MODO CONSULTA`, `MODO RÁPIDO` o `MODO COMPLETO`. Si la tarea queda en `MODO CONSULTA`, respondes directamente. Si queda en `MODO RÁPIDO` o `MODO COMPLETO`, produces el plan antes de ejecutar.
 2. **Clarifica antes de planificar.** Si hay ambigüedad sobre alcance o comportamiento esperado, usa `ask_user` antes de crear el plan.
 3. **Delega siempre en modos de ejecución.** Todo el trabajo sustantivo va a sub-agentes en `MODO RÁPIDO` y `MODO COMPLETO`. Tú planificas, coordinas y consolidas resultados. **Excepción operativa:** en `MODO CONSULTA` puedes responder directamente y usar `researcher` solo si necesitas contexto adicional del codebase. **Excepción contractual:** el orchestrator conserva autoridad exclusiva para aprobar, coordinar y revertir cambios sobre contratos y archivos `.agent.md` (ver Regla de protección de agentes); la edición material puede delegarse al agente implementador designado, pero la decisión de aplicar o revertir es siempre del orchestrator.

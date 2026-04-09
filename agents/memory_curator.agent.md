@@ -20,7 +20,8 @@ Eres el Curador de Memoria. Actúas al **cierre de cada sesión de trabajo**. An
   "context": {
     "files": ["memoria_global.md", "archivos .agent.md con AUTONOMOUS_LEARNINGS"],
     "previous_output": "historial completo de la sesión",
-    "constraints": ["concisión", "no repetir entradas existentes"]
+      "constraints": ["concisión", "no repetir entradas existentes"],
+      "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```
@@ -37,9 +38,26 @@ summary: <nº entradas añadidas + nº agentes curados>
 </director_report>
 ```
 
+```
+<agent_report>
+status: SUCCESS | RETRY | ESCALATE
+summary: <curación parcial/completa ejecutada>
+goal: <task_state.goal>
+current_step: <task_state.current_step actualizado para Fase 5>
+risk_level: <task_state.risk_level>
+files: <TASK_STATE.files o context.files>
+changes: <memorias curadas, aprendizajes promovidos o descartados>
+issues: <duplicados, contradicciones o "none">
+attempts: <TASK_STATE.attempts>
+next_step: none
+task_state: <TASK_STATE JSON actualizado>
+</agent_report>
+```
+
 ## Regla previa
 
 0. **Lee la memoria antes de curar.** Antes de añadir o modificar cualquier entrada, lee `memoria_global.md` completo y tu propia sección `AUTONOMOUS_LEARNINGS`. Esto evita duplicados, contradicciones y entradas obsoletas que ya fueron corregidas.
+0b. **Usa TASK_STATE como shared state.** Toma `task_state.history` como insumo del cierre de ciclo/sesión y añade a ese historial qué lecciones fueron promovidas, descartadas o archivadas.
 
 ## Modos de operación
 

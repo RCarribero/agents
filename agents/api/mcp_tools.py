@@ -25,6 +25,11 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SERVICE_NAME = "agents-api"
+DEFAULT_SERVICE_VERSION = "3.1.0"
+SERVICE_NAME = os.getenv("SERVICE_NAME", DEFAULT_SERVICE_NAME)
+SERVICE_VERSION = os.getenv("SERVICE_VERSION", DEFAULT_SERVICE_VERSION)
+
 router = APIRouter(prefix="/mcp", tags=["MCP"])
 
 
@@ -217,15 +222,19 @@ async def _tool_health_check(_args: dict) -> dict:
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "service": "agents-api",
-        "version": "3.0.0"
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION
     }
 
 
 async def _tool_search_products(args: dict) -> dict:
     """Delega a la lógica existente de búsqueda de productos."""
-    from api.repositories.product_repository import ProductRepository
-    from api.models.product import ProductSearchParams
+    try:
+        from api.repositories.product_repository import ProductRepository
+        from api.models.product import ProductSearchParams
+    except ModuleNotFoundError:
+        from repositories.product_repository import ProductRepository
+        from models.product import ProductSearchParams
     supabase_url = os.getenv("SUPABASE_URL")
     supabase_key = os.getenv("SUPABASE_KEY")
     if not supabase_url or not supabase_key:
