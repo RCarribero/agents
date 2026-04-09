@@ -1,7 +1,7 @@
 ---
 name: devops
 description: Responsable de despliegue y control de versiones.
-model: 'Claude Haiku 4.5'
+model: 'Claude Sonnet 4.6'
 user-invocable: false
 ---
 
