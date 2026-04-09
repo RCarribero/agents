@@ -20,7 +20,7 @@ Eres el Instalador de Skills. Tu única responsabilidad es detectar el stack del
   "context": {
     "workspace_root": "ruta raíz del proyecto",
     "constraints": ["convenciones del proyecto"],
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```
@@ -60,7 +60,8 @@ task_state: <TASK_STATE JSON actualizado>
 0b. **Usa TASK_STATE como estado compartido.** Si el orquestador ya inicializó `task_state`, añade a `history` el stack detectado y el estado de `skill_context`; no reinicies el objeto ni sobrescribas el historial previo.
 1. **Verifica cache primero.** Lee `skills_cache.md` en la raíz del workspace. Si existe y tiene menos de 24 horas, usa los datos cacheados y salta al paso de construcción de `skill_context`.
 2. **Detecta el stack.** En orden de preferencia:
-   - Lee `.copilot/stack.md` si existe
+  - Lee `stack.md` si existe
+  - Si no existe, usa el fallback legado `.copilot/stack.md`
    - Detecta desde manifests: `pubspec.yaml` (Flutter/Dart), `package.json` (Node/React/Next), `requirements.txt` / `pyproject.toml` (Python), `go.mod` (Go)
    - Si no hay manifests, anota `stack: unknown`
 3. **Ejecuta autoskills** (si está disponible):

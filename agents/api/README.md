@@ -62,7 +62,7 @@ python main.py
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-Desde la raíz del repositorio, los scripts `scripts/run-tests.sh` y `scripts/run-lint.sh` detectan automáticamente este subproyecto.
+Desde la raíz del repositorio, los scripts `scripts/run-tests/run-tests.sh` y `scripts/run-lint/run-lint.sh` detectan automáticamente este subproyecto.
 
 ## Documentación
 
@@ -74,8 +74,8 @@ Una vez ejecutado el servidor, la documentación interactiva está disponible en
 
 ```bash
 # Desde la raíz del repositorio
-./scripts/run-tests.sh . --json
-./scripts/run-lint.sh . --json
+./scripts/run-tests/run-tests.sh . --json
+./scripts/run-lint/run-lint.sh . --json
 
 # Verificar salud del servicio
 curl http://localhost:8000/health

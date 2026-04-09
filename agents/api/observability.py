@@ -24,6 +24,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from supabase_client import get_shared_supabase_client, is_supabase_configured
+
 log = logging.getLogger("agents.observability")
 
 # Configurar root logger para emitir JSON si LOG_FORMAT=json
@@ -156,13 +158,10 @@ async def get_agent_metrics() -> dict:
     Retorna métricas de éxito/rechazo por agente desde agent_events (Supabase).
     Si Supabase no está disponible, retorna estructura vacía con aviso.
     """
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
+    if not is_supabase_configured():
         return {"error": "Supabase no configurado", "metrics": []}
 
-    from supabase import create_client
-    client = create_client(supabase_url, supabase_key)
+    client = get_shared_supabase_client()
     result = client.rpc("get_agent_metrics").execute()
     return {"metrics": result.data or [], "timestamp": datetime.now(timezone.utc).isoformat()}
 
@@ -173,13 +172,10 @@ async def get_task_trace(task_id: str) -> dict:
     Retorna todos los eventos asociados a un task_id, ordenados cronológicamente.
     Permite reconstruir el flujo completo de un ciclo.
     """
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
+    if not is_supabase_configured():
         return {"error": "Supabase no configurado", "events": []}
 
-    from supabase import create_client
-    client = create_client(supabase_url, supabase_key)
+    client = get_shared_supabase_client()
     result = (
         client.table("agent_events")
         .select("*")
@@ -199,13 +195,10 @@ async def get_system_summary() -> dict:
     """
     Resumen global: total eventos, agentes activos, últimas escalaciones.
     """
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
+    if not is_supabase_configured():
         return {"error": "Supabase no configurado"}
 
-    from supabase import create_client
-    client = create_client(supabase_url, supabase_key)
+    client = get_shared_supabase_client()
 
     total = client.table("agent_events").select("id", count="exact").execute()
     escalations = (

@@ -5,10 +5,7 @@ Abstracción sobre Supabase para desacoplar lógica de negocio del ORM
 
 from typing import Optional
 
-try:
-    from api.models.product import Product
-except ModuleNotFoundError:
-    from models.product import Product
+from models.product import Product
 
 
 class ProductRepository:

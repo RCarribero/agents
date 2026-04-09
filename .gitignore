@@ -9,4 +9,14 @@
 
 # Local backup files
 /instructions/*.bak.*
-/scripts/*.bak.*
+/scripts/**/*.bak.*
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Local environment files
+.env
+agents/api/.env

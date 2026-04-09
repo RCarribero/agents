@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # agent-metrics.sh — Muestra métricas del sistema multi-agente desde Supabase
-# Uso: ./scripts/agent-metrics.sh [--json] [--task <task_id>]
+# Uso: ./scripts/agent-metrics/agent-metrics.sh [--json] [--task <task_id>]
 #
 # Requiere: SUPABASE_URL, SUPABASE_KEY (service_role) o AGENTS_API_URL en .env
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Cargar .env si existe
 if [[ -f "$ROOT_DIR/.env" ]]; then

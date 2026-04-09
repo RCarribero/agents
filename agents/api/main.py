@@ -6,22 +6,18 @@ Endpoints de salud, diagnóstico y MCP tools para el sistema multi-agente.
 import logging
 import os
 from datetime import datetime, timezone
+
 from fastapi import FastAPI, status, HTTPException, Depends
 from pydantic import BaseModel
+from supabase import Client
 import uvicorn
-from supabase import create_client, Client
 from dotenv import load_dotenv
 
-try:
-    from api.models.product import ProductSearchParams, ProductSearchResponse
-    from api.repositories.product_repository import ProductRepository
-    from api.mcp_tools import router as mcp_router
-    from api.observability import configure_json_logging, metrics_router
-except ModuleNotFoundError:
-    from models.product import ProductSearchParams, ProductSearchResponse
-    from repositories.product_repository import ProductRepository
-    from mcp_tools import router as mcp_router
-    from observability import configure_json_logging, metrics_router
+from models.product import ProductSearchParams, ProductSearchResponse
+from repositories.product_repository import ProductRepository
+from mcp_tools import router as mcp_router
+from observability import configure_json_logging, metrics_router
+from supabase_client import SupabaseConfigurationError, get_shared_supabase_client
 
 
 DEFAULT_SERVICE_NAME = "agents-api"
@@ -70,16 +66,13 @@ def get_supabase_client() -> Client:
     Retorna un cliente de Supabase configurado.
     Usa variables de entorno SUPABASE_URL y SUPABASE_KEY.
     """
-    url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_KEY")
-    
-    if not url or not key:
+    try:
+        return get_shared_supabase_client()
+    except SupabaseConfigurationError as exc:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Supabase no configurado. Variables SUPABASE_URL y SUPABASE_KEY requeridas."
-        )
-    
-    return create_client(url, key)
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc)
+        ) from exc
 
 
 def get_product_repository(

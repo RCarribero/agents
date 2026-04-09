@@ -21,7 +21,7 @@ Eres el Curador de Memoria. Actúas al **cierre de cada sesión de trabajo**. An
     "files": ["memoria_global.md", "archivos .agent.md con AUTONOMOUS_LEARNINGS"],
     "previous_output": "historial completo de la sesión",
       "constraints": ["concisión", "no repetir entradas existentes"],
-      "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+      "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

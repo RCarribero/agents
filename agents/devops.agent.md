@@ -26,7 +26,7 @@ Eres el DevOps. Eres el **único agente con permisos para tocar el repositorio**
     "eval_gate_status": "PASSED | SKIPPED_BY_AUTHORIZATION — resultado del gate de evals para esta invocación (requerido explícito)",
     "previous_output": "bundle consolidado del orchestrator que contiene: (1) task_id base idéntico al de esta invocación, (2) mismo verification_cycle que context.verification_cycle, (3) verified_files set exactamente igual (como conjunto normalizado) al de context.verified_files — no subconjunto, (4) branch_name destino (requerido dentro del bundle — no solo en context) idéntico a context.branch_name, (5) test_status del ciclo actual (GREEN o NOT_APPLICABLE), (6) eval_gate_status del ciclo actual, (7) verified_digest idéntico a context.verified_digest — debe incluir los tres veredictos: APROBADO del auditor + CUMPLE del qa + RESISTENTE del red_team",
       "constraints": ["convenciones de commit"],
-      "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+      "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

@@ -8,7 +8,9 @@
 
 set -euo pipefail
 
-AGENTS_DIR="${1:-$(dirname "$0")/../agents}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AGENTS_DIR="${1:-$ROOT_DIR/agents}"
 TOKEN_WARN_THRESHOLD=2000
 
 echo "=== token-report.sh ==="
@@ -35,7 +37,7 @@ while IFS= read -r -d '' agent_file; do
 
   if [ "$token_est" -gt "$TOKEN_WARN_THRESHOLD" ]; then
     status="WARN"
-    ((warn_count++))
+    warn_count=$((warn_count + 1))
   else
     status="OK"
   fi

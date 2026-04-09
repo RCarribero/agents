@@ -1,14 +1,27 @@
 #!/usr/bin/env bash
 # validate-stack.sh
 # Detecta el stack del proyecto activo desde manifests estándar.
-# Si no existe .copilot/stack.md lo crea con el stack detectado
+# Si no existe stack.md lo crea con el stack detectado
 # y los comandos de test y lint correspondientes.
 # Salida: stack detectado + path del stack.md creado o existente
 
 set -euo pipefail
 
 PROJECT_ROOT="${1:-$(pwd)}"
-STACK_FILE="$PROJECT_ROOT/.copilot/stack.md"
+
+resolve_stack_file() {
+  local root="$1"
+
+  if [ -f "$root/stack.md" ]; then
+    echo "$root/stack.md"
+  elif [ -f "$root/.copilot/stack.md" ]; then
+    echo "$root/.copilot/stack.md"
+  else
+    echo "$root/stack.md"
+  fi
+}
+
+STACK_FILE="$(resolve_stack_file "$PROJECT_ROOT")"
 
 is_stack_root() {
   local root="$1"
@@ -173,7 +186,7 @@ $all_stacks
 $(for s in "${stacks[@]}"; do echo "- $s"; done)
 
 ---
-*Regenerar: eliminar este archivo y volver a ejecutar \`scripts/validate-stack.sh\`*
+*Regenerar: eliminar este archivo y volver a ejecutar \`scripts/validate-stack/validate-stack.sh\`*
 STACKMD
   echo "stack.md creado: $STACK_FILE"
 fi

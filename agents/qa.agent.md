@@ -24,7 +24,7 @@ Eres el QA. Tu trabajo es verificar que el código implementado **hace lo que se
     "constraints": ["criterios de aceptación del plan original"],
     "skill_context": { "...": "opcional, si fue adjuntado por el orchestrator" },
     "risk_level": "LOW | MEDIUM | HIGH (propagado por el orchestrator desde Fase 0c)",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```
@@ -100,7 +100,7 @@ Si el digest recomputado **no coincide** con el `verified_digest` del contrato d
    - ¿Los flujos de navegación llevan al usuario donde debe ir?
    - ¿Las validaciones de campos coinciden con las reglas de negocio definidas?
    - ¿La integración con APIs/Supabase maneja correctamente éxito y fallo?
-5. **Ejecuta los tests automatizados si existen.** Si `scripts/sandbox-run.sh` está disponible: `scripts/sandbox-run.sh <project_path> tests --json` y derivar `test_status` del `exit_code` real: 0=GREEN, ≠0=FAILED. Si sandbox no está disponible, corre `flutter test` (o el equivalente del proyecto) directamente. Si no hay tests, establece `test_status: NOT_APPLICABLE` explícitamente.
+5. **Ejecuta los tests automatizados si existen.** Si `scripts/sandbox-run/sandbox-run.sh` está disponible: `scripts/sandbox-run/sandbox-run.sh <project_path> tests --json` y derivar `test_status` del `exit_code` real: 0=GREEN, ≠0=FAILED. Si sandbox no está disponible, corre `flutter test` (o el equivalente del proyecto) directamente. Si no hay tests, establece `test_status: NOT_APPLICABLE` explícitamente.
 6. Si hay un gap funcional claro, devuelve `status: REJECTED` con descripción precisa: qué falta, en qué archivo/función y qué comportamiento esperado no se cumple.
 7. Si el objetivo era ambiguo y la implementación es una interpretación razonable, devuelve `status: SUCCESS` y documenta la asunción en `summary`.
 8. Si detectas que el objetivo original era irrealizable tal como fue definido, devuelve `status: ESCALATE` con `escalate_to: human`.

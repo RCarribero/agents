@@ -8,7 +8,9 @@
 
 set -euo pipefail
 
-AGENTS_DIR="${1:-$(dirname "$0")/../agents}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AGENTS_DIR="${1:-$ROOT_DIR/agents}"
 errors=()
 ok_count=0
 fail_count=0
@@ -41,6 +43,11 @@ check_agent() {
   # 3. Sección AUTONOMOUS_LEARNINGS
   if ! grep -q "AUTONOMOUS_LEARNINGS" "$file"; then
     file_errors+=("sección AUTONOMOUS_LEARNINGS ausente")
+  fi
+
+  # 4. TASK_STATE core: si el contrato lo declara, debe incluir timeout_seconds
+  if grep -q '"task_state": {' "$file" && ! grep -q '"timeout_seconds": 0' "$file"; then
+    file_errors+=("TASK_STATE sin campo timeout_seconds")
   fi
 
   if [ ${#file_errors[@]} -eq 0 ]; then

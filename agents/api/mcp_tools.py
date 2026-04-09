@@ -23,6 +23,10 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
+from models.product import ProductSearchParams
+from repositories.product_repository import ProductRepository
+from supabase_client import get_shared_supabase_client, is_supabase_configured
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_SERVICE_NAME = "agents-api"
@@ -229,25 +233,27 @@ async def _tool_health_check(_args: dict) -> dict:
 
 async def _tool_search_products(args: dict) -> dict:
     """Delega a la lógica existente de búsqueda de productos."""
-    try:
-        from api.repositories.product_repository import ProductRepository
-        from api.models.product import ProductSearchParams
-    except ModuleNotFoundError:
-        from repositories.product_repository import ProductRepository
-        from models.product import ProductSearchParams
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
+    if not is_supabase_configured():
         raise HTTPException(status_code=503, detail="Supabase no configurado")
-    from supabase import create_client
-    client = create_client(supabase_url, supabase_key)
-    repo = ProductRepository(client)
+
+    repo = ProductRepository(get_shared_supabase_client())
     params = ProductSearchParams(
         query=args["query"],
         limit=args.get("limit", 20),
         cursor=args.get("cursor")
     )
-    return await repo.search(params)
+    products, next_cursor = await repo.search(
+        query=params.query,
+        limit=params.limit,
+        cursor=params.cursor,
+    )
+    total = await repo.count_search_results(params.query)
+
+    return {
+        "products": [product.model_dump(mode="json") for product in products],
+        "next_cursor": next_cursor,
+        "total": total,
+    }
 
 
 async def _tool_embed_document(args: dict) -> dict:
@@ -288,11 +294,8 @@ async def _tool_embed_document(args: dict) -> dict:
 
     doc_id = hashlib.sha256(f"{source}:{content_truncated[:256]}".encode()).hexdigest()[:32]
 
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if supabase_url and supabase_key:
-        from supabase import create_client
-        client = create_client(supabase_url, supabase_key)
+    if is_supabase_configured():
+        client = get_shared_supabase_client()
         client.table("agent_memory_vectors").upsert({
             "id": doc_id,
             "content": content_truncated,
@@ -307,7 +310,7 @@ async def _tool_embed_document(args: dict) -> dict:
         "source": source,
         "model": model_used,
         "dimensions": len(embedding),
-        "persisted": bool(supabase_url and supabase_key)
+        "persisted": is_supabase_configured()
     }
 
 
@@ -320,16 +323,13 @@ async def _tool_retrieve_context(args: dict) -> dict:
     k: int = min(args.get("k", 5), 10)
     source_filter: str | None = args.get("source_filter")
 
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
+    if not is_supabase_configured():
         return {"results": [], "warning": "Supabase no configurado — RAG no disponible"}
 
     # Generar embedding del query
     query_embedding = await _get_embedding(query)
 
-    from supabase import create_client
-    client = create_client(supabase_url, supabase_key)
+    client = get_shared_supabase_client()
 
     # Usar función RPC match_documents (definida en la migración RAG)
     rpc_args: dict = {"query_embedding": query_embedding, "match_count": k}
@@ -357,9 +357,6 @@ async def _tool_retrieve_context(args: dict) -> dict:
 
 async def _tool_log_agent_event(args: dict) -> dict:
     """Persiste un evento de transición en la tabla agent_events (observabilidad)."""
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
-
     event = {
         "event_type": args["event_type"],
         "task_id": args["task_id"],
@@ -371,9 +368,8 @@ async def _tool_log_agent_event(args: dict) -> dict:
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-    if supabase_url and supabase_key:
-        from supabase import create_client
-        client = create_client(supabase_url, supabase_key)
+    if is_supabase_configured():
+        client = get_shared_supabase_client()
         client.table("agent_events").insert(event).execute()
 
     # También emitir como log estructurado JSON (observabilidad local)

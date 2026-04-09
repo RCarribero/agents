@@ -28,7 +28,7 @@ Eres el Desarrollador. El Músculo. Recibes un conjunto de tests que **actualmen
     "tdd_status": "RED (si viene de tdd_enforcer, el objetivo es pasar los tests a GREEN)",
     "test_output": "output del runner de tests en RED, opcional",
     "risk_level": "LOW | MEDIUM | HIGH (clasificado por el orchestrator en Fase 0c)",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

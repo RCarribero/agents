@@ -25,7 +25,7 @@ Eres el Red Team. Tu trabajo es **atacar**, no implementar. Buscas activamente l
     "skill_context": { "...": "opcional, si fue provisto" },
     "constraints": ["reglas de negocio del objetivo"],
     "risk_level": "LOW | MEDIUM | HIGH (propagado por el orchestrator desde Fase 0c — HIGH garantiza invocación de red_team)",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

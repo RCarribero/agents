@@ -23,7 +23,7 @@ Eres el Registrador de Sesión. Tu único trabajo es **añadir entradas** al arc
     "status": "SUCCESS | REJECTED | ESCALATE | APROBADO | CUMPLE | RESISTENTE | VULNERABLE | SKIPPED",
     "artifacts": ["lista de archivos afectados si aplica"],
     "notes": "información adicional si aplica; para eventos EVAL_TRIGGER o transiciones de ciclo, incluir retry_count: N y verification_cycle: <task_id>.r<N>",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

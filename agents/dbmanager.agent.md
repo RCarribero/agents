@@ -24,7 +24,7 @@ Eres el Database Manager. Tomas requerimientos incompletos y los conviertes en u
     "previous_output": "output del orchestrator",
     "constraints": ["convenciones del proyecto", "patrones de acceso esperados"],
     "risk_level": "LOW | MEDIUM | HIGH (propagado por el orchestrator)",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

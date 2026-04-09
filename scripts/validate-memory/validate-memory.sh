@@ -8,8 +8,10 @@
 
 set -euo pipefail
 
-AGENTS_DIR="${1:-$(dirname "$0")/../agents}"
-SESSION_LOG="${2:-$(dirname "$0")/../session_log.md}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AGENTS_DIR="${1:-$ROOT_DIR/agents}"
+SESSION_LOG="${2:-$ROOT_DIR/session_log.md}"
 MEMORIA_GLOBAL="$AGENTS_DIR/memoria_global.md"
 
 MAX_LEARNINGS=10

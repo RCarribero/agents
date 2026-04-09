@@ -23,7 +23,7 @@ Eres el Guardián del TDD. Tu única responsabilidad es **escribir tests que fal
     "skill_context": { "...": "si fue provisto por skill_installer, opcional" },
     "constraints": ["convenciones de tests del proyecto", "frameworks de test en uso"],
     "risk_level": "LOW | MEDIUM | HIGH (propagado por el orchestrator)",
-    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
+    "task_state": { "task_id": "", "goal": "", "plan": [], "current_step": "", "files": [], "risk_level": "", "timeout_seconds": 0, "attempts": 0, "history": [], "constraints": [], "risks": [], "artifacts": [] }
   }
 }
 ```

@@ -3,7 +3,7 @@
 # Detecta el stack automáticamente y retorna stdout/stderr + exit code estructurados.
 #
 # Uso:
-#   ./scripts/run-tests.sh [PROJECT_ROOT] [--json]
+#   ./scripts/run-tests/run-tests.sh [PROJECT_ROOT] [--json]
 #
 # Salida normal:  stdout del runner + resumen final
 # Salida --json:  JSON { success, exit_code, stdout, stderr, duration_s, stack }

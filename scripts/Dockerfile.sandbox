@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir ruff pytest
 WORKDIR /workspace
 
 # Scripts de ejecución pre-copiados
-COPY scripts/run-tests.sh /usr/local/bin/run-tests
-COPY scripts/run-lint.sh  /usr/local/bin/run-lint
+COPY scripts/run-tests/run-tests.sh /usr/local/bin/run-tests
+COPY scripts/run-lint/run-lint.sh  /usr/local/bin/run-lint
 RUN chmod +x /usr/local/bin/run-tests /usr/local/bin/run-lint
 
 # Entrypoint: ejecutar tests por defecto

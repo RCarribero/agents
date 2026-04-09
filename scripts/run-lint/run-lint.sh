@@ -2,7 +2,7 @@
 # run-lint.sh — Ejecuta el linter del proyecto y retorna resultado estructurado.
 #
 # Uso:
-#   ./scripts/run-lint.sh [PROJECT_ROOT] [--json]
+#   ./scripts/run-lint/run-lint.sh [PROJECT_ROOT] [--json]
 
 set -uo pipefail
 

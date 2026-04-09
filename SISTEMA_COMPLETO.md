@@ -113,7 +113,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 - Nunca implementa — delega siempre en modos de ejecución
 - **Rule 0c (v3.1):** Inicializa `TASK_STATE` y clasifica `risk_level` (LOW/MEDIUM/HIGH) antes de crear el plan
 - Propaga `risk_level` y snapshot de `TASK_STATE` en el contrato de entrada de cada sub-agente
-- **Core de `TASK_STATE`:** `task_id`, `goal`, `plan`, `current_step`, `files`, `risk_level`, `attempts`, `history`. El proyecto añade `constraints`, `risks` y `artifacts` como extensiones compatibles.
+- **Core de `TASK_STATE`:** `task_id`, `goal`, `plan`, `current_step`, `files`, `risk_level`, `timeout_seconds`, `attempts`, `history`. El proyecto añade `constraints`, `risks` y `artifacts` como extensiones compatibles. `timeout_seconds` es el presupuesto duro de la fase activa y evita bloqueos indefinidos del orchestrator.
 - Tabla de routing de verificadores según `risk_level`: LOW→ninguno (MODO RÁPIDO), MEDIUM→`auditor`+`qa`, HIGH→`auditor`+`qa`+`red_team`
 - En Fase 3 define `verification_cycle: <task_id>.r<retry_count>` y propaga `branch_name` a los tres verificadores
 - Valida que `verified_digest` sea idéntico en los tres reports antes de habilitar Fase 4
@@ -189,7 +189,7 @@ override humano ──► nuevo verification_cycle: <task_id>.override<N>.r0
 
 **Reglas clave:**
 - Verifica cache en `skills_cache.md` (válido 24 horas)
-- Detecta stack desde `.copilot/stack.md`, luego manifests (`pubspec.yaml`, `package.json`, `requirements.txt`, `go.mod`)
+- Detecta stack desde `stack.md` en raíz, con fallback legado a `.copilot/stack.md`, y luego manifests (`pubspec.yaml`, `package.json`, `requirements.txt`, `go.mod`)
 - Nunca bloquea el flujo — cualquier error devuelve `status: SKIPPED`
 - Registra `autoskills: unavailable` si la herramienta no está disponible
 
@@ -552,17 +552,17 @@ Detectados automáticamente por `skill_installer` en Fase -1. Almacenados en `sk
 
 **Aplica a:** todos los agentes (`applyTo: "**"`)
 
-- Si existe `.copilot/overrides.md` en el proyecto → leerlo antes de actuar
+- Si existe `overrides.md` en el proyecto, o en fallback legado `.copilot/overrides.md` → leerlo antes de actuar
 - Override tiene precedencia en: convenciones de proyecto, build/test/lint, arquitectura
 - Excepción: `readonly.instructions.md` NO puede ser anulada por ningún override
 - Documentar en `summary` del `director_report` qué override se aplicó
-- Si no existe `.copilot/overrides.md` → continuar sin interrumpir
+- Si no existe ni `overrides.md` ni `.copilot/overrides.md` → continuar sin interrumpir
 
 ---
 
 ## 6. Prompt templates
 
-*(No se encontraron archivos en `.github/prompts/`. Sección omitida.)*
+Los prompts reutilizables del workspace viven en `.github/prompts/*.prompt.md`.
 
 ---
 
@@ -573,7 +573,7 @@ Detectados automáticamente por `skill_installer` en Fase -1. Almacenados en `sk
 Verifica integridad estructural de cada `.agent.md` en `agents/`.
 
 ```bash
-./scripts/validate-agents.sh [ruta/a/agents/]
+./scripts/validate-agents/validate-agents.sh [ruta/a/agents/]
 ```
 
 Verifica: frontmatter con `name` y `description`, bloque `<director_report>`, sección `AUTONOMOUS_LEARNINGS`.
@@ -583,10 +583,10 @@ Output: `OK <agente>` o `FAIL <agente> → <motivo>`. Exit 1 si hay algún FAIL.
 
 ### validate-stack.sh
 
-Detecta el stack del proyecto y crea `.copilot/stack.md` si no existe.
+Detecta el stack del proyecto y crea `stack.md` en la raíz si no existe.
 
 ```bash
-./scripts/validate-stack.sh [ruta/proyecto/]
+./scripts/validate-stack/validate-stack.sh [ruta/proyecto/]
 ```
 
 Detecta: flutter, node, nextjs, react, python, fastapi, go, rust.
@@ -599,7 +599,7 @@ Si ya existe `stack.md` → lo muestra sin sobreescribir.
 Valida el estado de la memoria en tres dimensiones.
 
 ```bash
-./scripts/validate-memory.sh [ruta/agents/] [ruta/session_log.md]
+./scripts/validate-memory/validate-memory.sh [ruta/agents/] [ruta/session_log.md]
 ```
 
 - `[1/3] memoria_global.md` → OK | WARN (sin entradas) | FAIL (no existe)
@@ -613,7 +613,7 @@ Valida el estado de la memoria en tres dimensiones.
 Estima el tamaño en tokens de cada `.agent.md` (chars / 4).
 
 ```bash
-./scripts/token-report.sh [ruta/agents/]
+./scripts/token-report/token-report.sh [ruta/agents/]
 ```
 
 Tabla: Agente | Tokens est. | Estado. WARN si supera 2000 tokens.
@@ -625,7 +625,7 @@ Tabla: Agente | Tokens est. | Estado. WARN si supera 2000 tokens.
 Ejecuta los tests detectando el stack automáticamente.
 
 ```bash
-./scripts/run-tests.sh [PROJECT_ROOT] [--json]
+./scripts/run-tests/run-tests.sh [PROJECT_ROOT] [--json]
 ```
 
 Stacks: flutter, nextjs, node, python/pytest, go, rust.
@@ -638,7 +638,7 @@ Con `--json`: `{success, exit_code, stdout, stderr, duration_s, stack}`.
 Ejecuta el linter detectando el stack automáticamente.
 
 ```bash
-./scripts/run-lint.sh [PROJECT_ROOT] [--json]
+./scripts/run-lint/run-lint.sh [PROJECT_ROOT] [--json]
 ```
 
 Stacks: flutter (`flutter analyze --no-fatal-infos`), python (`ruff check .`), go (`go vet`), rust (`cargo clippy`).
@@ -650,7 +650,7 @@ Stacks: flutter (`flutter analyze --no-fatal-infos`), python (`ruff check .`), g
 Orquesta tests/lint en un contenedor Docker aislado.
 
 ```bash
-./scripts/sandbox-run.sh <project_root> <tests|lint> [--json]
+./scripts/sandbox-run/sandbox-run.sh <project_root> <tests|lint> [--json]
 ```
 
 Flags Docker: `--network none --cap-drop ALL --memory 512m --read-only --tmpfs /tmp`.
@@ -663,7 +663,7 @@ Fallback a ejecución directa en host si Docker no está disponible.
 Dashboard de métricas desde la API de observabilidad.
 
 ```bash
-./scripts/agent-metrics.sh [--json] [--task <task_id>] [--agents]
+./scripts/agent-metrics/agent-metrics.sh [--json] [--task <task_id>] [--agents]
 ```
 
 - Sin flags → resumen global con tabla de éxito por agente
@@ -753,7 +753,7 @@ Herramientas: `health_check`, `embed_document`, `retrieve_context` (RAG k=5), `l
 
 ### Override de MCP por proyecto
 
-Crear `.copilot/overrides.md` en la raíz del proyecto:
+Crear `overrides.md` en la raíz del proyecto:
 
 ```markdown
 ## MCP Override
@@ -849,9 +849,19 @@ Cuando `validate-memory.sh` detecta > 500 líneas: renombrar a `session_log_YYYY
 ## 11. Arquitectura de archivos
 
 ```
-.copilot/
+.
 ├── .github/
-│   ├── copilot-instructions.md         Instrucciones de stack para GitHub Copilot
+│   ├── copilot-instructions.md          Instrucciones de proyecto para GitHub Copilot
+│   ├── prompts/
+│   │   ├── start.prompt.md
+│   │   ├── validar.prompt.md
+│   │   ├── tests.prompt.md
+│   │   ├── lint.prompt.md
+│   │   ├── sandbox-tests.prompt.md
+│   │   ├── sandbox-lint.prompt.md
+│   │   ├── rag-index.prompt.md
+│   │   ├── metrics.prompt.md
+│   │   └── eval-gate.prompt.md
 │   └── workflows/
 │       ├── ci.yml                       Pipeline CI (python, flutter, security, validate-agents)
 │       └── rollback.yml                 Auto-revert en fallos de CI en main
@@ -897,12 +907,14 @@ Cuando `validate-memory.sh` detecta > 500 líneas: renombrar a `session_log_YYYY
 │   ├── run-lint.sh
 │   ├── run-tests.sh
 │   ├── sandbox-run.sh
+│   ├── start.sh
 │   ├── token-report.sh
 │   ├── validate-agents.sh
 │   ├── validate-memory.sh
 │   └── validate-stack.sh
 ├── config.json
 ├── session_log.md                       Audit trail append-only
+├── stack.md                             Stack detectado + comandos de test y lint
 └── SISTEMA_COMPLETO.md                  Este archivo
 ```
 
@@ -910,9 +922,9 @@ Cuando `validate-memory.sh` detecta > 500 líneas: renombrar a `session_log_YYYY
 
 ```
 <proyecto>/
-├── .copilot/
-│   ├── stack.md          Stack detectado + comandos de test y lint
-│   └── overrides.md      (opcional) Override de instrucciones globales
+├── stack.md              Stack detectado + comandos de test y lint
+├── overrides.md          (opcional) Override de instrucciones globales
+├── .env                  (opcional) Variables del workspace, derivadas de `.env.example`
 └── skills_cache.md       (generado por skill_installer, con timestamp 24h)
 ```
 
@@ -979,7 +991,9 @@ Todos: `NOT_EXECUTED` — sin runner end-to-end instalado.
 
 ## 14. Guía de inicio rápido
 
-1. **Clona el repositorio** `RCarribero/agents` y abre `.copilot/` en VS Code.
+1. **Clona el repositorio** `RCarribero/agents` y abre la raíz del proyecto en VS Code.
+
+1b. **Bootstrap inicial opcional** con `/start` o `./scripts/start/start.ps1 .` para generar `stack.md`, `.env` y `agents/api/.env` si todavía no existen.
 
 2. **Crea `.env`** en la raíz con las variables requeridas:
    ```
@@ -1002,14 +1016,14 @@ Todos: `NOT_EXECUTED` — sin runner end-to-end instalado.
 
 5. **Detecta el stack** de tu proyecto:
    ```bash
-   ./scripts/validate-stack.sh /ruta/a/tu/proyecto
+   ./scripts/validate-stack/validate-stack.sh /ruta/a/tu/proyecto
    ```
 
 6. **Verifica la integridad del sistema:**
    ```bash
-   ./scripts/validate-agents.sh
-   ./scripts/validate-memory.sh
-   ./scripts/token-report.sh
+   ./scripts/validate-agents/validate-agents.sh
+   ./scripts/validate-memory/validate-memory.sh
+   ./scripts/token-report/token-report.sh
    ```
 
 7. **Indexa documentación existente** en el vector store:
@@ -1025,7 +1039,7 @@ Todos: `NOT_EXECUTED` — sin runner end-to-end instalado.
 9. **Monitorea en tiempo real:**
    ```bash
    tail -f session_log.md
-   ./scripts/agent-metrics.sh
+   ./scripts/agent-metrics/agent-metrics.sh
    ```
 
 10. **Al cerrar la sesión**, invoca `memory_curator` (modo completo) para consolidar lecciones en `memoria_global.md`.

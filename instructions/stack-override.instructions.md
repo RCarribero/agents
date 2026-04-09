@@ -8,7 +8,7 @@ Estas instrucciones aplican a todos los agentes y gestionan los overrides de con
 
 ## Comportamiento de override
 
-- Si existe `.copilot/overrides.md` en el proyecto activo: **léelo antes de actuar**.
+- Si existe `overrides.md` en el proyecto activo, o en fallback legado `.copilot/overrides.md`: **léelo antes de actuar**.
 - Las instrucciones del override tienen **precedencia** sobre las instrucciones globales (`global.instructions.md`) en lo relativo a convenciones de proyecto, comandos de build/test/lint, y decisiones de arquitectura específicas.
 - **Excepción:** las reglas de seguridad definidas en `readonly.instructions.md` **no pueden ser anuladas** por ningún override. Los agentes de solo lectura permanecen de solo lectura independientemente del override.
 
@@ -18,4 +18,4 @@ En el campo `summary` de tu `<director_report>`, documenta qué override se apli
 
 ## Si no existe override
 
-Si `.copilot/overrides.md` no existe, continúa con las instrucciones globales sin interrumpir el flujo. No falles ni escales por la ausencia del archivo.
+Si no existe ni `overrides.md` ni `.copilot/overrides.md`, continúa con las instrucciones globales sin interrumpir el flujo. No falles ni escales por la ausencia del archivo.

@@ -6,7 +6,7 @@
 
 - Workspace raíz: repositorio de orquestación multi-agente
 - Backend embebido: `agents/api`
-- Scripts de validación desde raíz: `scripts/run-tests.sh . --json`, `scripts/run-lint.sh . --json`
+- Scripts de validación desde raíz: `scripts/run-tests/run-tests.sh . --json`, `scripts/run-lint/run-lint.sh . --json`
 
 ## Stack local
 

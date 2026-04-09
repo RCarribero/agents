@@ -3,7 +3,7 @@
 # Si Docker no está disponible, ejecuta directamente en el host.
 #
 # Uso:
-#   ./scripts/sandbox-run.sh <project_root> <command> [--json]
+#   ./scripts/sandbox-run/sandbox-run.sh <project_root> <command> [--json]
 #   command: tests | lint
 #
 # Variables de entorno:
@@ -16,6 +16,7 @@ PROJECT_ROOT="${1:-$(pwd)}"
 COMMAND="${2:-tests}"
 OUTPUT_FORMAT="${3:-}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 USE_DOCKER="${SANDBOX_USE_DOCKER:-}"
 
@@ -30,8 +31,8 @@ fi
 
 # Seleccionar script de ejecución
 case "$COMMAND" in
-  tests) SCRIPT="run-tests.sh" ;;
-  lint)  SCRIPT="run-lint.sh" ;;
+  tests) SCRIPT="run-tests/run-tests.sh" ;;
+  lint)  SCRIPT="run-lint/run-lint.sh" ;;
   *)
     echo "ERROR: comando desconocido '$COMMAND'. Usar: tests | lint" >&2
     exit 1
@@ -44,7 +45,7 @@ if [ "$USE_DOCKER" = "1" ]; then
   # Construir imagen si no existe o si el Dockerfile cambió
   if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo "Construyendo imagen sandbox..." >&2
-    docker build -f "$SCRIPT_DIR/Dockerfile.sandbox" -t "$IMAGE" "$SCRIPT_DIR/.." >&2
+    docker build -f "$SCRIPTS_ROOT/Dockerfile.sandbox" -t "$IMAGE" "$SCRIPTS_ROOT/.." >&2
   fi
 
   docker run --rm \
@@ -55,10 +56,10 @@ if [ "$USE_DOCKER" = "1" ]; then
     --read-only \
     --tmpfs /tmp:rw,noexec,nosuid,size=64m \
     -v "$PROJECT_ROOT:/workspace:ro" \
-    -v "$SCRIPT_DIR:/scripts:ro" \
+    -v "$SCRIPTS_ROOT:/scripts:ro" \
     "$IMAGE" \
     "/scripts/$SCRIPT" "/workspace" "$OUTPUT_FORMAT"
 else
   # Ejecución directa en el host
-  bash "$SCRIPT_DIR/$SCRIPT" "$PROJECT_ROOT" "$OUTPUT_FORMAT"
+  bash "$SCRIPTS_ROOT/$SCRIPT" "$PROJECT_ROOT" "$OUTPUT_FORMAT"
 fi
