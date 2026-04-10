@@ -27,7 +27,8 @@ function Write-Success { param($msg) Write-Host "[build] $msg" -ForegroundColor 
 function Write-Warn    { param($msg) Write-Host "[build][WARN] $msg" -ForegroundColor Yellow }
 function Write-Fail    { param($msg) Write-Host "[build][ERROR] $msg" -ForegroundColor Red; exit 1 }
 
-Set-Location $ProjectRoot
+Push-Location $ProjectRoot
+try {
 
 # ── 1. Verificar archivos clave ───────────────────────────────────────────────
 if (-not (Test-Path "Dockerfile") -and -not (Test-Path "docker-compose.yml")) {
@@ -67,25 +68,21 @@ if (Test-Path "docker-compose.yml") {
     # Detectar Compose v2 vs v1
     $useV2 = $false
     try { docker compose version 2>&1 | Out-Null; $useV2 = ($LASTEXITCODE -eq 0) } catch {}
-    $composeCmd  = if ($useV2) { "docker" } else { "docker-compose" }
-    $composeBase = if ($useV2) { @("compose") } else { @() }
 
     # ── Rebuild: parar contenedores y borrar imágenes ────────────────────────────
     if ($Action -eq "rebuild") {
         $targetDesc = if ($Service) { $Service } else { "todos los servicios" }
         Write-Warn "Rebuild: parando y eliminando imágenes de $targetDesc..."
-        $stopArgs = $composeBase + @("stop")
-        if ($Service) { $stopArgs += $Service }
-        & $composeCmd @stopArgs 2>&1 | Out-Null
-
-        $rmArgs = $composeBase + @("rm", "-f")
-        if ($Service) { $rmArgs += $Service }
-        & $composeCmd @rmArgs 2>&1 | Out-Null
-
-        # Eliminar imágenes locales
-        $imgArgs = $composeBase + @("images", "-q")
-        if ($Service) { $imgArgs += $Service }
-        $imgs = (& $composeCmd @imgArgs 2>&1) | Where-Object { $_ -match "^[0-9a-f]+$" }
+        if ($useV2) {
+            if ($Service) { docker compose stop $Service 2>&1 | Out-Null; docker compose rm -f $Service 2>&1 | Out-Null }
+            else          { docker compose stop 2>&1 | Out-Null; docker compose rm -f 2>&1 | Out-Null }
+            $imgs = if ($Service) { docker compose images -q $Service 2>&1 } else { docker compose images -q 2>&1 }
+        } else {
+            if ($Service) { docker-compose stop $Service 2>&1 | Out-Null; docker-compose rm -f $Service 2>&1 | Out-Null }
+            else          { docker-compose stop 2>&1 | Out-Null; docker-compose rm -f 2>&1 | Out-Null }
+            $imgs = if ($Service) { docker-compose images -q $Service 2>&1 } else { docker-compose images -q 2>&1 }
+        }
+        $imgs = $imgs | Where-Object { $_ -match "^[0-9a-f]+" }
         if ($imgs) {
             $imgs | ForEach-Object { docker rmi -f $_ 2>&1 | Out-Null }
             Write-Info "Imágenes anteriores eliminadas."
@@ -93,12 +90,18 @@ if (Test-Path "docker-compose.yml") {
         Write-Info "Comenzando rebuild sin caché..."
     }
 
-    $composeArgs = $composeBase + @("build")
-    if ($NoCache) { $composeArgs += "--no-cache" }
-    if ($Service) { $composeArgs += $Service }
-
     Write-Info "Construyendo con Compose..."
-    & $composeCmd @composeArgs
+    if ($useV2) {
+        if ($NoCache -and $Service) { docker compose build --no-cache $Service }
+        elseif ($NoCache)           { docker compose build --no-cache }
+        elseif ($Service)           { docker compose build $Service }
+        else                        { docker compose build }
+    } else {
+        if ($NoCache -and $Service) { docker-compose build --no-cache $Service }
+        elseif ($NoCache)           { docker-compose build --no-cache }
+        elseif ($Service)           { docker-compose build $Service }
+        else                        { docker-compose build }
+    }
     if ($LASTEXITCODE -ne 0) { Write-Fail "Build fallido (exit code $LASTEXITCODE)." }
 
 } else {
@@ -121,3 +124,4 @@ if (Test-Path "docker-compose.yml") {
 
 $elapsed = [math]::Round(((Get-Date) - $startTime).TotalSeconds)
 Write-Success "Build completado en ${elapsed}s. Siguiente paso: .\launch.ps1"
+} finally { Pop-Location }

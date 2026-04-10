@@ -55,7 +55,8 @@ if (-not $EnvOnly) {
 }
 
 # ── 2. Crear .env desde .env.example ─────────────────────────────────────────
-Set-Location $ProjectRoot
+Push-Location $ProjectRoot
+try {
 
 if ((Test-Path ".env.example") -and -not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
@@ -112,3 +113,4 @@ if (-not $EnvOnly -and (Get-Command docker -ErrorAction SilentlyContinue)) {
 }
 
 Write-Success "Setup completado. Siguiente paso: .\build.ps1"
+} finally { Pop-Location }

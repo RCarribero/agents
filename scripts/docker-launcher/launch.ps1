@@ -30,14 +30,12 @@ function Write-Success { param($msg) Write-Host "[launch] $msg" -ForegroundColor
 function Write-Warn    { param($msg) Write-Host "[launch][WARN] $msg" -ForegroundColor Yellow }
 function Write-Fail    { param($msg) Write-Host "[launch][ERROR] $msg" -ForegroundColor Red; exit 1 }
 
-Set-Location $ProjectRoot
+Push-Location $ProjectRoot
+try {
 
 # ── Detectar Compose ──────────────────────────────────────────────────────────
 $useV2 = $false
 try { docker compose version 2>&1 | Out-Null; $useV2 = ($LASTEXITCODE -eq 0) } catch {}
-
-$composeExe  = if ($useV2) { "docker" } else { "docker-compose" }
-$composeBase = if ($useV2) { @("compose") } else { @() }
 
 # ── Cargar .env ───────────────────────────────────────────────────────────────
 if (Test-Path ".env") {
@@ -62,11 +60,17 @@ switch ($Action) {
 
     "up" {
         Write-Info "Levantando contenedores$(if ($Service) { " (servicio: $Service)" })..."
-        $args = $composeBase + @("up")
-        if (-not $NoDetach) { $args += "--detach" }
-        if ($Service)       { $args += $Service }
-
-        & $composeExe @args
+        if ($useV2) {
+            if (-not $NoDetach -and $Service) { docker compose up --detach $Service }
+            elseif (-not $NoDetach)           { docker compose up --detach }
+            elseif ($Service)                 { docker compose up $Service }
+            else                              { docker compose up }
+        } else {
+            if (-not $NoDetach -and $Service) { docker-compose up --detach $Service }
+            elseif (-not $NoDetach)           { docker-compose up --detach }
+            elseif ($Service)                 { docker-compose up $Service }
+            else                              { docker-compose up }
+        }
         if ($LASTEXITCODE -ne 0) { Write-Fail "Error al levantar contenedores." }
 
         if (-not $NoDetach) {
@@ -84,35 +88,45 @@ switch ($Action) {
             if ($confirm -notmatch "^[Yy]$") { Write-Info "Cancelado."; exit 0 }
         }
         Write-Info "Deteniendo contenedores..."
-        $args = $composeBase + @("down")
-        if ($Volumes) { $args += "--volumes" }
-        if ($Service) { $args += $Service }
-
-        & $composeExe @args
+        if ($useV2) {
+            if ($Volumes -and $Service) { docker compose down --volumes $Service }
+            elseif ($Volumes)           { docker compose down --volumes }
+            elseif ($Service)           { docker compose down $Service }
+            else                        { docker compose down }
+        } else {
+            if ($Volumes -and $Service) { docker-compose down --volumes $Service }
+            elseif ($Volumes)           { docker-compose down --volumes }
+            elseif ($Service)           { docker-compose down $Service }
+            else                        { docker-compose down }
+        }
         if ($LASTEXITCODE -ne 0) { Write-Fail "Error al detener contenedores." }
         Write-Success "Contenedores detenidos."
     }
 
     "restart" {
         Write-Info "Reiniciando contenedores$(if ($Service) { " (servicio: $Service)" })..."
-        $args = $composeBase + @("restart")
-        if ($Service) { $args += $Service }
-
-        & $composeExe @args
+        if ($useV2) {
+            if ($Service) { docker compose restart $Service } else { docker compose restart }
+        } else {
+            if ($Service) { docker-compose restart $Service } else { docker-compose restart }
+        }
         if ($LASTEXITCODE -ne 0) { Write-Fail "Error al reiniciar contenedores." }
         Write-Success "Contenedores reiniciados."
     }
 
     "logs" {
         Write-Info "Mostrando logs (Ctrl+C para salir)..."
-        $args = $composeBase + @("logs", "--follow", "--tail=100")
-        if ($Service) { $args += $Service }
-
-        & $composeExe @args
+        if ($useV2) {
+            if ($Service) { docker compose logs --follow --tail=100 $Service }
+            else          { docker compose logs --follow --tail=100 }
+        } else {
+            if ($Service) { docker-compose logs --follow --tail=100 $Service }
+            else          { docker-compose logs --follow --tail=100 }
+        }
     }
 
     "status" {
-        $args = $composeBase + @("ps")
-        & $composeExe @args
+        if ($useV2) { docker compose ps } else { docker-compose ps }
     }
 }
+} finally { Pop-Location }
