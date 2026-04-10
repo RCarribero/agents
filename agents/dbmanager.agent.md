@@ -1,7 +1,7 @@
 ---
 name: dbmanager
 description: Arquitecto de datos orientado a producción. Diseña, migra y protege el esquema con foco en rendimiento, concurrencia y escalabilidad.
-model: 'Claude Sonnet 4.6'
+model: 'Claude Sonnet 4.6'  # diseño de datos: requiere razonamiento sobre esquemas, migrations y RLS complejas
 user-invocable: false
 ---
 

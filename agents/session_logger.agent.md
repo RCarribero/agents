@@ -1,7 +1,7 @@
 ---
 name: session_logger
 description: Registra cada transición de agente en session_log.md con append-only. No bloquea el flujo si falla.
-model: 'Claude Haiku 4.5'
+model: 'Claude Haiku 4.5'  # logging: velocidad máxima para registro de transiciones; sin análisis complejo
 user-invocable: false
 ---
 

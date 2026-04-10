@@ -2,6 +2,8 @@
 
 API auxiliar del sistema multi-agente. Expone health checks, búsqueda de productos y tools MCP para observabilidad y RAG.
 
+**Requisito:** Python 3.13+
+
 ## Endpoints Disponibles
 
 ### GET /health

@@ -37,6 +37,9 @@ REPO_ROOT = SCRIPT_DIR.parent  # agents/api/../ = agents/
 AGENTS_API_URL = os.getenv("AGENTS_API_URL", "http://localhost:8000")
 AGENTS_API_KEY = os.getenv("AGENTS_API_KEY", "")
 
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_SECONDS = [2, 4, 8]  # exponential backoff per attempt
+
 SOURCES: dict[str, list[Path]] = {
     "memoria": [REPO_ROOT / "memoria_global.md"],
     "session_log": [REPO_ROOT.parent / "session_log.md"],
@@ -92,6 +95,25 @@ def embed_document(content: str, source: str, metadata: dict) -> dict:
         return resp.json()
 
 
+def embed_document_with_retry(content: str, source: str, metadata: dict) -> dict:
+    """Intenta embed_document hasta RETRY_ATTEMPTS veces con backoff exponencial.
+
+    Si falla tras todos los intentos, relanza la última excepción.
+    """
+    last_exc: Exception | None = None
+    for attempt in range(RETRY_ATTEMPTS):
+        try:
+            return embed_document(content, source, metadata)
+        except Exception as exc:
+            last_exc = exc
+            if attempt < RETRY_ATTEMPTS - 1:
+                wait = RETRY_BACKOFF_SECONDS[attempt]
+                print(f"    RETRY [{attempt + 1}/{RETRY_ATTEMPTS}] en {wait}s — {exc}")
+                time.sleep(wait)
+    assert last_exc is not None
+    raise last_exc
+
+
 def index_source(source_key: str) -> tuple[int, int]:
     """Indexa todos los documentos de una fuente. Retorna (ok, errores)."""
     paths = SOURCES.get(source_key, [])
@@ -118,7 +140,7 @@ def index_source(source_key: str) -> tuple[int, int]:
 
         for i, chunk in enumerate(chunks):
             try:
-                result = embed_document(
+                result = embed_document_with_retry(
                     content=chunk,
                     source=str(path.name),
                     metadata={"chunk": i, "total_chunks": len(chunks), "path": str(path)},
@@ -131,7 +153,7 @@ def index_source(source_key: str) -> tuple[int, int]:
                 # Throttle para no saturar la API
                 time.sleep(0.1)
             except Exception as exc:
-                print(f"    ERROR chunk {i}: {exc}")
+                print(f"    FAILED chunk {i} tras {RETRY_ATTEMPTS} intentos: {exc}")
                 errors += 1
 
     return ok, errors
@@ -163,7 +185,9 @@ def main() -> None:
         total_errors += errors
         print(f"  → {ok} chunks indexados, {errors} errores\n")
 
-    print(f"Totales: {total_ok} OK, {total_errors} errores")
+    print(f"=== Resumen final ===")
+    print(f"  Documentos indexados OK : {total_ok}")
+    print(f"  Documentos fallidos     : {total_errors}")
     sys.exit(1 if total_errors > 0 else 0)
 
 

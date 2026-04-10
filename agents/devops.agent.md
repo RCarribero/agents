@@ -1,7 +1,7 @@
 ---
 name: devops
 description: Responsable de despliegue y control de versiones.
-model: 'Claude Sonnet 4.6'
+model: 'Claude Sonnet 4.6'  # despliegue: balance coste/capacidad para operaciones git y generación de CI/CD
 user-invocable: false
 ---
 

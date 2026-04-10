@@ -7,6 +7,20 @@ Historial de lecciones aprendidas durante sesiones de trabajo. Consulta este arc
 
 ---
 
+## Política de esta memoria
+
+Solo se registran lecciones aplicables a cualquier proyecto con el mismo stack, con patrón que seguirá siendo relevante en un proyecto diferente, y que pueden describirse sin mencionar nombres de vistas, tablas, rutas o entidades del proyecto actual. Si cualquiera de esas tres condiciones falla, la lección se anota en `session_log.md`, no aquí.
+
+---
+
+## [2026-04-10] multiagent-hygiene-002 — Política de modelos por agente
+
+**Agentes:** todos
+
+El modelo de cada agente es una decisión de diseño: refleja el balance entre coste, velocidad y capacidad de razonamiento exigido por el rol. Cambiar un modelo requiere actualizar la justificación inline en el frontmatter (`model: 'X'  # justificación`) y pasar eval-gate. No se aceptan cambios de modelo sin ambas condiciones cumplidas.
+
+---
+
 ## [2026-04-07] routing-fix-v1.0.1 — Reglas de routing para dbmanager
 
 **Agentes:** orchestrator (corregido)
@@ -65,9 +79,9 @@ Documentar siempre la decisión en el plan:
 
 ---
 
-## [2026-04-07] ciclo3-bio-perfil — Campo bio en perfil de usuario
+## [2026-04-07] patrón: campo de texto largo con validación multicapa
 
-**Agentes:** dbmanager, backend, frontend, auditor, qa, devops
+**Agentes:** dbmanager, backend, frontend
 
 ### Buenas prácticas
 - **Flujo completo DB→Backend→UI funciona sin fricción** cuando la migración de esquema precede a la implementación de lógica.
@@ -95,7 +109,7 @@ Documentar siempre la decisión en el plan:
 
 ---
 
-## [2026-04-07] ciclo1-color-boton — Cambio de color en botón primario
+## [2026-04-07] patrón: ciclo1 cambio cosmético — validación de accesibilidad en UI
 
 **Agentes:** frontend, auditor, qa, devops
 
@@ -110,112 +124,17 @@ Documentar siempre la decisión en el plan:
 
 ---
 
-## [2026-04-07] NetTask — Migración de autenticación y bugfixes
+## [2026-04-07] patrón: migración de stack de autenticación y magic strings
 
-**Agentes:** frontend, qa, auditor, memory_curator
+**Agentes:** frontend, auditor, qa
 
-### Hallazgo 1: Migración Django Auth (auth-migration-django-001)
+### Buenas prácticas
+- **Verificar consistencia de stacks de auth entre frontend y backend ANTES de implementar.** Frontend que llama al SDK incorrecto bloquea login completamente al llegar a producción.
+- **Interfaz del contexto de autenticación idéntica tras migración:** permite cambiar el proveedor de auth sin romper componentes consumidores (cambio en una capa, no en cascada).
+- **Optimistic updates en operaciones de baja latencia:** actualizar estado local inmediatamente y hacer rollback solo si el backend devuelve error. Mejora UX sin riesgo de inconsistencia.
 
-**Contexto:**
-Frontend estaba configurado para usar Supabase Auth SDK, bloqueando completamente login y registro porque backend solo provee Django Auth + JWT.
-
-**Solución aplicada:**
-- Reescritura completa de `frontend/src/api/auth.ts` — eliminó `supabase.auth.signUp/signInWithPassword`, agregó llamadas directas a Django endpoints
-- Reescritura completa de `frontend/src/context/AuthContext.tsx` — eliminó listeners de Supabase session, simplificó a JWT + localStorage
-- `frontend/src/api/supabase.ts` marcado como obsoleto para auth, mantiene funcionalidad real-time
-
-**Arquitectura antes:**
-```
-UI → AuthContext → supabase.auth.signInWithPassword() → Supabase Auth → /sync-supabase → Django
-```
-
-**Arquitectura después:**
-```
-UI → AuthContext → axios POST /api/auth/login → Django → JWT tokens → localStorage
-```
-
-**Buenas prácticas validadas:**
-- Verificar consistencia de stacks de autenticación entre frontend y backend ANTES de deploy
-- Testing de prioridad por criticidad: login/register probados primero (88.9% endpoints verificados)
-- Usar emails únicos con timestamp en testing para evitar colisiones de datos seed
-- Migración sin breaking changes: AuthContext interface idéntica para componentes consumidores
-
-**Antipatrones detectados y documentados:**
-- **Magic strings descentralizados:** Tipos de columna hardcodeados sin constantes compartidas ("done", "completado" vs "terminado")
-- **No verificar comunicación E2E antes de deploy:** Login funcionaba en backend pero frontend nunca lo llamaba
-- **Auth sin fallback = single point of failure:** Frontend dependía 100% de Supabase Auth sin alternativa a Django directo
-
-### Hallazgo 2: Bug de tachado de tareas (task-strikethrough-bug-001)
-
-**Problema:**
-Tareas completadas no se tachaban visualmente al moverlas a columna "Terminado", solo después de recargar página.
-
-**Causa raíz:**
-Frontend verificaba tipos de columna incorrectos: `destCol?.tipo === "done" || destCol?.tipo === "completado"` cuando el backend usa `TIPO_TERMINADO = 'terminado'`
-
-**Corrección:**
-Cambio de 1 línea en `DashboardPage.tsx:218`: `const isCompleting = destCol?.tipo === "terminado";`
-Actualización adicional en líneas 147 y 505 para consistencia.
-
-**Impacto:**
-- Estado local `completada` ahora se actualiza inmediatamente en drag & drop
-- TaskCard renderiza `line-through` sin esperar respuesta del backend (optimistic update)
-- 3 líneas modificadas, 0 breaking changes
-
-**Buenas prácticas:**
-- Verificar constantes de backend antes de implementar lógica condicional en frontend
-- Cambios de valores de constantes (no lógica) = bajo riesgo de regresión
-- Optimistic updates mejoran UX cuando la operación backend es altamente probable que tenga éxito
-
-**Antipatrones detectados:**
-- **3 valores adicionales de tipo de columna también incorrectos:** "todo" debería ser "backlog", "in_progress" → "progreso", "testing" → "testeo" (no bloqueante, deuda técnica documentada)
-- **Magic strings sin archivo de constantes:** Debería existir `frontend/src/constants/columns.ts` con `COLUMN_TYPES = { TERMINADO: 'terminado', ... }`
-
-### Hallazgo 3: Auditoría de seguridad post-migración (auth-migration-django-001.audit)
-
-**Veredicto:** APROBADO CON OBSERVACIONES (severidad MEDIA)
-
-**Hallazgos de severidad MEDIA:**
-1. **Exposición de `error.message` en UI sin sanitizar** (ErrorBoundary.tsx:49) — Stack traces pueden exponer arquitectura interna
-2. **Console.log activo en producción** (20+ ocurrencias) — Puede exponer tokens decodificados o payloads de API
-3. **Mensajes de backend expuestos directamente** (auth.ts:80, LoginPage.tsx:35) — Errores técnicos pueden revelar nombres de tablas o queries SQL
-
-**Hallazgos de severidad BAJA:**
-1. CSP permite `'unsafe-inline'` (nginx.conf:30) — Reduce defensa contra XSS
-2. Validación de contraseña solo en cliente (LoginPage.tsx:48) — Puede bypassearse con peticiones directas
-
-**Verificaciones positivas:**
-- HTTPS en producción ✓
-- JWT en Authorization header (protege contra CSRF) ✓
-- Logout limpia tokens ✓
-- No tokens en URLs ✓
-- Token refresh con cola previene race conditions ✓
-
-**Recomendaciones no bloqueantes:**
-- Implementar logging centralizado (Sentry) en lugar de console.log
-- Mapear errores backend a mensajes user-friendly en frontend
-- Considerar httpOnly cookies + refresh token rotation en el futuro
-
-### Resultados consolidados
-
-**Tarea 1 (Verificación endpoints):**
-- Status: ✅ CUMPLE
-- 8/9 endpoints funcionando (88.9%)
-- Login y register operativos en producción
-
-**Tarea 2 (Migración auth):**
-- Status: ✅ SUCCESS
-- Frontend ahora usa Django Auth directo
-- 0% funcionalidad bloqueada por Supabase Auth
-
-**Tarea 3 (Fix tachado):**
-- Status: ✅ CUMPLE
-- Tareas se tachan inmediatamente
-- Deuda técnica identificada y documentada
-
-### Deuda técnica identificada
-
-1. **Prioridad MEDIA:** Corregir magic strings de tipos de columna ("todo", "in_progress", "testing") → valores backend correctos
-2. **Prioridad MEDIA:** Crear archivo `constants/columns.ts` con tipos centralizados
-3. **Prioridad BAJA:** Deshabilitar console.log en builds de producción (vite.config.ts)
-4. **Prioridad BAJA:** Sanitizar mensajes de error en producción con diccionario de mensajes seguros
+### Errores a evitar
+- **Magic strings sin archivo de constantes:** valores de estado/tipo hardcodeados en múltiples lugares divergen silenciosamente. Si hay >3 ocurrencias del mismo literal, crear archivo de constantes.
+- **Console.log activo en producción:** puede exponer tokens decodificados o payloads sensibles. Deshabilitar mediante configuración de build (por ejemplo `vite.config.ts`).
+- **Mensajes de error de backend expuestos directamente en UI:** mapear errores a mensajes genéricos user-friendly para no revelar arquitectura interna.
+- **Auth como single point of failure sin fallback:** verificar que el frontend tiene una ruta de auth funcional antes de eliminar la anterior.

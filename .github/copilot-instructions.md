@@ -8,7 +8,7 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - **Agentes:** definidos en `agents/*.agent.md` — NO modificar sin autorización del orchestrator + eval gate
 - **MCP:** configurado en `.mcp.json`; usar tools MCP en lugar de acceso directo al filesystem cuando sea posible
 
-## Convenciones de código
+## Convenciones de código — aplican solo si stack.md declara este lenguaje
 
 ### Python (FastAPI)
 - Usar `async def` en todos los endpoints
@@ -34,7 +34,8 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 ## Sistema de agentes
 
 - Cada agente tiene un contrato en `agents/*.agent.md`
-- El flujo de ejecución: Fase -1 → 0a → 0 → 1 → 2a → 2 → 3 (paralelo) → 4 → 5
+- El flujo de ejecución: 0a → 0 → 1 → 2a → 2 → 3 (paralelo) → 4 → 5 (Fase -1 eliminada; usar prompt `/skill-installer` manualmente si se necesita skill_context)
+- `skill_context` puede existir si el usuario ejecutó `/skill-installer` manualmente, pero no se espera ni bloquea su ausencia
 - `devops` es el único agente con permisos git — nunca hacer commit desde otro contexto
 - Triple aprobación obligatoria: `auditor` APROBADO + `qa` CUMPLE + `red_team` RESISTENTE
 - `verified_digest` debe recomputarse independientemente por cada agente de Fase 3
@@ -91,3 +92,7 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica.
 - Descripción debe incluir: qué cambió, por qué, cómo probar, agentes involucrados
 - Relacionar el PR con el `task_id` del ciclo (`task: xxxxxx`)
 - No mergear sin triple aprobación de Fase 3 documentada en el PR
+
+## Prompts disponibles
+
+- **`/skill-installer`** (`prompts/skill-installer.prompt.md`) — detecta el stack del proyecto activo y construye el `skill_context`; invocar manualmente antes de una sesión de trabajo nueva o tras cambios de stack.

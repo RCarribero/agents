@@ -1,7 +1,7 @@
 ---
 name: memory_curator
 description: Extrae lecciones aprendidas y actualiza la memoria global.
-model: 'GPT-5.4'
+model: 'GPT-5.4'  # curación: requiere síntesis abstracta y generalización de patrones cross-proyecto
 user-invocable: false
 ---
 
@@ -60,6 +60,15 @@ task_state: <TASK_STATE JSON actualizado>
 0b. **Usa TASK_STATE como shared state.** Toma `task_state.history` como insumo del cierre de ciclo/sesión y añade a ese historial qué lecciones fueron promovidas, descartadas o archivadas.
 
 ## Modos de operación
+
+### REGLA DE GENERALIZACIÓN (aplicar antes de escribir en memoria_global.md)
+
+Antes de guardar cualquier lección en `memoria_global.md`, aplica las tres preguntas:
+- **(a)** ¿Aplica a cualquier proyecto con este stack, no solo al proyecto actual?
+- **(b)** ¿El patrón seguirá siendo relevante en un proyecto diferente?
+- **(c)** ¿Puede describirse sin mencionar nombres de vistas, tablas, rutas o entidades del proyecto actual?
+
+**Si cualquier respuesta es NO → no guardar en `memoria_global.md`.** Si es relevante solo para el proyecto activo, anotarla en `session_log.md` con prefijo `[PROYECTO-ESPECÍFICO]`.
 
 ### Modo parcial — tras cada ciclo exitoso (post-devops)
 

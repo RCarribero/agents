@@ -34,10 +34,11 @@ copy_if_missing() {
 }
 
 resolve_copilot_instructions_source() {
+  # Archivo canónico: .github/copilot-instructions.md (GitHub Copilot lo lee nativamente).
+  # El fallback a copilot-instructions.md raíz fue eliminado (FIX-002).
   for candidate in \
     "$SOURCE_ROOT/repo-templates/.github/copilot-instructions.md" \
-    "$SOURCE_ROOT/.github/copilot-instructions.md" \
-    "$SOURCE_ROOT/copilot-instructions.md"
+    "$SOURCE_ROOT/.github/copilot-instructions.md"
   do
     if [ -f "$candidate" ]; then
       echo "$candidate"
