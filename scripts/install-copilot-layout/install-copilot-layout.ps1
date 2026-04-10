@@ -215,30 +215,30 @@ function Invoke-McpJsonSync {
     # Merges standard MCP servers into $JsonPath. Returns list of added key names.
 
     $targetServers = [ordered]@{
-        "io.github.github/github-mcp-server": {
-			"type": "http",
-			"url": "https://api.githubcopilot.com/mcp/",
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.33.0"
-		},
-		"com.supabase/mcp": {
-			"type": "http",
-			"url": "https://mcp.supabase.com/mcp",
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.7.0"
-		},
-		"com.stripe/mcp": {
-			"type": "http",
-			"url": "https://mcp.stripe.com",
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.2.4"
-		},
-		"com.vercel/vercel-mcp": {
-			"type": "http",
-			"url": "https://mcp.vercel.com",
-			"gallery": "https://api.mcp.github.com",
-			"version": "0.0.3"
-		}
+        "io.github.github/github-mcp-server" = [ordered]@{
+            "type"    = "http"
+            "url"     = "https://api.githubcopilot.com/mcp/"
+            "gallery" = "https://api.mcp.github.com"
+            "version" = "0.33.0"
+        }
+        "com.supabase/mcp" = [ordered]@{
+            "type"    = "http"
+            "url"     = "https://mcp.supabase.com/mcp"
+            "gallery" = "https://api.mcp.github.com"
+            "version" = "0.7.0"
+        }
+        "com.stripe/mcp" = [ordered]@{
+            "type"    = "http"
+            "url"     = "https://mcp.stripe.com"
+            "gallery" = "https://api.mcp.github.com"
+            "version" = "0.2.4"
+        }
+        "com.vercel/vercel-mcp" = [ordered]@{
+            "type"    = "http"
+            "url"     = "https://mcp.vercel.com"
+            "gallery" = "https://api.mcp.github.com"
+            "version" = "0.0.3"
+        }
     }
 
     $servers = [ordered]@{}
