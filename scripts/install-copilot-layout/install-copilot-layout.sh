@@ -28,6 +28,11 @@ created=()
 updated=()
 skipped=()
 missing=()
+MCP_STATUS="SKIPPED"
+MCP_DETAILS="python/python3 no disponible"
+mcp_synced=()
+mcp_unchanged=()
+mcp_warned=()
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -180,6 +185,127 @@ write_prompt() {
   fi
 }
 
+# ─── MCP sync helpers ──────────────────────────────────────────────────────────
+
+_sync_one_mcp_json() {
+  # Merges the four MCP server entries into target mcp.json (create if absent).
+  # Prints comma-separated list of added keys, or empty string if nothing changed.
+  local target="$1"
+  "${MCP_JSON_PYTHON:-python3}" - "$target" <<'PYEOF'
+import sys, json, os
+
+target = sys.argv[1]
+
+SERVERS = {
+  "io.github.github/github-mcp-server": {
+    "type": "http",
+    "url": "https://api.githubcopilot.com/mcp/",
+    "gallery": "https://api.mcp.github.com",
+    "version": "0.33.0",
+  },
+  "com.supabase/mcp": {
+    "type": "http",
+    "url": "https://mcp.supabase.com/mcp",
+    "gallery": "https://api.mcp.github.com",
+    "version": "0.7.0",
+  },
+  "com.stripe/mcp": {
+    "type": "http",
+    "url": "https://mcp.stripe.com",
+    "gallery": "https://api.mcp.github.com",
+    "version": "0.2.4",
+  },
+  "com.vercel/vercel-mcp": {
+    "type": "http",
+    "url": "https://mcp.vercel.com",
+    "gallery": "https://api.mcp.github.com",
+    "version": "0.0.3",
+  },
+}
+
+data = {}
+if os.path.isfile(target):
+    with open(target, encoding="utf-8") as f:
+        data = json.load(f)
+
+if not isinstance(data.get("servers"), dict):
+    data["servers"] = {}
+if "inputs" not in data:
+    data["inputs"] = []
+
+known_urls = {
+    v["url"]
+    for v in data["servers"].values()
+    if isinstance(v, dict) and "url" in v
+}
+
+added = []
+for key, entry in SERVERS.items():
+    if key in data["servers"]:
+        continue
+    if entry.get("url") in known_urls:
+        continue
+    data["servers"][key] = entry
+    known_urls.add(entry["url"])
+    added.append(key)
+
+os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+
+print(",".join(added))
+PYEOF
+}
+
+run_mcp_sync_layout() {
+  local MCP_JSON_PYTHON=""
+  for _py in python3 python; do
+    if command -v "$_py" >/dev/null 2>&1; then
+      MCP_JSON_PYTHON="$_py"
+      break
+    fi
+  done
+  if [ -z "$MCP_JSON_PYTHON" ]; then
+    MCP_STATUS="SKIPPED"
+    MCP_DETAILS="python/python3 no disponible"
+    return 0
+  fi
+
+  local -a targets=()
+  # Profile-level mcp.json files
+  if [ -d "$USER_ROOT_DIR/profiles" ]; then
+    while IFS= read -r -d '' _pdir; do
+      targets+=("$_pdir/mcp.json")
+    done < <(find "$USER_ROOT_DIR/profiles" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
+  fi
+  # User-root mcp.json (always include; _sync_one_mcp_json creates it if absent)
+  targets+=("$USER_ROOT_DIR/mcp.json")
+
+  local had_ok=false
+  local _result
+  for _mcpfile in "${targets[@]}"; do
+    if _result="$(_sync_one_mcp_json "$_mcpfile" 2>&1)"; then
+      had_ok=true
+      if [ -n "$_result" ]; then
+        mcp_synced+=("$_mcpfile [+$_result]")
+      else
+        mcp_unchanged+=("$_mcpfile")
+      fi
+    else
+      mcp_warned+=("WARN $_mcpfile: $_result")
+    fi
+  done
+
+  if $had_ok; then
+    MCP_STATUS="OK"
+    MCP_DETAILS="sync completado (${#mcp_synced[@]} actualizado(s), ${#mcp_unchanged[@]} sin cambios)"
+  elif [ ${#mcp_warned[@]} -gt 0 ]; then
+    MCP_STATUS="WARN"
+    MCP_DETAILS="${mcp_warned[0]:-error en sync}"
+  fi
+}
+
 collect_prompt_install_dirs
 COPILOT_TOOLS_DIR="${COPILOT_GLOBAL_TOOLS_DIR:-$USER_ROOT_DIR/copilot-tools}"
 TOOLS_SCRIPTS_DIR="$COPILOT_TOOLS_DIR/scripts"
@@ -248,9 +374,6 @@ for relative_path in \
   scripts/sandbox-run/sandbox-run.sh \
   scripts/sandbox-run/sandbox-run.ps1 \
   scripts/Dockerfile.sandbox \
-  scripts/agent-metrics/agent-metrics.sh \
-  scripts/agent-metrics/agent-metrics.ps1 \
-  scripts/rag_indexer.py \
   scripts/run_eval_gate.py \
   scripts/token-report/token-report.sh \
   scripts/token-report/token-report.ps1 \
@@ -421,52 +544,6 @@ Comportamiento esperado:
 done
 
 for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "rag-index" "$prompt_dir/rag-index.prompt.md" "---
-name: \"rag-index\"
-description: \"Indexa memoria y contratos del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta el indexado RAG del repositorio actual y resume el resultado.
-
-Reglas de ejecución:
-
-- Usa este comando:
-  - python \"$BASH_SCRIPTS_DIR/rag_indexer.py\" --all
-
-Comportamiento esperado:
-
-- Ejecuta solo el indexador RAG.
-- No modifiques archivos del workspace.
-- Aclara si hubo chunks indexados, skips o errores.
-" "$(prompt_label "$prompt_dir" "rag-index")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "metrics" "$prompt_dir/metrics.prompt.md" "---
-name: \"metrics\"
-description: \"Consulta las métricas del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Consulta las métricas del sistema y resume el resultado.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa este comando:
-  - & \"$TOOLS_SCRIPTS_DIR/agent-metrics/agent-metrics.ps1\" --agents
-- Si estás en Bash, Git Bash o Linux/macOS, usa este comando:
-  - bash \"$BASH_SCRIPTS_DIR/agent-metrics/agent-metrics.sh\" --agents
-
-Comportamiento esperado:
-
-- Ejecuta solo la consulta de métricas.
-- No modifiques archivos.
-- Resume los datos relevantes disponibles o el error de conexión si falla.
-" "$(prompt_label "$prompt_dir" "metrics")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
 write_prompt "eval-gate" "$prompt_dir/eval-gate.prompt.md" "---
 name: \"eval-gate\"
 description: \"Ejecuta el gate automático de contratos del workspace actual con el toolkit global\"
@@ -487,6 +564,8 @@ Comportamiento esperado:
 - Resume qué checks pasaron o fallaron y el exit code.
 " "$(prompt_label "$prompt_dir" "eval-gate")"
 done
+
+run_mcp_sync_layout || true
 
 echo "=== install-copilot-layout.sh ==="
 echo "Origen:           $SOURCE_ROOT"
@@ -538,6 +617,21 @@ if [ ${#missing[@]} -eq 0 ]; then
 else
   for item in "${missing[@]}"; do
     echo "  - $item"
+  done
+fi
+
+echo ""
+echo "MCP sync:"
+echo "  - estado: $MCP_STATUS"
+echo "  - detalle: $MCP_DETAILS"
+if [ ${#mcp_synced[@]} -gt 0 ]; then
+  for _r in "${mcp_synced[@]}"; do
+    echo "    updated: $_r"
+  done
+fi
+if [ ${#mcp_warned[@]} -gt 0 ]; then
+  for _w in "${mcp_warned[@]}"; do
+    echo "    $_w"
   done
 fi
 

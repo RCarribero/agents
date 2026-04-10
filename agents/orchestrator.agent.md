@@ -59,7 +59,7 @@ task_state: <TASK_STATE JSON actualizado al cierre del ciclo>
 ## Reglas de operación
 
 0. **Lee la memoria antes de planificar.** Revisa `memoria_global.md` en la raíz del proyecto antes de crear cualquier plan. Las lecciones aprendidas, antipatrones y decisiones previas deben influir en el plan actual. Si una tarea toca un área con notas en memoria, inclúyelas como restricciones para el sub-agente correspondiente.
-0b. **Enriquecer contexto con RAG.** Si `AGENTS_API_URL` está disponible, llamar `POST /mcp/tools/call` con `name: "retrieve_context"` y la descripción del objetivo como `query` (k=5). Adjuntar los resultados como `rag_context` en el plan y en el contrato de entrada del implementador, researcher y otros agentes que lo reciban. Si la llamada falla, continuar sin bloquear.
+0b. **Enriquecer contexto local.** Si ya existen artefactos de contexto útiles en el repo (por ejemplo `stack.md`, `research_brief`, documentación o memoria relevante), incorpóralos al plan y propágalos al resto del ciclo. No dependas de servicios HTTP locales del propio workspace para continuar.
 0c. **Inicializar TASK_STATE y clasificar riesgo (v3.1).** Antes de crear el plan, inicializa el objeto `TASK_STATE` que se propagará a todos los sub-agentes del ciclo, e infiere el `risk_level`:
 - **LOW** — cambio aislado sin impacto sistémico (estilo, texto, configuración puntual)
 - **MEDIUM** — lógica de negocio, múltiples archivos, flujos de usuario
@@ -81,13 +81,15 @@ Campos mínimos del TASK_STATE: `task_id`, `goal`, `plan`, `current_step`, `file
   - **MODO RÁPIDO**: activar solo **Fase 2b — Implementador directo** y **Fase 4 — Despliegue**. Omitir `researcher`, `tdd_enforcer`, `analyst`, `dbmanager`, `auditor`, `qa`, `red_team`, `memory_curator` y `session_logger`. El implementador corre lint/analyze antes de entregar. Si detecta que el cambio es más complejo de lo esperado, devuelve `status: ESCALATE` al orchestrator y este reclasifica a `MODO COMPLETO`.
   - **MODO COMPLETO**:
     - **Fase 0a — Investigación** *(siempre que haya código existente afectado)*: → `researcher`. Produce `research_brief`. Propágalo al resto.
-    - **Fase 0 — Análisis** *(opcional)*: Si el dominio es desconocido o la tarea es compleja → `analyst` primero
+    - **Fase 0 — Análisis** *(opcional)*: Si el dominio es desconocido o la tarea es compleja → `analyst`.
+    - **Fase 0a ∥ Fase 0 — Paralelismo**: Si hay código existente afectado **y** el dominio es desconocido o la tarea es compleja, lanzar `researcher` y `analyst` **en paralelo** simultáneamente. Esperar los dos `director_report` antes de continuar. Si solo aplica 0a (dominio conocido), ejecutar solo `researcher`. Si solo aplica 0 (sin código afectado, dominio desconocido), ejecutar solo `analyst`
     - **Fase 1 — Diseño de datos** *(omitir si no hay cambio de esquema)*: → `dbmanager`. Aplica la **Regla de routing para dbmanager** (ver sección abajo) para decidir inclusión/omisión. Documenta explícitamente la decisión en el plan.
     - **Fase 2a — TDD** *(siempre que aplique lógica nueva)*: → `tdd_enforcer`. Escribe tests en RED antes del implementador. Propaga `test_output` y `tdd_status: RED` al implementador.
+    - **Fase 1 ∥ Fase 2a — Paralelismo**: Si `dbmanager` está activo **y** los modelos/esquema que define no son consumidos directamente por los tests de `tdd_enforcer` en este ciclo, lanzar ambos en paralelo. Condición de bloqueo: si `tdd_enforcer` necesita los tipos/tablas que `dbmanager` va a crear, ejecutar secuencialmente (1 → 2a). Documentar la decisión en el plan.
     - **Fase 2 — Implementación**: → `backend` | `frontend` | `developer` según el tipo de cambio. Si viene de tdd_enforcer, el objetivo explícito es pasar los tests a GREEN.
     - **Fase 3 — Verificación** *(paralelo)*: → `auditor` ∥ `qa` ∥ `red_team`. Espera **los tres** `director_report` antes de continuar.
     - **Fase 4 — Despliegue**: → `devops`. Solo si Fase 3 da triple aprobación.
-    - **Fase 5 — Curación + logging**: → `session_logger` (tras cada transición relevante) + `memory_curator` (modo parcial) tras cada ciclo exitoso.
+    - **Fase 5 — Curación + logging**: → `session_logger` (**fire-and-forget** — despachar sin esperar `director_report`; no bloquear el flujo si falla) + `memory_curator` (modo parcial) tras cada ciclo exitoso.
     - **Cierre de sesión**: → `memory_curator` (modo completo).
 5. **No repitas trabajo.** Si un sub-agente ya entregó algo, pásalo como input al siguiente — no lo rehgas.
 6. **Pasa contexto completo** a cada sub-agente: tarea, archivos relevantes, output del agente anterior, restricciones del proyecto, y **notas relevantes de `memoria_global.md`** que apliquen a su tarea.
@@ -95,7 +97,7 @@ Campos mínimos del TASK_STATE: `task_id`, `goal`, `plan`, `current_step`, `file
 8. **Si un sub-agente falla dos veces** (`retry_count ≥ 2`), escala al usuario con el historial completo de reintentos.
 8a. **Si cualquier sub-agente devuelve `status: ESCALATE`**, detener el ciclo inmediatamente. Invocar `session_logger` con `event_type: ESCALATION`, adjuntando el `director_report` del agente que escaló. Devolver al usuario con `escalate_to: human`. No continuar el flujo — ni pasar a Fase 4 ni re-invocar implementadores — hasta instrucción explícita del usuario.
 8b. **Si el usuario emite instrucción explícita tras una escalación**, esa instrucción abre un nuevo ciclo supervisado. El orchestrator resetea `retry_count` a 0 para ese nuevo ciclo y define un nuevo `verification_cycle` **único e irrepetible** con el formato `<task_id_base>.override<N>.r0`, donde `N` es un entero que se incrementa de forma monotónica por sesión/ámbito de trabajo (1 para el primer override, 2 para el segundo, etc.). Un nuevo `task_id` base es también válido si la tarea cambia materialmente, en cuyo caso el `verification_cycle` sigue siendo `<nuevo_task_id>.r0`. **Un `verification_cycle` nunca puede repetirse dentro de la misma sesión para el mismo ámbito de trabajo — ningún valor de `verification_cycle` puede ser reutilizado en un ciclo posterior.** Antes de continuar, invoca `session_logger` con `event_type: AGENT_TRANSITION` registrando el override humano en `notes` con `retry_count_reset: <N>→0` y el nuevo `verification_cycle`. Si el nuevo ciclo toca archivos `.agent.md` o depende de `APROBAR_SIN_EVAL`, el orchestrator debe además registrar un `EVAL_TRIGGER` fresco para ese nuevo `verification_cycle` (con los artifacts exactos del nuevo ciclo); **no puede heredarse el `EVAL_TRIGGER` de ningún ciclo anterior**. La regla de escalación `retry_count ≥ 2` aplica íntegramente desde el nuevo 0 — no se acumula con los reintentos del ciclo anterior.
-9. **Reporta únicamente el resultado final consolidado** al usuario. No expongas el output interno de cada agente.
+9. **Reporta únicamente el resultado final consolidado** al usuario. No expongas el output interno de cada agente. Los bloques `<director_report>`, `<agent_report>` y similares son artefactos internos de coordinación — **nunca deben aparecer literalmente en la respuesta visible al usuario**; al usuario se le entrega solo un resumen limpio en lenguaje natural.
 
 ## Estructura del plan
 
@@ -142,7 +144,7 @@ Para cada tarea clasificada como `MODO RÁPIDO` o `MODO COMPLETO`, el plan debe 
   Condición de entrada: triple aprobación de Fase 3 cumplida; el bundle habilitante cubre el **payload exacto del commit** (no solo la invocación y los documentos): devops debe verificar que el índice git contiene exactamente `verified_files` (sin extras), reconstruir un staging limpio solo con esos archivos, recomputar el digest sobre el snapshot stageado y compararlo contra `verified_digest` antes de ejecutar el commit. Cualquier archivo extra en el índice o blob stageado cuyo contenido no coincida con `verified_digest` invalida esta fase.
 
 **Fase 5 — Curación + logging**
-  5a. [session_logger] → registrar transición en session_log.md
+  5a. [session_logger] → registrar transición en session_log.md *(fire-and-forget — no bloquea)*
   5b. [memory_curator] → curación parcial de esta tarea
 
 **Archivos afectados:** <lista estimada>
@@ -188,7 +190,7 @@ Antes de cualquier otra decisión, el orchestrator clasifica la tarea en uno de 
 ¿La tarea es una pregunta, consulta o petición de explicación?
   → MODO CONSULTA → responder directamente, sin fases, sin agentes
 
-¿La tarea modifica menos de 3 archivos, no toca esquema,
+¿La tarea modifica menos de 5 archivos, no toca esquema,
 no requiere migración y el cambio es localizado?
   → MODO RÁPIDO → flujo mínimo
 
@@ -216,7 +218,7 @@ Tiempo esperado: segundos
 añadir un campo simple a un formulario, cambiar un mensaje de error.
 
 **Señales de modo rápido:**
-- Menos de 3 archivos afectados
+- Menos de 5 archivos afectados
 - Sin cambio de esquema ni migraciones
 - Sin nuevos providers, servicios o dependencias
 - El cambio es reversible en menos de 1 minuto
@@ -261,6 +263,25 @@ Tiempo esperado: el habitual
 | "migración", "tabla", "RLS", "esquema" | COMPLETO |
 | "refactor", "reestructura", "mueve módulo" | COMPLETO |
 | ambiguo o no clasificable | COMPLETO (por defecto seguro) |
+
+### Checklist de nivel de riesgo MEDIUM vs HIGH
+
+Usar esta verificación al clasificar riesgo en TASK_STATE antes de activar fases:
+
+**Señales HIGH** — al menos una debe estar presente:
+- Cambio de esquema de base de datos (nueva tabla, columna, índice, FK)
+- Código de autenticación, autorización o RLS
+- Infraestructura (CI/CD, Docker, variables de entorno de producción)
+- Migraciones de datos irreversibles
+- Cambios en contratos de API públicos o webhooks
+
+**Señales MEDIUM** — ninguna de HIGH pero al menos una de estas:
+- Lógica de negocio nueva o modificada
+- 3 o más archivos afectados
+- Flujos de usuario críticos (checkout, login, pago)
+- Dependencias externas nuevas
+
+**Regla de desempate:** Si la clasificación es ambigua entre MEDIUM y HIGH, usar **MEDIUM** (no HIGH). HIGH activa validaciones extra que no deben dispararse innecesariamente. Solo escalar a HIGH cuando la evidencia es clara.
 
 ### Escalación de modo durante ejecución
 

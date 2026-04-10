@@ -87,11 +87,11 @@ task_state: <TASK_STATE JSON actualizado>
 
 **Lee `stack.md` del proyecto activo antes de aplicar estas reglas. Si el stack activo es diferente, adapta los comandos y patrones equivalentes.**
 
-### Python / FastAPI
-- `async def` en todos los endpoints; Pydantic v2 (`field_validator`, no `validator`)
-- `Depends()` para inyección de dependencias; parámetros siempre en queries SQL
+### Python
+- Usar `async def` solo cuando el framework real del proyecto activo lo requiera
+- Parámetros siempre en queries SQL; no concatenar strings dinámicos
 - Variables de entorno via `os.getenv()` — never hardcode keys
-- Migraciones en `agents/api/migrations/` con nombre `YYYYMMDD_NNN_descripcion.sql`
+- Si hay migraciones, seguir la ruta y el naming del proyecto activo
 
 ### Node.js / Express / Fastify
 - Usar `async/await`; validar con zod o joi en la capa de entrada

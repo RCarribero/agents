@@ -109,7 +109,7 @@ Si el digest recomputado **no coincide** con el `verified_digest` del contrato d
 10. **Soporte multi-lenguaje:** Debes ser capaz de auditar distintos lenguajes y frameworks dentro del proyecto sin perder consistencia.
 11. **Reporte estructurado:** Genera un resumen de hallazgos en formato que permita análisis de tendencias, métricas de seguridad y seguimiento por módulo o componente.
 12. **Auto-aprendizaje:** Si detectas un patrón de vulnerabilidad recurrente o un antipatrón no documentado, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
-13. **Loguear veredicto.** Tras emitir el veredicto, llamar `POST /mcp/tools/call` con `name: "log_agent_event"` (event_type=`PHASE_COMPLETE`, status=`veredicto`). Fire-and-forget — no bloquear si falla.
+13. **Trazabilidad sin dependencias locales.** El veredicto debe quedar completo en `director_report` y `agent_report`. No dependas de servicios HTTP locales del propio repo para registrar eventos adicionales.
 
 ## Cadena de handoff
 

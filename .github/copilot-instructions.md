@@ -3,17 +3,15 @@
 ## Stack y arquitectura
 
 Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
-- **Workspace local:** sistema de orquestación multi-agente + API embebida en `agents/api` (FastAPI + Python 3.11 + Supabase)
+- **Workspace local:** sistema de orquestación multi-agente y toolkit operativo basado en contratos Markdown, scripts Python/Bash/PowerShell y CI
 - **Repos frontend objetivo:** Flutter/Dart con Riverpod, solo cuando el proyecto activo contenga `pubspec.yaml`
 - **Agentes:** definidos en `agents/*.agent.md` — NO modificar sin autorización del orchestrator + eval gate
-- **MCP:** configurado en `.mcp.json`; usar tools MCP en lugar de acceso directo al filesystem cuando sea posible
+- **MCP:** configurado en `.mcp.json`; priorizar los servidores disponibles por tarea, sin depender de servicios HTTP locales del propio repo
 
 ## Convenciones de código — aplican solo si stack.md declara este lenguaje
 
-### Python (FastAPI)
-- Usar `async def` en todos los endpoints
-- Pydantic v2 para validación — no usar `validator`, usar `field_validator`
-- Usar `Depends()` para inyección de dependencias
+### Python
+- Mantener funciones pequeñas y cohesionadas; usar `async def` solo cuando el framework real del proyecto activo lo requiera
 - No concatenar strings en queries SQL — usar parámetros siempre
 - Variables de entorno via `os.getenv()` — nunca hardcodear claves
 - Imports en orden: stdlib → terceros → locales
@@ -26,9 +24,9 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - `flutter analyze --no-fatal-infos` debe pasar antes de cualquier entrega
 
 ### SQL / Migraciones
-- Migraciones en `agents/api/migrations/` con nombre `YYYYMMDD_NNN_descripcion.sql`
+- Si la tarea requiere migraciones, ubicarlas en la ruta del proyecto activo con nombre `YYYYMMDD_NNN_descripcion.sql`
 - Siempre idempotentes (IF NOT EXISTS, OR REPLACE)
-- RLS obligatoria en todas las tablas con datos de usuario
+- RLS obligatoria en tablas con datos de usuario cuando el stack de datos lo requiera
 - Prohibido `USING (true)` sin comentario que justifique el caso público
 
 ## Sistema de agentes
@@ -58,20 +56,18 @@ Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
 ```
 
 Commits atómicos — un cambio lógico por commit.
-DB migrations en commit separado (`feat(db):`) antes del commit de lógica.
+DB migrations en commit separado (`feat(db):`) antes del commit de lógica cuando existan.
 
 ## Seguridad
 
-- No exponer stack traces en responses de la API — mapear a mensajes genéricos
+- No exponer stack traces en respuestas o mensajes orientados a usuario
 - No loguear tokens, keys ni PII en stdout/stderr
 - En proyectos Flutter, eliminar `console.log/warn/error` en código de producción (configurar tree-shaking)
-- RLS debe estar activa en todas las tablas Supabase antes de cualquier query
+- Aplicar controles de permisos y políticas de datos según el backend real del proyecto activo
 
-## RAG y memoria
+## Memoria y trazabilidad
 
-- Usar `/mcp/tools/call` con `retrieve_context` para enriquecer contexto antes de planificar
-- Indexar documentos nuevos con `embed_document` tras cada ciclo exitoso
-- Limitar a k=5 en retrieval para controlar tokens (k=10 solo si el contexto es muy amplio)
+- No asumir un servicio local de retrieval o indexación como prerequisito del ciclo
 - `session_log.md` es audit-trail-artifact: NO incluir en `verified_files` ni en `verified_digest`
 
 ## Testing
@@ -83,9 +79,9 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica.
 
 ## MCP
 
-- Usar herramientas del filesystem MCP server en lugar de leer archivos con contexto manual
-- El servidor `agents-api` expone `/mcp/tools` — consultarlo antes de implementar integraciones
-- `AGENTS_API_URL` y `AGENTS_API_KEY` deben estar en `.env` — no hardcodear
+- **MCP locales del repo** — definidos en `.mcp.json`: filesystem, GitHub, Postgres u otros según el workspace. Usar solo los que la tarea necesite.
+- **MCP del perfil global** — sincronizados por `install-copilot-layout` cuando el layout está instalado: GitHub (`io.github.github/github-mcp-server`), Supabase (`com.supabase/mcp`), Vercel (`com.vercel/vercel-mcp`), Stripe (`com.resend/mcp`). Solo usar si están efectivamente disponibles en la sesión; no asumir disponibilidad ciega.
+- No hardcodear credenciales ni URLs de servicios en instrucciones o scripts
 
 ## Pull Requests
 
@@ -96,3 +92,4 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica.
 ## Prompts disponibles
 
 - **`/skill-installer`** (`prompts/skill-installer.prompt.md`) — detecta el stack del proyecto activo y construye el `skill_context`; invocar manualmente antes de una sesión de trabajo nueva o tras cambios de stack.
+- **`/dockerize`** (`prompts/dockerize.prompt.md`) — dockeriza el proyecto activo (Dockerfile multi-stage, docker-compose, .dockerignore) + setup local del entorno + carpeta `docker-launcher/` con scripts de setup/build/launch para Bash y PowerShell.

@@ -1,4 +1,4 @@
-name: CI — Tests + Lint + Security
+name: CI — Validate Agents + Optional Project Checks
 
 on:
   push:
@@ -12,14 +12,10 @@ permissions:
   security-events: write
 
 jobs:
-  # ─────────────────────────────────────────────
-  # Detect which stacks changed
-  # ─────────────────────────────────────────────
   detect-stack:
     name: Detect changed stacks
     runs-on: ubuntu-latest
     outputs:
-      python: ${{ steps.changes.outputs.python }}
       flutter: ${{ steps.changes.outputs.flutter }}
       agents: ${{ steps.changes.outputs.agents }}
     steps:
@@ -29,9 +25,6 @@ jobs:
         id: changes
         with:
           filters: |
-            python:
-              - 'agents/api/**/*.py'
-              - 'agents/api/requirements.txt'
             flutter:
               - '**/*.dart'
               - '**/pubspec.yaml'
@@ -40,82 +33,11 @@ jobs:
               - '!agents/session_log.md'
               - '!agents/eval_outputs/**'
 
-  # ─────────────────────────────────────────────
-  # Python / FastAPI tests + lint
-  # ─────────────────────────────────────────────
-  python-ci:
-    name: Python — Tests & Lint
-    runs-on: ubuntu-latest
-    needs: detect-stack
-    if: needs.detect-stack.outputs.python == 'true'
-    defaults:
-      run:
-        working-directory: agents/api
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt ruff pytest pytest-asyncio
-
-      - name: Lint (ruff)
-        run: ruff check . --output-format=github
-
-      - name: Run tests
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: pytest -q --tb=short --json-report --json-report-file=test-results.json
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-test-results
-          path: agents/api/test-results.json
-          retention-days: 7
-
-  # ─────────────────────────────────────────────
-  # Python type check — informational only, non-blocking
-  # ─────────────────────────────────────────────
-  python-typecheck:
-    name: Python — Type Check (informational only)
-    runs-on: ubuntu-latest
-    needs: detect-stack
-    if: needs.detect-stack.outputs.python == 'true'
-    defaults:
-      run:
-        working-directory: agents/api
-    continue-on-error: true  # informational only
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt mypy
-
-      - name: Type check (mypy) # informational only
-        run: python -m mypy . --ignore-missing-imports --no-error-summary
-
-  # ─────────────────────────────────────────────
-  # Flutter tests + analyze
-  # ─────────────────────────────────────────────
   flutter-ci:
     name: Flutter — Tests & Analyze
     runs-on: ubuntu-latest
     needs: detect-stack
     if: needs.detect-stack.outputs.flutter == 'true'
-
     steps:
       - uses: actions/checkout@v4
 
@@ -142,9 +64,6 @@ jobs:
           path: flutter-test-results.json
           retention-days: 7
 
-  # ─────────────────────────────────────────────
-  # Security scan (Trivy + Semgrep)
-  # ─────────────────────────────────────────────
   security:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -159,7 +78,7 @@ jobs:
           severity: CRITICAL,HIGH
           format: sarif
           output: trivy-results.sarif
-          exit-code: "0"  # No bloquear, solo reportar
+          exit-code: "0"
 
       - name: Upload Trivy SARIF
         if: always()
@@ -180,9 +99,6 @@ jobs:
           SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
         continue-on-error: true
 
-  # ─────────────────────────────────────────────
-  # Validate agent contracts
-  # ─────────────────────────────────────────────
   validate-agents:
     name: Validate .agent.md contracts
     runs-on: ubuntu-latest
@@ -197,9 +113,6 @@ jobs:
       - name: Run token-report.sh
         run: bash scripts/token-report/token-report.sh agents/
 
-  # ─────────────────────────────────────────────
-  # Automated agent eval gate
-  # ─────────────────────────────────────────────
   eval-gate:
     name: Agent Eval Gate
     runs-on: ubuntu-latest
@@ -230,7 +143,7 @@ jobs:
   pr-summary:
     name: PR Summary Comment
     runs-on: ubuntu-latest
-    needs: [python-ci, flutter-ci, security, validate-agents, eval-gate]
+    needs: [flutter-ci, security, validate-agents, eval-gate]
     if: always() && github.event_name == 'pull_request'
     steps:
       - name: Comment CI summary on PR
@@ -238,7 +151,6 @@ jobs:
         with:
           script: |
             const jobs = {
-              python: '${{ needs.python-ci.result }}',
               flutter: '${{ needs.flutter-ci.result }}',
               security: '${{ needs.security.result }}',
               agents: '${{ needs.validate-agents.result }}',
@@ -250,7 +162,6 @@ jobs:
               '',
               `| Job | Status |`,
               `|-----|--------|`,
-              `| Python Tests + Lint | ${icon(jobs.python)} ${jobs.python} |`,
               `| Flutter Tests + Analyze | ${icon(jobs.flutter)} ${jobs.flutter} |`,
               `| Security Scan | ${icon(jobs.security)} ${jobs.security} |`,
               `| Agent Contracts | ${icon(jobs.agents)} ${jobs.agents} |`,

@@ -11,7 +11,7 @@
         "@modelcontextprotocol/server-filesystem",
         "${workspaceFolder}"
       ],
-      "description": "Acceso al sistema de archivos del workspace. Usado por researcher, auditor y backend para leer archivos sin context.files manual.",
+      "description": "Acceso al sistema de archivos del workspace. Usado por agentes de lectura e implementación para consultar archivos sin depender solo de context.files.",
       "tools": [
         "read_file",
         "read_multiple_files",
@@ -33,7 +33,7 @@
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_TOKEN}"
       },
-      "description": "Integración con GitHub. Usado por devops para PRs, commits y revisión de código automatizada.",
+      "description": "Integración con GitHub para PRs, issues y operaciones remotas cuando el ciclo lo requiere.",
       "tools": [
         "create_or_update_file",
         "search_repositories",
@@ -60,9 +60,9 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "${env:SUPABASE_DB_URL}"
+        "${env:POSTGRES_DB_URL}"
       ],
-      "description": "Acceso a Supabase/Postgres. Usado por dbmanager, backend y RAG para queries directas y migraciones.",
+      "description": "Acceso opcional a Postgres para tareas de datos en proyectos activos que requieran queries directas o migraciones.",
       "tools": [
         "query",
         "list_tables",
@@ -72,30 +72,15 @@
         "update_rows",
         "delete_rows"
       ]
-    },
-    "agents-api": {
-      "type": "http",
-      "url": "${env:AGENTS_API_URL:-http://localhost:8000}",
-      "description": "API interna del sistema de agentes. Expone tools de búsqueda, health checks y RAG embedding.",
-      "headers": {
-        "Authorization": "Bearer ${env:AGENTS_API_KEY}"
-      },
-      "tools": [
-        "health_check",
-        "search_products",
-        "embed_document",
-        "retrieve_context",
-        "log_agent_event"
-      ]
     }
   },
   "routing": {
-    "researcher": ["filesystem", "postgres", "agents-api"],
-    "auditor": ["filesystem", "agents-api"],
+    "orchestrator": ["filesystem"],
+    "researcher": ["filesystem"],
+    "auditor": ["filesystem"],
     "backend": ["filesystem", "postgres"],
     "dbmanager": ["postgres", "filesystem"],
     "devops": ["github"],
-    "skill_installer": ["filesystem"],
-    "orchestrator": ["agents-api"]
+    "skill_installer": ["filesystem"]
   }
 }

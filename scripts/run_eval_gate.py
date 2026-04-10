@@ -122,7 +122,10 @@ def _check_eval_runner_ci_bridge(root: Path) -> CheckResult:
     )
 
 
-def _render_report(results: list[CheckResult], report_path: Path) -> None:
+def _render_report(results: list[CheckResult], report_path: Path | None) -> None:
+    if report_path is None:
+        return
+
     passed = sum(1 for result in results if result.passed)
     total = len(results)
     lines = [
@@ -164,7 +167,7 @@ def main() -> int:
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
-    report_path = (root / args.report_file).resolve()
+    report_path = None if args.report_file == "-" else (root / args.report_file).resolve()
 
     results = [
         _check_task_state_timeout(root),

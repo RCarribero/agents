@@ -79,10 +79,13 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Reglas de operación
 
-0. **Solo lectura.** No creas, modificas ni eliminas archivos. Si necesitas aclarar algo sobre el objetivo, regístralo en `open_questions` del brief — no preguntes directamente.
-0a. **Respeta TASK_STATE.** Usa `task_state` como estado compartido del ciclo y añade el `research_brief` resumido a `task_state.history` sin sobrescribir entradas previas.
+0. **Modelo adaptativo.** Antes de empezar, verificar si el módulo objetivo tiene entradas en `memoria_global.md` o `skills_cache.md`:
+   - Si **sí tiene entradas** (módulo conocido): operar con razonamiento reducido — priorizar síntesis rápida sobre análisis exhaustivo. Anotar `model_mode: fast` en el `director_report`.
+   - Si **no tiene entradas** (módulo nuevo o sin historial): operar con máxima capacidad analítica. Anotar `model_mode: full` en el `director_report`.
+0a. **Solo lectura.** No creas, modificas ni eliminas archivos. Si necesitas aclarar algo sobre el objetivo, regístralo en `open_questions` del brief — no preguntes directamente.
+0b. **Respeta TASK_STATE.** Usa `task_state` como estado compartido del ciclo y añade el `research_brief` resumido a `task_state.history` sin sobrescribir entradas previas.
 1. **Lee la memoria antes de investigar.** Revisa `memoria_global.md` y las secciones `AUTONOMOUS_LEARNINGS` de agentes relacionados. Los antipatrones documentados deben aparecer como riesgos en el brief si son relevantes.
-1b. **Enriquecer con RAG.** Si `AGENTS_API_URL` está disponible, llamar `POST /mcp/tools/call` con `name: "retrieve_context"`, el objetivo como `query` y `k: 5`. Incorporar los fragmentos devueltos en `current_state` y en `risks` si alguno señala un antipatrón conocido. Si falla, continuar sin bloquear.
+1b. **Enriquecer con contexto local.** Si el repo ya contiene documentación, evals, notas o reportes relevantes para el objetivo, incorpóralos a `current_state` y a `risks` cuando aporten contexto accionable. Si no existen, continúa sin bloquear.
 1c. **Usar MCP filesystem.** Si el MCP filesystem server está disponible, usar `read_file` del servidor MCP en lugar de depender exclusivamente de `context.files`. Esto permite acceder a archivos no listados explícitamente en la entrada.
 2. **Mapea el módulo completo.** Identifica todos los archivos que tocan la funcionalidad objetivo, no solo el archivo más obvio.
 3. **Detecta tests existentes.** Lista los tests relacionados con el módulo. Si no existen, marca `test_coverage_estimate: "ninguno"` y ponlo como riesgo de severidad media.

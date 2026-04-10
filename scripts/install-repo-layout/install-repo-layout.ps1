@@ -188,13 +188,16 @@ $relativeFiles = @(
     'scripts/sandbox-run/sandbox-run.sh',
     'scripts/sandbox-run/sandbox-run.ps1',
     'scripts/Dockerfile.sandbox',
-    'scripts/agent-metrics/agent-metrics.sh',
-    'scripts/agent-metrics/agent-metrics.ps1',
-    'scripts/rag_indexer.py',
     'scripts/run_eval_gate.py',
     'scripts/token-report/token-report.sh',
     'scripts/token-report/token-report.ps1',
-    'scripts/verified_digest.py'
+    'scripts/verified_digest.py',
+    'scripts/docker-launcher/setup.sh',
+    'scripts/docker-launcher/setup.ps1',
+    'scripts/docker-launcher/build.sh',
+    'scripts/docker-launcher/build.ps1',
+    'scripts/docker-launcher/launch.sh',
+    'scripts/docker-launcher/launch.ps1'
 )
 
 foreach ($relativePath in $relativeFiles) {

@@ -210,6 +210,115 @@ function New-GlobalPromptContent {
     return ($lines -join "`n")
 }
 
+function Invoke-McpJsonSync {
+    param([string]$JsonPath)
+    # Merges standard MCP servers into $JsonPath. Returns list of added key names.
+
+    $targetServers = [ordered]@{
+        "io.github.github/github-mcp-server": {
+			"type": "http",
+			"url": "https://api.githubcopilot.com/mcp/",
+			"gallery": "https://api.mcp.github.com",
+			"version": "0.33.0"
+		},
+		"com.supabase/mcp": {
+			"type": "http",
+			"url": "https://mcp.supabase.com/mcp",
+			"gallery": "https://api.mcp.github.com",
+			"version": "0.7.0"
+		},
+		"com.stripe/mcp": {
+			"type": "http",
+			"url": "https://mcp.stripe.com",
+			"gallery": "https://api.mcp.github.com",
+			"version": "0.2.4"
+		},
+		"com.vercel/vercel-mcp": {
+			"type": "http",
+			"url": "https://mcp.vercel.com",
+			"gallery": "https://api.mcp.github.com",
+			"version": "0.0.3"
+		}
+    }
+
+    $servers = [ordered]@{}
+    $inputs  = @()
+
+    if (Test-Path $JsonPath -PathType Leaf) {
+        $parsed = Get-Content -Path $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($parsed.PSObject.Properties['servers'] -and $null -ne $parsed.servers) {
+            $parsed.servers.PSObject.Properties | ForEach-Object {
+                $servers[$_.Name] = $_.Value
+            }
+        }
+        if ($parsed.PSObject.Properties['inputs'] -and $null -ne $parsed.inputs) {
+            $inputs = $parsed.inputs
+        }
+    }
+
+    $knownUrls = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($kv in $servers.GetEnumerator()) {
+        $v = $kv.Value
+        if ($v -is [System.Management.Automation.PSCustomObject] -and $v.PSObject.Properties['url']) {
+            [void]$knownUrls.Add($v.url)
+        }
+    }
+
+    $added = [System.Collections.Generic.List[string]]::new()
+    foreach ($kv in $targetServers.GetEnumerator()) {
+        $key   = $kv.Key
+        $entry = $kv.Value
+        if ($servers.Contains($key)) { continue }
+        if ($knownUrls.Contains($entry['url'])) { continue }
+        $servers[$key] = $entry
+        [void]$knownUrls.Add($entry['url'])
+        $added.Add($key)
+    }
+
+    $parentDir = Split-Path $JsonPath -Parent
+    if ($parentDir -and -not (Test-Path $parentDir -PathType Container)) {
+        New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+    }
+    [ordered]@{ servers = $servers; inputs = $inputs } |
+        ConvertTo-Json -Depth 10 |
+        Set-Content -Path $JsonPath -Encoding UTF8
+
+    return ,$added
+}
+
+function Invoke-McpSyncLayout {
+    param(
+        [string]$UserRootDir,
+        [System.Collections.Generic.List[string]]$Synced,
+        [System.Collections.Generic.List[string]]$Unchanged,
+        [System.Collections.Generic.List[string]]$Warned
+    )
+
+    $targets = [System.Collections.Generic.List[string]]::new()
+    $profilesDir = Join-Path $UserRootDir 'profiles'
+    if (Test-Path $profilesDir -PathType Container) {
+        Get-ChildItem -Path $profilesDir -Directory | Sort-Object Name | ForEach-Object {
+            $targets.Add((Join-Path $_.FullName 'mcp.json'))
+        }
+    }
+    $targets.Add((Join-Path $UserRootDir 'mcp.json'))
+
+    foreach ($mcpFile in $targets) {
+        try {
+            $addedList = Invoke-McpJsonSync -JsonPath $mcpFile
+            if ($addedList.Count -gt 0) {
+                $Synced.Add("$mcpFile [+$($addedList -join ',')]")
+            }
+            else {
+                $Unchanged.Add($mcpFile)
+            }
+        }
+        catch {
+            $Warned.Add("WARN ${mcpFile}: $_")
+        }
+    }
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $userPromptsDir = Detect-UserPromptsDirectory
@@ -224,6 +333,11 @@ $created = [System.Collections.Generic.List[string]]::new()
 $updated = [System.Collections.Generic.List[string]]::new()
 $skipped = [System.Collections.Generic.List[string]]::new()
 $missing = [System.Collections.Generic.List[string]]::new()
+$mcpStatus    = 'SKIPPED'
+$mcpDetails   = 'n/a'
+$mcpSynced    = [System.Collections.Generic.List[string]]::new()
+$mcpUnchanged = [System.Collections.Generic.List[string]]::new()
+$mcpWarned    = [System.Collections.Generic.List[string]]::new()
 
 foreach ($promptDir in $promptInstallDirs) {
     New-Item -ItemType Directory -Path $promptDir -Force | Out-Null
@@ -288,9 +402,6 @@ $relativeFiles = @(
     'scripts/sandbox-run/sandbox-run.sh',
     'scripts/sandbox-run/sandbox-run.ps1',
     'scripts/Dockerfile.sandbox',
-    'scripts/agent-metrics/agent-metrics.sh',
-    'scripts/agent-metrics/agent-metrics.ps1',
-    'scripts/rag_indexer.py',
     'scripts/run_eval_gate.py',
     'scripts/token-report/token-report.sh',
     'scripts/token-report/token-report.ps1',
@@ -422,40 +533,6 @@ $globalPrompts = @(
         )
     },
     @{
-        FileName = 'rag-index.prompt.md'
-        Name = 'rag-index'
-        Description = 'Indexa memoria y contratos del workspace actual con el toolkit global'
-        Intro = 'Ejecuta el indexado RAG del repositorio actual y resume el resultado.'
-        WindowsCommands = @(
-            ('python "{0}" --all' -f (Join-Path $toolsScriptsDir 'rag_indexer.py'))
-        )
-        BashCommands = @(
-            ('python "{0}/rag_indexer.py" --all' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo el indexador RAG.',
-            'No modifiques archivos del workspace.',
-            'Aclara si hubo chunks indexados, skips o errores.'
-        )
-    },
-    @{
-        FileName = 'metrics.prompt.md'
-        Name = 'metrics'
-        Description = 'Consulta las métricas del workspace actual con el toolkit global'
-        Intro = 'Consulta las métricas del sistema y resume el resultado.'
-        WindowsCommands = @(
-            ('& "{0}" --agents' -f (Join-Path $toolsScriptsDir 'agent-metrics/agent-metrics.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/agent-metrics/agent-metrics.sh" --agents' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo la consulta de métricas.',
-            'No modifiques archivos.',
-            'Resume los datos relevantes disponibles o el error de conexión si falla.'
-        )
-    },
-    @{
         FileName = 'eval-gate.prompt.md'
         Name = 'eval-gate'
         Description = 'Ejecuta el gate automático de contratos del workspace actual con el toolkit global'
@@ -480,6 +557,22 @@ foreach ($prompt in $globalPrompts) {
         $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $prompt.Name
         Write-GlobalPrompt -TargetPath (Join-Path $promptDir $prompt.FileName) -Name $prompt.Name -Label $label -Content $content -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
     }
+}
+
+try {
+    Invoke-McpSyncLayout -UserRootDir $userRootDir -Synced $mcpSynced -Unchanged $mcpUnchanged -Warned $mcpWarned
+    if ($mcpSynced.Count -gt 0 -or $mcpUnchanged.Count -gt 0) {
+        $mcpStatus  = 'OK'
+        $mcpDetails = "sync completado ($($mcpSynced.Count) actualizado(s), $($mcpUnchanged.Count) sin cambios)"
+    }
+    elseif ($mcpWarned.Count -gt 0) {
+        $mcpStatus  = 'WARN'
+        $mcpDetails = $mcpWarned[0]
+    }
+}
+catch {
+    $mcpStatus  = 'WARN'
+    $mcpDetails = "error en sync: $_"
 }
 
 Write-Output '=== install-copilot-layout.ps1 ==='
@@ -525,6 +618,17 @@ if ($missing.Count -eq 0) {
 }
 else {
     $missing | ForEach-Object { Write-Output "  - $_" }
+}
+
+Write-Output ''
+Write-Output 'MCP sync:'
+Write-Output "  - estado: $mcpStatus"
+Write-Output "  - detalle: $mcpDetails"
+if ($mcpSynced.Count -gt 0) {
+    $mcpSynced | ForEach-Object { Write-Output "    updated: $_" }
+}
+if ($mcpWarned.Count -gt 0) {
+    $mcpWarned | ForEach-Object { Write-Output "    $_" }
 }
 
 Write-Output ''

@@ -2,7 +2,7 @@ name: Rollback — Automatic revert on pipeline failure
 
 on:
   workflow_run:
-    workflows: ["CI — Tests + Lint + Security"]
+    workflows: ["CI — Validate Agents + Optional Project Checks"]
     types: [completed]
     branches: [main]
 

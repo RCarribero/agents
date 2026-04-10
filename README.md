@@ -1,13 +1,12 @@
 # Sistema Multi-Agente v3.1
 
-[![Version](https://img.shields.io/badge/version-v3.1.0-0a7ea4?style=for-the-badge)](SISTEMA_COMPLETO.md)
+[![Version](https://img.shields.io/badge/version-v3.1.1-0a7ea4?style=for-the-badge)](SISTEMA_COMPLETO.md)
 [![Python](https://img.shields.io/badge/python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)](stack.md)
-[![FastAPI](https://img.shields.io/badge/FastAPI-agents%20api-009688?style=for-the-badge&logo=fastapi&logoColor=white)](agents/api/README.md)
-[![Tests](https://img.shields.io/badge/tests-passing-2ea043?style=for-the-badge)](scripts/run-tests/run-tests.sh)
-[![Lint](https://img.shields.io/badge/lint-passing-22863a?style=for-the-badge)](scripts/run-lint/run-lint.sh)
+[![Tests](https://img.shields.io/badge/tests-toolkit-2ea043?style=for-the-badge)](scripts/run-tests/run-tests.sh)
+[![Lint](https://img.shields.io/badge/lint-toolkit-22863a?style=for-the-badge)](scripts/run-lint/run-lint.sh)
 [![Licencia](https://img.shields.io/badge/licencia-uso%20interno-6f42c1?style=for-the-badge)](LICENSE)
 
-Swarm de agentes con estado compartido, verificación por fases, trazabilidad operativa y una API auxiliar embebida para MCP, observabilidad y utilidades de backend.
+Swarm de agentes con estado compartido, verificación por fases, trazabilidad operativa y toolkit local para validar contratos, ejecutar checks y sostener el flujo de trabajo del sistema.
 
 ## Índice
 
@@ -21,7 +20,6 @@ Swarm de agentes con estado compartido, verificación por fases, trazabilidad op
 - [Prompts disponibles](#prompts-disponibles)
 - [Archivos ejecutables](#archivos-ejecutables)
 - [Comandos útiles](#comandos-útiles)
-- [API embebida](#api-embebida)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
 
@@ -34,22 +32,22 @@ Este repositorio contiene el núcleo operativo de un sistema multi-agente orient
 - scripts de validación, lint y test en `scripts/`
 - customizaciones de Copilot en `.github/`
 - memoria compartida y audit trail del sistema
-- una API FastAPI en `agents/api` para MCP, observabilidad y utilidades
+- artefactos de evaluación y verificación contractual en `agents/evals/` y `agents/eval_outputs/`
 
 ## Stack
 
 | Capa | Tecnología | Ubicación |
 |---|---|---|
-| Orquestación | agentes por contrato Markdown | `agents/*.agent.md` |
-| Backend auxiliar | Python + FastAPI | `agents/api` |
-| Persistencia / integración | Supabase | `agents/api` |
-| Automatización | Bash | `scripts/` |
+| Orquestación | contratos Markdown | `agents/*.agent.md` |
+| Toolkit local | Python + Bash + PowerShell | `scripts/` |
+| Automatización | GitHub Actions | `.github/workflows/` |
 | Estado compartido | `TASK_STATE` | flujo completo del swarm |
 
 Notas importantes:
 
 - El stack efectivo del workspace está curado en `stack.md`.
 - Flutter/Dart solo aplica cuando la tarea apunta a un proyecto externo con `pubspec.yaml`.
+- La configuración MCP del repo ya no depende de un servicio HTTP embebido local.
 
 ## Arquitectura
 
@@ -63,7 +61,7 @@ flowchart TD
     O --> A[analyst]
     O --> DB[dbmanager]
     O --> TDD[tdd_enforcer]
-  O --> IMP[backend / frontend / developer]
+    O --> IMP[backend / frontend / developer]
     IMP --> AUD[auditor]
     IMP --> QA[qa]
     IMP --> RT[red_team]
@@ -143,7 +141,6 @@ Reglas clave:
 │   └── workflows/
 ├── agents/
 │   ├── *.agent.md
-│   ├── api/
 │   ├── eval_outputs/
 │   ├── evals/
 │   └── memoria_global.md
@@ -160,9 +157,9 @@ Reglas clave:
 
 Rutas importantes:
 
-- `agents/api/migrations/`: migraciones SQL del workspace
-- `agents/api/tests/`: tests de la API
 - `agents/memoria_global.md`: memoria compartida persistente
+- `agents/evals/`: catálogo y plantillas de evaluación
+- `agents/eval_outputs/`: reportes generados por eval gate u otras corridas
 - `session_log.md`: traza append-only del sistema
 
 ## Manual de uso
@@ -173,7 +170,6 @@ Requisitos:
 
 - Git Bash en Windows o Bash compatible en Linux/macOS
 - Python disponible en PATH
-- dependencias de `agents/api/requirements.txt`
 - opcional: Docker para aislamiento con `sandbox-run.sh`
 
 En Windows:
@@ -183,14 +179,9 @@ En Windows:
 
 Variables de entorno frecuentes:
 
-- `SUPABASE_URL` y `SUPABASE_KEY` para integraciones directas con Supabase
-- `AGENTS_API_URL` y `AGENTS_API_KEY` para `rag_indexer.py` y `agent-metrics.sh`
-
-Instalación base:
-
-```bash
-python -m pip install -r ./agents/api/requirements.txt
-```
+- `POSTGRES_DB_URL` si el proyecto activo necesita queries directas por MCP Postgres
+- `GITHUB_TOKEN` para integraciones remotas con GitHub
+- `OPENAI_API_KEY` si alguna tarea o skill externa la requiere
 
 Bootstrap recomendado:
 
@@ -203,7 +194,7 @@ Bootstrap manual del repo actual:
 - PowerShell: `./scripts/start/start.ps1 .`
 - Bash: `bash ./scripts/start/start.sh .`
 
-`install-copilot-layout` instala los prompts globales en la carpeta de usuario de VS Code y deja un toolkit en el perfil del usuario. Después, `/start` usa ese toolkit para hacer un bootstrap mínimo del repo actual: copiar `.github/copilot-instructions.md` si falta, crear `stack.md` si falta e intentar descargar skills con `autoskills` si está disponible. `/start` no materializa `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` dentro del repo destino.
+`install-copilot-layout` instala prompts globales en la carpeta de usuario de VS Code y deja un toolkit en el perfil del usuario. Después, `/start` usa ese toolkit para hacer un bootstrap mínimo del repo actual: copiar `.github/copilot-instructions.md` si falta, crear `stack.md` si falta e intentar descargar skills con `autoskills` si está disponible. `/start` no materializa `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` dentro del repo destino.
 
 ### 2. Validar el workspace
 
@@ -225,25 +216,11 @@ En PowerShell:
 
 `validate-stack.sh` resuelve automáticamente el subproyecto real cuando la raíz del repo no contiene los manifests directos.
 
-### 3. Levantar la API embebida
-
-```bash
-cd agents/api
-python main.py
-```
-
-O con Uvicorn:
-
-```bash
-cd agents/api
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-
-Esto habilita los endpoints HTTP, MCP, métricas y cualquier script que dependa de `AGENTS_API_URL`.
-
-### 4. Ejecutar tests y lint
+### 3. Ejecutar tests y lint
 
 También puedes invocarlos desde el chat con `/tests` y `/lint` en este repositorio.
+
+En esta raíz toolkit, `run-tests` detecta el stack `toolkit` y ejecuta `run_eval_gate.py` sin persistir reporte; `run-lint` detecta `toolkit` y ejecuta `validate-agents` seguido de `token-report`. Si apuntas a un subproyecto con manifest, ambos mantienen el autodetect tradicional por stack.
 
 ```bash
 bash ./scripts/run-tests/run-tests.sh . --json
@@ -257,11 +234,7 @@ En PowerShell:
 ./scripts/run-lint/run-lint.ps1 . --json
 ```
 
-Ambos scripts detectan el stack y trabajan contra `agents/api` cuando corresponde.
-
-Si quieres aislar la ejecución:
-
-También puedes invocarlo desde el chat con `/sandbox-tests` y `/sandbox-lint`.
+Si quieres aislar la ejecución, usa `sandbox-run`:
 
 ```bash
 bash ./scripts/sandbox-run/sandbox-run.sh . tests --json
@@ -277,35 +250,24 @@ En PowerShell:
 
 `sandbox-run.sh` usa Docker si está disponible y, si no, cae a ejecución directa en host.
 
-### 5. Operaciones opcionales del sistema
+### 4. Ejecutar eval gate
 
-También puedes invocarlas desde el chat con `/rag-index`, `/metrics` y `/eval-gate`.
+También puedes invocarlo desde el chat con `/eval-gate`.
 
 ```bash
-python ./scripts/rag_indexer.py --all
-bash ./scripts/agent-metrics/agent-metrics.sh --agents
 python ./scripts/run_eval_gate.py --root .
 ```
 
-En PowerShell:
+Este script ejecuta comprobaciones automáticas sobre contratos de agentes y genera un reporte markdown consumible por CI o por revisión manual.
 
-```powershell
-python ./scripts/rag_indexer.py --all
-./scripts/agent-metrics/agent-metrics.ps1 --agents
-python ./scripts/run_eval_gate.py --root .
-```
-
-Estas utilidades sirven para indexado RAG, observabilidad y gates automáticos de contratos.
-
-### 6. Flujo de trabajo recomendado
+### 5. Flujo de trabajo recomendado
 
 1. validar stack y contratos
-2. levantar `agents/api` si vas a usar MCP, métricas o RAG
-3. revisar memoria compartida y documentación
-4. ejecutar la tarea a través de `orchestrator`
-5. verificar tests/lint desde raíz o con sandbox
-6. correr `run_eval_gate.py` si tocaste contratos de agentes
-7. revisar `session_log.md` y memoria al cierre del ciclo
+2. revisar memoria compartida y documentación
+3. ejecutar la tarea a través de `orchestrator`
+4. verificar tests/lint desde raíz o con sandbox
+5. correr `run_eval_gate.py` si tocaste contratos de agentes
+6. revisar `session_log.md` y memoria al cierre del ciclo
 
 ## Prompts disponibles
 
@@ -317,15 +279,13 @@ Los slash commands disponibles en este workspace son estos:
 - `/lint`: ejecuta el runner de lint del workspace.
 - `/sandbox-tests`: ejecuta los tests en sandbox Docker o en host si Docker no está disponible.
 - `/sandbox-lint`: ejecuta el lint en sandbox Docker o en host si Docker no está disponible.
-- `/rag-index`: indexa memoria y contratos en el vector store.
-- `/metrics`: consulta métricas del sistema multi-agente.
 - `/eval-gate`: corre el gate automático de contratos de agentes.
 
 Estos prompts viven en `.github/prompts/` y también pueden instalarse como prompts globales con `install-copilot-layout`.
 
 ## Archivos ejecutables
 
-Los entrypoints operativos reales del repositorio son estos:
+Los entrypoints operativos reales del repositorio son estos.
 
 Nota para Windows PowerShell: cada script `.sh` listado abajo tiene un wrapper `.ps1` equivalente en la misma subcarpeta.
 
@@ -337,15 +297,12 @@ Nota para Windows PowerShell: cada script `.sh` listado abajo tiene un wrapper `
 | `scripts/validate-stack/validate-stack.sh` | Detecta el stack activo, resuelve el subproyecto real y genera/actualiza `stack.md` en raíz. Si existe el layout legado, también lo reutiliza. | `bash ./scripts/validate-stack/validate-stack.sh .` |
 | `scripts/validate-agents/validate-agents.sh` | Valida que cada `*.agent.md` tenga frontmatter, `director_report`, `AUTONOMOUS_LEARNINGS` y `timeout_seconds` cuando declara `TASK_STATE`. | `bash ./scripts/validate-agents/validate-agents.sh` |
 | `scripts/validate-memory/validate-memory.sh` | Verifica `agents/memoria_global.md`, el tamaño de `AUTONOMOUS_LEARNINGS` por agente y el estado de `session_log.md`. | `bash ./scripts/validate-memory/validate-memory.sh` |
-| `scripts/run-tests/run-tests.sh` | Detecta el stack y ejecuta los tests del proyecto devolviendo salida normal o JSON estructurado. | `bash ./scripts/run-tests/run-tests.sh . --json` |
-| `scripts/run-lint/run-lint.sh` | Detecta el stack y ejecuta el linter adecuado devolviendo salida normal o JSON estructurado. | `bash ./scripts/run-lint/run-lint.sh . --json` |
+| `scripts/run-tests/run-tests.sh` | Detecta el stack y ejecuta los tests del proyecto; en esta raíz toolkit mapea `tests` a `run_eval_gate.py` sin escribir reporte persistente. | `bash ./scripts/run-tests/run-tests.sh . --json` |
+| `scripts/run-lint/run-lint.sh` | Detecta el stack y ejecuta el linter adecuado; en esta raíz toolkit mapea `lint` a `validate-agents` + `token-report`. | `bash ./scripts/run-lint/run-lint.sh . --json` |
 | `scripts/sandbox-run/sandbox-run.sh` | Ejecuta `tests` o `lint` dentro de un contenedor Docker aislado; si Docker no está disponible, usa el host. | `bash ./scripts/sandbox-run/sandbox-run.sh . tests --json` |
-| `scripts/agent-metrics/agent-metrics.sh` | Consulta `agents/api` para mostrar métricas agregadas, por agente o por `task_id`. | `bash ./scripts/agent-metrics/agent-metrics.sh --agents` |
 | `scripts/token-report/token-report.sh` | Estima tokens por contrato `.agent.md`, detecta agentes sobredimensionados y calcula el total de una sesión completa. | `bash ./scripts/token-report/token-report.sh` |
-| `scripts/rag_indexer.py` | Indexa `memoria_global.md`, `session_log.md` y `AUTONOMOUS_LEARNINGS` en el vector store vía `agents-api`. | `python ./scripts/rag_indexer.py --all` |
 | `scripts/run_eval_gate.py` | Ejecuta checks automáticos sobre contratos de agentes y genera un reporte markdown consumible por CI. | `python ./scripts/run_eval_gate.py --root . --report-file agents/eval_outputs/ci_eval_gate_report.md` |
 | `scripts/verified_digest.py` | Calcula `verified_digest` para un conjunto de archivos y valida consenso entre reports de Fase 3. | `python ./scripts/verified_digest.py compute --workspace-root . agents/orchestrator.agent.md` |
-| `agents/api/main.py` | Arranca la API FastAPI embebida con endpoints HTTP, MCP y métricas. | `cd agents/api && python main.py` |
 
 Atajos útiles por archivo:
 
@@ -353,8 +310,6 @@ Atajos útiles por archivo:
 - `run-tests.sh`: acepta `bash ./scripts/run-tests/run-tests.sh [PROJECT_ROOT] [--json]` o `./scripts/run-tests/run-tests.ps1 [PROJECT_ROOT] [--json]`
 - `run-lint.sh`: acepta `bash ./scripts/run-lint/run-lint.sh [PROJECT_ROOT] [--json]` o `./scripts/run-lint/run-lint.ps1 [PROJECT_ROOT] [--json]`
 - `sandbox-run.sh`: acepta `bash ./scripts/sandbox-run/sandbox-run.sh <project_root> <tests|lint> [--json]` o `./scripts/sandbox-run/sandbox-run.ps1 <project_root> <tests|lint> [--json]`
-- `agent-metrics.sh`: soporta `--json`, `--task <task_id>` y `--agents`; en PowerShell usa `./scripts/agent-metrics/agent-metrics.ps1`
-- `rag_indexer.py`: soporta `--all` o `--source memoria|session_log|agents`
 - `verified_digest.py`: soporta `compute` y `verify-consensus`
 
 Ejemplos rápidos:
@@ -364,34 +319,12 @@ Ejemplos rápidos:
 bash ./scripts/validate-agents/validate-agents.sh
 bash ./scripts/validate-memory/validate-memory.sh
 
-# Ver contratos y memoria desde PowerShell
-./scripts/validate-agents/validate-agents.ps1
-./scripts/validate-memory/validate-memory.ps1
-
 # Tests y lint directos
 bash ./scripts/run-tests/run-tests.sh . --json
 bash ./scripts/run-lint/run-lint.sh . --json
 
-# Tests y lint desde PowerShell
-./scripts/run-tests/run-tests.ps1 . --json
-./scripts/run-lint/run-lint.ps1 . --json
-
 # Tests aislados con Docker si está disponible
 bash ./scripts/sandbox-run/sandbox-run.sh . tests --json
-
-# Tests aislados desde PowerShell
-./scripts/sandbox-run/sandbox-run.ps1 . tests --json
-
-# Métricas del sistema
-bash ./scripts/agent-metrics/agent-metrics.sh
-bash ./scripts/agent-metrics/agent-metrics.sh --task task-123
-
-# Métricas desde PowerShell
-./scripts/agent-metrics/agent-metrics.ps1
-./scripts/agent-metrics/agent-metrics.ps1 --task task-123
-
-# Indexado RAG
-python ./scripts/rag_indexer.py --source agents
 
 # Digest de archivos críticos
 python ./scripts/verified_digest.py compute --workspace-root . agents/orchestrator.agent.md agents/devops.agent.md
@@ -408,7 +341,7 @@ Archivo de soporte relacionado:
 | Bootstrap del proyecto por chat | `/start` |
 | Instalar prompts y toolkit globales | `./scripts/install-copilot-layout/install-copilot-layout.ps1 --force` en PowerShell, `bash ./scripts/install-copilot-layout/install-copilot-layout.sh --force` en Bash |
 | Bootstrap del proyecto | `/start` o `./scripts/start/start.ps1 .` en PowerShell, `bash ./scripts/start/start.sh .` en Bash |
-| Instalar layout canónico completo en el repo actual | `./scripts/install-repo-layout/install-repo-layout.ps1 .` en PowerShell, `bash ./scripts/install-repo-layout/install-repo-layout.sh .` en Bash. Úsalo solo si quieres copiar el toolkit completo al repositorio. |
+| Instalar layout canónico completo en el repo actual | `./scripts/install-repo-layout/install-repo-layout.ps1 .` en PowerShell, `bash ./scripts/install-repo-layout/install-repo-layout.sh .` en Bash |
 | Detectar stack | `./scripts/validate-stack/validate-stack.ps1 .` en PowerShell, `bash ./scripts/validate-stack/validate-stack.sh .` en Bash |
 | Validar contratos | `./scripts/validate-agents/validate-agents.ps1` en PowerShell, `bash ./scripts/validate-agents/validate-agents.sh` en Bash |
 | Validar memoria | `./scripts/validate-memory/validate-memory.ps1` en PowerShell, `bash ./scripts/validate-memory/validate-memory.sh` en Bash |
@@ -420,36 +353,18 @@ Archivo de soporte relacionado:
 | Ejecutar tests en sandbox por chat | `/sandbox-tests` |
 | Ejecutar lint en sandbox por chat | `/sandbox-lint` |
 | Ejecutar tests/lint aislados | `./scripts/sandbox-run/sandbox-run.ps1 . tests --json` en PowerShell, `bash ./scripts/sandbox-run/sandbox-run.sh . tests --json` en Bash |
-| Ver métricas del swarm | `./scripts/agent-metrics/agent-metrics.ps1 --agents` en PowerShell, `bash ./scripts/agent-metrics/agent-metrics.sh --agents` en Bash |
-| Indexar memoria por chat | `/rag-index` |
-| Consultar métricas por chat | `/metrics` |
 | Ejecutar eval gate por chat | `/eval-gate` |
-| Indexar memoria en RAG | `python ./scripts/rag_indexer.py --all` |
 | Correr gate contractual | `python ./scripts/run_eval_gate.py --root .` |
 | Calcular digest verificado | `python ./scripts/verified_digest.py compute --workspace-root . agents/orchestrator.agent.md` |
-| Arrancar API | `cd agents/api && python main.py` |
-
-## API embebida
-
-La API auxiliar vive en `agents/api` y expone:
-
-- `/health`
-- `/ping`
-- `/products/search`
-- `/mcp/tools`
-- `/metrics/*`
-
-Más detalle en `agents/api/README.md`.
 
 ## Documentación
 
 - `SISTEMA_COMPLETO.md`: contratos, fases, reglas de verificación y evolución del sistema
 - `.github/copilot-instructions.md`: convenciones del repo cargadas por Copilot
 - `.github/prompts/`: slash commands del workspace (`/start`, `/validar`, `/tests`, etc.)
-- `.github/workflows/`: workflows canónicos de GitHub Actions
+- `.github/workflows/`: workflows canónicos de GitHub Actions (`ci.yml` y `rollback.yml`)
 - `stack.md`: stack efectivo del workspace
 - `agents/memoria_global.md`: memoria compartida del sistema
-- `agents/api/README.md`: documentación específica de la API
 
 ## Licencia
 
@@ -461,6 +376,6 @@ El workspace está preparado para:
 
 - validar contratos de agentes
 - ejecutar tests y lint desde la raíz
-- resolver automáticamente el subproyecto backend
 - operar con `TASK_STATE` compartido y salida dual por agente
 - documentar decisiones y trazabilidad del swarm de forma consistente
+- generar reportes de eval gate para control contractual

@@ -11,6 +11,14 @@ OUTPUT_FORMAT="${2:-}"
 
 START_TIME=$(date +%s%3N)
 
+is_toolkit_root() {
+  local root="$1"
+  [ -f "$root/stack.md" ] && \
+  [ -d "$root/agents" ] && \
+  [ -d "$root/scripts" ] && \
+  [ -f "$root/scripts/run_eval_gate.py" ]
+}
+
 is_stack_root() {
   local root="$1"
   [ -f "$root/pubspec.yaml" ] || \
@@ -24,6 +32,11 @@ is_stack_root() {
 resolve_project_root() {
   local requested_root="$1"
   local -a candidates=()
+
+  if is_toolkit_root "$requested_root"; then
+    echo "$requested_root"
+    return 0
+  fi
 
   if is_stack_root "$requested_root"; then
     echo "$requested_root"
@@ -66,7 +79,8 @@ PROJECT_ROOT="$(resolve_project_root "$PROJECT_ROOT_INPUT")"
 
 detect_stack() {
   local root="$1"
-  if [ -f "$root/pubspec.yaml" ]; then echo "flutter"
+  if is_toolkit_root "$root"; then echo "toolkit"
+  elif [ -f "$root/pubspec.yaml" ]; then echo "flutter"
   elif [ -f "$root/package.json" ] && grep -q '"next"' "$root/package.json" 2>/dev/null; then echo "nextjs"
   elif [ -f "$root/package.json" ]; then echo "node"
   elif [ -f "$root/requirements.txt" ] || [ -f "$root/pyproject.toml" ]; then echo "python"
@@ -78,8 +92,9 @@ detect_stack() {
 
 STACK=$(detect_stack "$PROJECT_ROOT")
 
-get_lint_cmd() {
+describe_lint_cmd() {
   case "$1" in
+    toolkit)  echo "bash ./scripts/validate-agents/validate-agents.sh ./agents && bash ./scripts/token-report/token-report.sh ./agents" ;;
     flutter)  echo "flutter analyze --no-fatal-infos" ;;
     nextjs)   echo "npm run lint" ;;
     node)     echo "npm run lint" ;;
@@ -90,7 +105,37 @@ get_lint_cmd() {
   esac
 }
 
-LINT_CMD=$(get_lint_cmd "$STACK")
+run_lint_cmd() {
+  case "$1" in
+    toolkit)
+      bash ./scripts/validate-agents/validate-agents.sh ./agents && \
+      bash ./scripts/token-report/token-report.sh ./agents
+      ;;
+    flutter)
+      flutter analyze --no-fatal-infos
+      ;;
+    nextjs)
+      npm run lint
+      ;;
+    node)
+      npm run lint
+      ;;
+    python)
+      python -m ruff check . --output-format=json
+      ;;
+    go)
+      go vet ./...
+      ;;
+    rust)
+      cargo clippy -- -D warnings
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+LINT_CMD=$(describe_lint_cmd "$STACK")
 
 if [ -z "$LINT_CMD" ]; then
   MSG="ERROR: No se detectó stack compatible en '$PROJECT_ROOT'"
@@ -105,7 +150,7 @@ STDERR_FILE=$(mktemp)
 trap 'rm -f "$STDOUT_FILE" "$STDERR_FILE"' EXIT
 
 cd "$PROJECT_ROOT"
-$LINT_CMD >"$STDOUT_FILE" 2>"$STDERR_FILE"
+run_lint_cmd "$STACK" >"$STDOUT_FILE" 2>"$STDERR_FILE"
 EXIT_CODE=$?
 
 END_TIME=$(date +%s%3N)

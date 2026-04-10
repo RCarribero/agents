@@ -15,6 +15,14 @@ OUTPUT_FORMAT="${2:-}"
 
 START_TIME=$(date +%s%3N)
 
+is_toolkit_root() {
+  local root="$1"
+  [ -f "$root/stack.md" ] && \
+  [ -d "$root/agents" ] && \
+  [ -d "$root/scripts" ] && \
+  [ -f "$root/scripts/run_eval_gate.py" ]
+}
+
 is_stack_root() {
   local root="$1"
   [ -f "$root/pubspec.yaml" ] || \
@@ -28,6 +36,11 @@ is_stack_root() {
 resolve_project_root() {
   local requested_root="$1"
   local -a candidates=()
+
+  if is_toolkit_root "$requested_root"; then
+    echo "$requested_root"
+    return 0
+  fi
 
   if is_stack_root "$requested_root"; then
     echo "$requested_root"
@@ -68,10 +81,21 @@ json_escape_file() {
 
 PROJECT_ROOT="$(resolve_project_root "$PROJECT_ROOT_INPUT")"
 
+resolve_python_cmd() {
+  if command -v python >/dev/null 2>&1; then
+    echo "python"
+  elif command -v python3 >/dev/null 2>&1; then
+    echo "python3"
+  else
+    echo ""
+  fi
+}
+
 # Detectar stack
 detect_stack() {
   local root="$1"
-  if [ -f "$root/pubspec.yaml" ]; then echo "flutter"
+  if is_toolkit_root "$root"; then echo "toolkit"
+  elif [ -f "$root/pubspec.yaml" ]; then echo "flutter"
   elif [ -f "$root/package.json" ] && grep -q '"next"' "$root/package.json" 2>/dev/null; then echo "nextjs"
   elif [ -f "$root/package.json" ]; then echo "node"
   elif [ -f "$root/requirements.txt" ] || [ -f "$root/pyproject.toml" ]; then echo "python"
@@ -84,8 +108,9 @@ detect_stack() {
 STACK=$(detect_stack "$PROJECT_ROOT")
 
 # Seleccionar comando de test
-get_test_cmd() {
+describe_test_cmd() {
   case "$1" in
+    toolkit)  echo "python ./scripts/run_eval_gate.py --root . --report-file -" ;;
     flutter)  echo "flutter test --reporter=compact" ;;
     nextjs)   echo "npm test -- --passWithNoTests --watchAll=false" ;;
     node)     echo "npm test -- --passWithNoTests" ;;
@@ -96,7 +121,42 @@ get_test_cmd() {
   esac
 }
 
-TEST_CMD=$(get_test_cmd "$STACK")
+run_test_cmd() {
+  case "$1" in
+    toolkit)
+      local python_cmd
+      python_cmd="$(resolve_python_cmd)"
+      if [ -z "$python_cmd" ]; then
+        echo "ERROR: python/python3 no disponible para ejecutar run_eval_gate.py" >&2
+        return 127
+      fi
+      "$python_cmd" ./scripts/run_eval_gate.py --root . --report-file -
+      ;;
+    flutter)
+      flutter test --reporter=compact
+      ;;
+    nextjs)
+      npm test -- --passWithNoTests --watchAll=false
+      ;;
+    node)
+      npm test -- --passWithNoTests
+      ;;
+    python)
+      python -m pytest -q --tb=short
+      ;;
+    go)
+      go test ./... -v
+      ;;
+    rust)
+      cargo test
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+TEST_CMD=$(describe_test_cmd "$STACK")
 
 if [ -z "$TEST_CMD" ]; then
   MSG="ERROR: No se detectó stack compatible en '$PROJECT_ROOT'"
@@ -114,7 +174,7 @@ STDERR_FILE=$(mktemp)
 trap 'rm -f "$STDOUT_FILE" "$STDERR_FILE"' EXIT
 
 cd "$PROJECT_ROOT"
-$TEST_CMD >"$STDOUT_FILE" 2>"$STDERR_FILE"
+run_test_cmd "$STACK" >"$STDOUT_FILE" 2>"$STDERR_FILE"
 EXIT_CODE=$?
 
 END_TIME=$(date +%s%3N)
