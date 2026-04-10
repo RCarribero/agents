@@ -389,22 +389,6 @@ $relativeFiles = @(
     'scripts/install-repo-layout/install-repo-layout.ps1',
     'scripts/start/start.sh',
     'scripts/start/start.ps1',
-    'scripts/validate-stack/validate-stack.sh',
-    'scripts/validate-stack/validate-stack.ps1',
-    'scripts/validate-agents/validate-agents.sh',
-    'scripts/validate-agents/validate-agents.ps1',
-    'scripts/validate-memory/validate-memory.sh',
-    'scripts/validate-memory/validate-memory.ps1',
-    'scripts/run-tests/run-tests.sh',
-    'scripts/run-tests/run-tests.ps1',
-    'scripts/run-lint/run-lint.sh',
-    'scripts/run-lint/run-lint.ps1',
-    'scripts/sandbox-run/sandbox-run.sh',
-    'scripts/sandbox-run/sandbox-run.ps1',
-    'scripts/Dockerfile.sandbox',
-    'scripts/run_eval_gate.py',
-    'scripts/token-report/token-report.sh',
-    'scripts/token-report/token-report.ps1',
     'scripts/verified_digest.py'
 )
 
@@ -439,114 +423,6 @@ $globalPrompts = @(
             'Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.',
             'No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.',
             'Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.'
-        )
-    },
-    @{
-        FileName = 'validar.prompt.md'
-        Name = 'validar'
-        Description = 'Ejecuta las validaciones del workspace actual con el toolkit global'
-        Intro = 'Valida el repositorio actual ejecutando las comprobaciones operativas estándar.'
-        WindowsCommands = @(
-            ('& "{0}" .' -f (Join-Path $toolsScriptsDir 'validate-stack/validate-stack.ps1')),
-            ('& "{0}"' -f (Join-Path $toolsScriptsDir 'validate-agents/validate-agents.ps1')),
-            ('& "{0}"' -f (Join-Path $toolsScriptsDir 'validate-memory/validate-memory.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/validate-stack/validate-stack.sh" .' -f $bashScriptsDir),
-            ('bash "{0}/validate-agents/validate-agents.sh"' -f $bashScriptsDir),
-            ('bash "{0}/validate-memory/validate-memory.sh"' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta las tres validaciones en orden.',
-            'No modifiques archivos.',
-            'Resume el resultado de cada script con exit code y hallazgos relevantes.'
-        )
-    },
-    @{
-        FileName = 'tests.prompt.md'
-        Name = 'tests'
-        Description = 'Ejecuta los tests del workspace actual con el toolkit global'
-        Intro = 'Ejecuta los tests del repositorio actual y resume el resultado.'
-        WindowsCommands = @(
-            ('& "{0}" . --json' -f (Join-Path $toolsScriptsDir 'run-tests/run-tests.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/run-tests/run-tests.sh" . --json' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo el runner de tests.',
-            'No modifiques archivos.',
-            'Resume exit code, stack detectado y fallos relevantes si existen.'
-        )
-    },
-    @{
-        FileName = 'lint.prompt.md'
-        Name = 'lint'
-        Description = 'Ejecuta el lint del workspace actual con el toolkit global'
-        Intro = 'Ejecuta el linter del repositorio actual y resume el resultado.'
-        WindowsCommands = @(
-            ('& "{0}" . --json' -f (Join-Path $toolsScriptsDir 'run-lint/run-lint.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/run-lint/run-lint.sh" . --json' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo el runner de lint.',
-            'No modifiques archivos.',
-            'Resume exit code, stack detectado y problemas relevantes si existen.'
-        )
-    },
-    @{
-        FileName = 'sandbox-tests.prompt.md'
-        Name = 'sandbox-tests'
-        Description = 'Ejecuta los tests del workspace actual en sandbox con el toolkit global'
-        Intro = 'Ejecuta los tests del repositorio actual en sandbox y resume el resultado.'
-        WindowsCommands = @(
-            ('& "{0}" . tests --json' -f (Join-Path $toolsScriptsDir 'sandbox-run/sandbox-run.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/sandbox-run/sandbox-run.sh" . tests --json' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo tests en sandbox.',
-            'No modifiques archivos.',
-            'Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.',
-            'Resume exit code y fallos relevantes si existen.'
-        )
-    },
-    @{
-        FileName = 'sandbox-lint.prompt.md'
-        Name = 'sandbox-lint'
-        Description = 'Ejecuta el lint del workspace actual en sandbox con el toolkit global'
-        Intro = 'Ejecuta el linter del repositorio actual en sandbox y resume el resultado.'
-        WindowsCommands = @(
-            ('& "{0}" . lint --json' -f (Join-Path $toolsScriptsDir 'sandbox-run/sandbox-run.ps1'))
-        )
-        BashCommands = @(
-            ('bash "{0}/sandbox-run/sandbox-run.sh" . lint --json' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo lint en sandbox.',
-            'No modifiques archivos.',
-            'Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.',
-            'Resume exit code y problemas relevantes si existen.'
-        )
-    },
-    @{
-        FileName = 'eval-gate.prompt.md'
-        Name = 'eval-gate'
-        Description = 'Ejecuta el gate automático de contratos del workspace actual con el toolkit global'
-        Intro = 'Ejecuta el gate automático de contratos y resume el resultado.'
-        WindowsCommands = @(
-            ('python "{0}" --root .' -f (Join-Path $toolsScriptsDir 'run_eval_gate.py'))
-        )
-        BashCommands = @(
-            ('python "{0}/run_eval_gate.py" --root .' -f $bashScriptsDir)
-        )
-        ExpectedBehavior = @(
-            'Ejecuta solo el eval gate.',
-            'No modifiques archivos salvo el reporte generado por el propio script.',
-            'Resume qué checks pasaron o fallaron y el exit code.'
         )
     }
 )
@@ -647,4 +523,4 @@ if ($mcpWarned.Count -gt 0) {
 }
 
 Write-Output ''
-Write-Output 'Siguiente paso: recarga VS Code para ver /start, /validar, /tests, /lint y el resto de prompts globales.'
+Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize y /skill-installer como prompts globales.'

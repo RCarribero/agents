@@ -11,8 +11,8 @@ Uso:
 
 Descripción:
   Instala prompts globales en el perfil de VS Code y un toolkit de soporte en
-  el perfil del usuario. Después de esto, /start, /validar, /tests, /lint y
-  el resto de prompts estarán disponibles en cualquier carpeta/workspace.
+  el perfil del usuario. Después de esto, /start, /dockerize y
+  /skill-installer estarán disponibles en cualquier carpeta/workspace.
 
 Opciones:
   --force     Sobrescribe archivos existentes en el destino.
@@ -361,22 +361,6 @@ for relative_path in \
   scripts/install-repo-layout/install-repo-layout.ps1 \
   scripts/start/start.sh \
   scripts/start/start.ps1 \
-  scripts/validate-stack/validate-stack.sh \
-  scripts/validate-stack/validate-stack.ps1 \
-  scripts/validate-agents/validate-agents.sh \
-  scripts/validate-agents/validate-agents.ps1 \
-  scripts/validate-memory/validate-memory.sh \
-  scripts/validate-memory/validate-memory.ps1 \
-  scripts/run-tests/run-tests.sh \
-  scripts/run-tests/run-tests.ps1 \
-  scripts/run-lint/run-lint.sh \
-  scripts/run-lint/run-lint.ps1 \
-  scripts/sandbox-run/sandbox-run.sh \
-  scripts/sandbox-run/sandbox-run.ps1 \
-  scripts/Dockerfile.sandbox \
-  scripts/run_eval_gate.py \
-  scripts/token-report/token-report.sh \
-  scripts/token-report/token-report.ps1 \
   scripts/verified_digest.py
 do
   source_path="$SOURCE_ROOT/$relative_path"
@@ -415,154 +399,6 @@ Comportamiento esperado:
 - No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.
 - Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.
 " "$(prompt_label "$prompt_dir" "start")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "validar" "$prompt_dir/validar.prompt.md" "---
-name: \"validar\"
-description: \"Ejecuta las validaciones del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Valida el repositorio actual ejecutando las comprobaciones operativas estándar.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa estos comandos:
-  - & \"$TOOLS_SCRIPTS_DIR/validate-stack/validate-stack.ps1\" .
-  - & \"$TOOLS_SCRIPTS_DIR/validate-agents/validate-agents.ps1\"
-  - & \"$TOOLS_SCRIPTS_DIR/validate-memory/validate-memory.ps1\"
-- Si estás en Bash, Git Bash o Linux/macOS, usa estos comandos:
-  - bash \"$BASH_SCRIPTS_DIR/validate-stack/validate-stack.sh\" .
-  - bash \"$BASH_SCRIPTS_DIR/validate-agents/validate-agents.sh\"
-  - bash \"$BASH_SCRIPTS_DIR/validate-memory/validate-memory.sh\"
-
-Comportamiento esperado:
-
-- Ejecuta las tres validaciones en orden.
-- No modifiques archivos.
-- Resume el resultado de cada script con exit code y hallazgos relevantes.
-" "$(prompt_label "$prompt_dir" "validar")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "tests" "$prompt_dir/tests.prompt.md" "---
-name: \"tests\"
-description: \"Ejecuta los tests del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta los tests del repositorio actual y resume el resultado.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa este comando:
-  - & \"$TOOLS_SCRIPTS_DIR/run-tests/run-tests.ps1\" . --json
-- Si estás en Bash, Git Bash o Linux/macOS, usa este comando:
-  - bash \"$BASH_SCRIPTS_DIR/run-tests/run-tests.sh\" . --json
-
-Comportamiento esperado:
-
-- Ejecuta solo el runner de tests.
-- No modifiques archivos.
-- Resume exit code, stack detectado y fallos relevantes si existen.
-" "$(prompt_label "$prompt_dir" "tests")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "lint" "$prompt_dir/lint.prompt.md" "---
-name: \"lint\"
-description: \"Ejecuta el lint del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta el linter del repositorio actual y resume el resultado.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa este comando:
-  - & \"$TOOLS_SCRIPTS_DIR/run-lint/run-lint.ps1\" . --json
-- Si estás en Bash, Git Bash o Linux/macOS, usa este comando:
-  - bash \"$BASH_SCRIPTS_DIR/run-lint/run-lint.sh\" . --json
-
-Comportamiento esperado:
-
-- Ejecuta solo el runner de lint.
-- No modifiques archivos.
-- Resume exit code, stack detectado y problemas relevantes si existen.
-" "$(prompt_label "$prompt_dir" "lint")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "sandbox-tests" "$prompt_dir/sandbox-tests.prompt.md" "---
-name: \"sandbox-tests\"
-description: \"Ejecuta los tests del workspace actual en sandbox con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta los tests del repositorio actual en sandbox y resume el resultado.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa este comando:
-  - & \"$TOOLS_SCRIPTS_DIR/sandbox-run/sandbox-run.ps1\" . tests --json
-- Si estás en Bash, Git Bash o Linux/macOS, usa este comando:
-  - bash \"$BASH_SCRIPTS_DIR/sandbox-run/sandbox-run.sh\" . tests --json
-
-Comportamiento esperado:
-
-- Ejecuta solo tests en sandbox.
-- No modifiques archivos.
-- Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.
-- Resume exit code y fallos relevantes si existen.
-" "$(prompt_label "$prompt_dir" "sandbox-tests")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "sandbox-lint" "$prompt_dir/sandbox-lint.prompt.md" "---
-name: \"sandbox-lint\"
-description: \"Ejecuta el lint del workspace actual en sandbox con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta el linter del repositorio actual en sandbox y resume el resultado.
-
-Reglas de ejecución:
-
-- Si estás en Windows/PowerShell, usa este comando:
-  - & \"$TOOLS_SCRIPTS_DIR/sandbox-run/sandbox-run.ps1\" . lint --json
-- Si estás en Bash, Git Bash o Linux/macOS, usa este comando:
-  - bash \"$BASH_SCRIPTS_DIR/sandbox-run/sandbox-run.sh\" . lint --json
-
-Comportamiento esperado:
-
-- Ejecuta solo lint en sandbox.
-- No modifiques archivos.
-- Indica si la ejecución fue en Docker o en host cuando sea visible en la salida.
-- Resume exit code y problemas relevantes si existen.
-" "$(prompt_label "$prompt_dir" "sandbox-lint")"
-done
-
-for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-write_prompt "eval-gate" "$prompt_dir/eval-gate.prompt.md" "---
-name: \"eval-gate\"
-description: \"Ejecuta el gate automático de contratos del workspace actual con el toolkit global\"
-agent: \"agent\"
----
-
-Ejecuta el gate automático de contratos y resume el resultado.
-
-Reglas de ejecución:
-
-- Usa este comando:
-  - python \"$BASH_SCRIPTS_DIR/run_eval_gate.py\" --root .
-
-Comportamiento esperado:
-
-- Ejecuta solo el eval gate.
-- No modifiques archivos salvo el reporte generado por el propio script.
-- Resume qué checks pasaron o fallaron y el exit code.
-" "$(prompt_label "$prompt_dir" "eval-gate")"
 done
 
 # Prompts complejos: se copian directo desde el source (no generados inline)
@@ -648,4 +484,4 @@ if [ ${#mcp_warned[@]} -gt 0 ]; then
 fi
 
 echo ""
-echo "Siguiente paso: recarga VS Code para ver /start, /validar, /tests, /lint y el resto de prompts globales."
+echo "Siguiente paso: recarga VS Code para ver /start, /dockerize y /skill-installer como prompts globales."

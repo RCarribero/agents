@@ -57,6 +57,184 @@ detect_stack_file() {
   fi
 }
 
+resolve_stack_target() {
+  if [ -f "$PROJECT_ROOT/.copilot/stack.md" ]; then
+    echo "$PROJECT_ROOT/.copilot/stack.md"
+  else
+    echo "$PROJECT_ROOT/stack.md"
+  fi
+}
+
+is_stack_root() {
+  local root="$1"
+  [ -f "$root/pubspec.yaml" ] || \
+  [ -f "$root/package.json" ] || \
+  [ -f "$root/requirements.txt" ] || \
+  [ -f "$root/pyproject.toml" ] || \
+  [ -f "$root/go.mod" ] || \
+  [ -f "$root/Cargo.toml" ] || \
+  [ -f "$root/pom.xml" ] || \
+  [ -f "$root/build.gradle" ] || \
+  [ -d "$root/agents" ]
+}
+
+resolve_project_root() {
+  local requested_root="$1"
+  local -a candidates=()
+
+  if is_stack_root "$requested_root"; then
+    echo "$requested_root"
+    return 0
+  fi
+
+  while IFS= read -r candidate; do
+    candidates+=("$candidate")
+  done < <(
+    find "$requested_root" -maxdepth 3 \
+      \( -name pubspec.yaml -o -name package.json -o -name requirements.txt -o -name pyproject.toml -o -name go.mod -o -name Cargo.toml -o -name pom.xml -o -name build.gradle \) \
+      -not -path '*/.git/*' \
+      -not -path '*/node_modules/*' \
+      -not -path '*/venv/*' \
+      -not -path '*/.venv/*' \
+      -printf '%h\n' | sort -u
+  )
+
+  if [ ${#candidates[@]} -eq 1 ]; then
+    echo "${candidates[0]}"
+    return 0
+  fi
+
+  echo "$requested_root"
+}
+
+detect_stack() {
+  local root="$1"
+  local stacks=()
+
+  [ -f "$root/pubspec.yaml" ] && stacks+=("flutter")
+  [ -f "$root/package.json" ] && stacks+=("node")
+  if [ -f "$root/requirements.txt" ] || [ -f "$root/pyproject.toml" ]; then
+    stacks+=("python")
+  fi
+  [ -f "$root/go.mod" ] && stacks+=("go")
+  [ -f "$root/Cargo.toml" ] && stacks+=("rust")
+  [ -f "$root/pom.xml" ] && stacks+=("java-maven")
+  [ -f "$root/build.gradle" ] && stacks+=("java-gradle")
+
+  if [ -d "$root/agents" ] && [ -d "$root/scripts" ] && [ -d "$root/.github" ]; then
+    stacks+=("toolkit")
+  fi
+
+  if [[ " ${stacks[*]} " =~ " node " ]]; then
+    if grep -q '"next"' "$root/package.json" 2>/dev/null; then
+      stacks+=("nextjs")
+    elif grep -q '"react"' "$root/package.json" 2>/dev/null; then
+      stacks+=("react")
+    fi
+  fi
+
+  if [[ " ${stacks[*]} " =~ " python " ]]; then
+    if grep -q 'fastapi' "$root/requirements.txt" 2>/dev/null || \
+       grep -q 'fastapi' "$root/pyproject.toml" 2>/dev/null; then
+      stacks+=("fastapi")
+    fi
+  fi
+
+  if [ ${#stacks[@]} -eq 0 ]; then
+    stacks+=("unknown")
+  fi
+
+  printf '%s\n' "${stacks[@]}"
+}
+
+get_test_cmd() {
+  local stack="$1"
+  case "$stack" in
+    *flutter*)    echo "flutter test" ;;
+    *nextjs*)     echo "npm test -- --passWithNoTests" ;;
+    *react*)      echo "npm test -- --passWithNoTests" ;;
+    *node*)       echo "npm test" ;;
+    *fastapi*)    echo "pytest" ;;
+    *python*)     echo "pytest" ;;
+    *go*)         echo "go test ./..." ;;
+    *rust*)       echo "cargo test" ;;
+    *toolkit*)    echo "# usa el flujo del swarm y las verificaciones del proyecto activo" ;;
+    *)            echo "# define manualmente el comando de tests para este proyecto" ;;
+  esac
+}
+
+get_lint_cmd() {
+  local stack="$1"
+  case "$stack" in
+    *flutter*)    echo "flutter analyze" ;;
+    *nextjs*)     echo "npm run lint" ;;
+    *react*)      echo "npm run lint" ;;
+    *node*)       echo "npm run lint" ;;
+    *fastapi*)    echo "python -m ruff check ." ;;
+    *python*)     echo "python -m ruff check ." ;;
+    *go*)         echo "golangci-lint run" ;;
+    *rust*)       echo "cargo clippy" ;;
+    *toolkit*)    echo "# usa las verificaciones nativas del proyecto activo" ;;
+    *)            echo "# define manualmente el comando de lint para este proyecto" ;;
+  esac
+}
+
+ensure_stack_file() {
+  local effective_root stack_target stacks_raw all_stacks test_cmd lint_cmd
+  local -a stacks=()
+
+  effective_root="$(resolve_project_root "$PROJECT_ROOT")"
+  stack_target="$(resolve_stack_target)"
+
+  if [ -f "$stack_target" ]; then
+    return 0
+  fi
+
+  while IFS= read -r stack_name; do
+    if [ -n "$stack_name" ]; then
+      stacks+=("$stack_name")
+    fi
+  done < <(detect_stack "$effective_root")
+
+  all_stacks="$(printf '%s, ' "${stacks[@]}")"
+  all_stacks="${all_stacks%, }"
+  stacks_raw="${stacks[*]}"
+  test_cmd="$(get_test_cmd "$stacks_raw")"
+  lint_cmd="$(get_lint_cmd "$stacks_raw")"
+
+  mkdir -p "$(dirname "$stack_target")"
+  cat > "$stack_target" <<STACKMD
+# Stack del Proyecto
+
+**Detectado automáticamente por start.sh** — $(date +%Y-%m-%d)
+
+## Scope detectado
+
+- Workspace raíz: $PROJECT_ROOT
+- Subproyecto con manifests: $effective_root
+
+## Stack activo
+
+\`\`\`
+$all_stacks
+\`\`\`
+
+## Comandos orientativos
+
+| Acción | Comando |
+|--------|---------|
+| Tests  | \`$test_cmd\` |
+| Lint   | \`$lint_cmd\` |
+
+## Señales detectadas
+
+$(for stack_name in "${stacks[@]}"; do echo "- $stack_name"; done)
+
+---
+*Regenerar: eliminar este archivo y volver a ejecutar \`scripts/start/start.sh\`*
+STACKMD
+}
+
 run_autoskills() {
   local log_file
   log_file="$(mktemp)"
@@ -89,7 +267,7 @@ else
 fi
 
 stack_file_before="$(detect_stack_file || true)"
-bash "$SCRIPTS_ROOT/validate-stack/validate-stack.sh" "$PROJECT_ROOT"
+ensure_stack_file
 stack_file_after="$(detect_stack_file || true)"
 if [ -n "$stack_file_after" ]; then
   if [ -n "$stack_file_before" ]; then

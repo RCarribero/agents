@@ -5,7 +5,7 @@
 Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - **Workspace local:** sistema de orquestación multi-agente y toolkit operativo basado en contratos Markdown, scripts Python/Bash/PowerShell y CI
 - **Repos frontend objetivo:** Flutter/Dart con Riverpod, solo cuando el proyecto activo contenga `pubspec.yaml`
-- **Agentes:** definidos en `agents/*.agent.md` — NO modificar sin autorización del orchestrator + eval gate
+- **Agentes:** definidos en `agents/*.agent.md` — NO modificar sin autorización del orchestrator y la verificación correspondiente
 - **MCP:** configurado en `.mcp.json`; priorizar los servidores disponibles por tarea, sin depender de servicios HTTP locales del propio repo
 
 ## Convenciones de código — aplican solo si stack.md declara este lenguaje
@@ -75,7 +75,6 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica cuand
 - Tests deben estar en RED antes de que el implementador empiece (TDD)
 - Cubrir: happy path + al menos 1 error + al menos 1 validación fallida
 - No modificar tests existentes sin reportar el conflicto al orchestrator
-- `run-tests.sh --json` retorna resultado estructurado para consumo de agentes
 
 ## MCP
 

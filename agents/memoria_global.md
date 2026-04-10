@@ -17,7 +17,7 @@ Solo se registran lecciones aplicables a cualquier proyecto con el mismo stack, 
 
 **Agentes:** todos
 
-El modelo de cada agente es una decisión de diseño: refleja el balance entre coste, velocidad y capacidad de razonamiento exigido por el rol. Cambiar un modelo requiere actualizar la justificación inline en el frontmatter (`model: 'X'  # justificación`) y pasar eval-gate. No se aceptan cambios de modelo sin ambas condiciones cumplidas.
+El modelo de cada agente es una decisión de diseño: refleja el balance entre coste, velocidad y capacidad de razonamiento exigido por el rol. Cambiar un modelo requiere actualizar la justificación inline en el frontmatter (`model: 'X'  # justificación`) y pasar la verificación vigente del repositorio. No se aceptan cambios de modelo sin ambas condiciones cumplidas.
 
 ---
 

@@ -11,8 +11,9 @@ Ejecuta los **dos objetivos** siguientes sobre el proyecto activo, en orden. No 
 ## PASO 0 — Detección de stack (base de ambos objetivos)
 
 1. Lee `stack.md` en la raíz del proyecto. Si no existe, ejecuta:
-   - PowerShell: `./scripts/validate-stack/validate-stack.ps1 .`
-   - Bash/macOS/Linux: `bash ./scripts/validate-stack/validate-stack.sh .`
+  - PowerShell: `./scripts/start/start.ps1 .`
+  - Bash/macOS/Linux: `bash ./scripts/start/start.sh .`
+  Si tampoco puedes usar `/start`, detecta el stack manualmente inspeccionando manifests (`pubspec.yaml`, `package.json`, `pyproject.toml`, etc.) y continúa sin depender de scripts externos eliminados.
 2. Identifica el **stack primario** (Flutter/Dart, Next.js, React, Python/FastAPI, Node.js genérico, etc.) y los **servicios auxiliares** (PostgreSQL, Redis…) según referencias en el código o en variables de entorno.
 3. Lee `.env.example` si existe; si no, busca referencias a variables de entorno en el código y anótalas.
 

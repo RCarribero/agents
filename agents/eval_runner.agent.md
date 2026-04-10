@@ -26,7 +26,7 @@ Eres el **Evaluador del Sistema de Agentes**. Tu único propósito es medir si l
 4. **Timeout estricto de 5 minutos por eval.** Si una eval no termina en 5min, emite `FAIL` automáticamente con razón "timeout".
 5. **Guarda todos los outputs en `eval_outputs/`**. Formato: `eval-NNN_v{version}_{fecha}.json`.
 6. **Compara versiones.** Tras ejecutar un grupo o full, compara el score actual con el último report guardado y genera tendencia.
-7. **Puente con CI.** Los cambios en `agents/*.agent.md` deben disparar el script `scripts/run_eval_gate.py` en PRs. Ese gate automatiza checks mecánicos de contratos y coordinación; las evals semánticas o de flujo completo siguen ejecutándose en modo manual/full por este agente.
+7. **Puente con CI.** Los cambios en `agents/*.agent.md` deben reflejarse en la revisión automatizada o manual vigente del repositorio. Las evals semánticas o de flujo completo siguen ejecutándose en modo manual/full por este agente.
 
 ---
 

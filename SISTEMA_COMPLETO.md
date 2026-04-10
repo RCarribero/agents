@@ -185,78 +185,40 @@ Reglas:
 
 ---
 
-## 6. Scripts de validación y soporte
+## 6. Scripts de soporte vigentes
 
-### `validate-agents.sh`
+### `install-copilot-layout`
 
-Verifica integridad estructural de cada `.agent.md` en `agents/`.
+Instala los prompts globales preservados y un toolkit portable en el perfil del usuario de VS Code.
 
 ```bash
-./scripts/validate-agents/validate-agents.sh [ruta/a/agents/]
+./scripts/install-copilot-layout/install-copilot-layout.sh [--force]
 ```
 
-Chequea frontmatter, bloques de report, presencia de `AUTONOMOUS_LEARNINGS` y consistencia contractual básica.
+### `install-repo-layout`
 
-### `validate-stack.sh`
-
-Detecta el stack del proyecto y crea `stack.md` en la raíz si no existe.
+Materializa el layout canónico del repositorio actual en `.github/` y copia solo los scripts de soporte todavía vigentes.
 
 ```bash
-./scripts/validate-stack/validate-stack.sh [ruta/proyecto/]
+./scripts/install-repo-layout/install-repo-layout.sh [target_root] [--force]
 ```
 
-Soporta detección de stacks comunes de proyectos objetivo y no sobreescribe `stack.md` si ya está curado manualmente.
+### `start.sh`
 
-### `validate-memory.sh`
-
-Valida el estado de la memoria en tres dimensiones.
+Bootstrap mínimo del proyecto: copia `.github/copilot-instructions.md` si falta, crea `stack.md` si falta e intenta descargar skills con `autoskills`.
 
 ```bash
-./scripts/validate-memory/validate-memory.sh [ruta/agents/] [ruta/session_log.md]
+./scripts/start/start.sh [ruta/proyecto/]
 ```
 
-### `token-report.sh`
+### `docker-launcher/*`
 
-Estima el tamaño en tokens de cada `.agent.md`.
-
-```bash
-./scripts/token-report/token-report.sh [ruta/agents/]
-```
-
-### `run-tests.sh`
-
-Ejecuta los tests detectando el stack automáticamente.
-
-En la raíz de este toolkit, el stack detectado es `toolkit` y el script ejecuta `run_eval_gate.py` en modo sin reporte persistente para que `tests` funcione también en sandbox read-only.
+Conjunto de scripts auxiliares para preparar, construir y lanzar el entorno Docker generado por `/dockerize`.
 
 ```bash
-./scripts/run-tests/run-tests.sh [PROJECT_ROOT] [--json]
-```
-
-### `run-lint.sh`
-
-Ejecuta el linter detectando el stack automáticamente.
-
-En la raíz de este toolkit, el stack detectado es `toolkit` y el script ejecuta `validate-agents.sh` seguido de `token-report.sh` para alinear `/lint` con los checks estructurales del repositorio.
-
-```bash
-./scripts/run-lint/run-lint.sh [PROJECT_ROOT] [--json]
-```
-
-### `sandbox-run.sh`
-
-Orquesta tests o lint en un contenedor Docker aislado.
-
-```bash
-./scripts/sandbox-run/sandbox-run.sh <project_root> <tests|lint> [--json]
-```
-
-### `run_eval_gate.py`
-
-Ejecuta checks automáticos sobre contratos de agentes y genera un reporte markdown.
-
-```bash
-python scripts/run_eval_gate.py --root . --report-file agents/eval_outputs/ci_eval_gate_report.md
+./scripts/docker-launcher/setup.sh
+./scripts/docker-launcher/build.sh
+./scripts/docker-launcher/launch.sh
 ```
 
 ### `verified_digest.py`
@@ -328,7 +290,7 @@ Uso previsto: proyectos activos que realmente necesiten queries directas o migra
 | Recurso | Límite | Acción si se supera |
 |---|---|---|
 | AUTONOMOUS_LEARNINGS por agente | 10 notas | memory_curator archiva las más antiguas |
-| session_log.md | 500 líneas | validate-memory.sh emite WARN |
+| session_log.md | 500 líneas | revisar longitud antes de cerrar el ciclo |
 
 ---
 
@@ -354,13 +316,8 @@ Eventos habituales: `AGENT_TRANSITION`, `EVAL_TRIGGER`, `PHASE_COMPLETE`, `ERROR
 │   ├── copilot-instructions.md
 │   ├── prompts/
 │   │   ├── start.prompt.md
-│   │   ├── validar.prompt.md
-│   │   ├── tests.prompt.md
-│   │   ├── lint.prompt.md
-│   │   ├── sandbox-tests.prompt.md
-│   │   ├── sandbox-lint.prompt.md
-│   │   ├── eval-gate.prompt.md
-│   │   └── dockerize.prompt.md
+│   │   ├── dockerize.prompt.md
+│   │   └── skill-installer.prompt.md
 │   └── workflows/
 │       ├── ci.yml
 │       └── rollback.yml
@@ -372,19 +329,10 @@ Eventos habituales: `AGENT_TRANSITION`, `EVAL_TRIGGER`, `PHASE_COMPLETE`, `ERROR
 │   └── memoria_global.md
 ├── instructions/
 ├── scripts/
-│   ├── Dockerfile.sandbox
-│   ├── run-lint/
-│   ├── run-tests/
-│   ├── sandbox-run/
 │   ├── start/
-│   ├── token-report/
-│   ├── validate-agents/
-│   ├── validate-memory/
-│   ├── validate-stack/
 │   ├── install-copilot-layout/
 │   ├── install-repo-layout/
 │   ├── docker-launcher/
-│   ├── run_eval_gate.py
 │   └── verified_digest.py
 ├── session_log.md
 ├── stack.md
@@ -402,7 +350,7 @@ Objetivos del sistema de evals:
 - validar routing y contratos de agentes
 - detectar drift entre reglas y documentación
 - generar un baseline reproducible antes de tocar contratos críticos
-- dar soporte al CI mediante `run_eval_gate.py`
+- dar soporte a revisiones manuales y automatizadas según el workflow vigente
 
 Limitación conocida: no todos los casos se ejecutan end-to-end; parte del catálogo sigue dependiendo de simulación contractual o inspección estructural.
 
@@ -432,22 +380,16 @@ Limitación conocida: no todos los casos se ejecutan end-to-end; parte del catá
    GITHUB_TOKEN=tu-github-pat
    OPENAI_API_KEY=sk-...
    ```
-4. **Detecta el stack** de tu proyecto:
+4. **Genera o actualiza `stack.md`** del repo actual:
    ```bash
-   ./scripts/validate-stack/validate-stack.sh /ruta/a/tu/proyecto
+   ./scripts/start/start.sh /ruta/a/tu/proyecto
    ```
-5. **Verifica la integridad del sistema:**
-   ```bash
-   ./scripts/validate-agents/validate-agents.sh
-   ./scripts/validate-memory/validate-memory.sh
-   ./scripts/token-report/token-report.sh
-   ```
+5. **Verifica la integridad del sistema** con la documentación operativa, los contratos vigentes y las herramientas nativas del proyecto activo.
 6. **Envía tu primera tarea:**
    ```
    @orchestrator Implementa [tu tarea aquí]
    ```
-7. **Valida el resultado** con tests, lint y eval gate si tocaste contratos.
-   En la raíz de este toolkit, `tests` equivale a eval gate sin reporte persistente y `lint` equivale a `validate-agents` + `token-report`.
+7. **Valida el resultado** con las verificaciones nativas del proyecto activo y revisa `verified_digest` cuando el flujo entre en Fase 3/Fase 4.
 8. **Al cerrar la sesión**, invoca `memory_curator` (modo completo) si el flujo operativo lo requiere.
 
 ---
