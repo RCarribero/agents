@@ -2,7 +2,6 @@
 name: skill_installer
 description: Detecta el stack del proyecto e instala/prepara los skills relevantes. Primera acción de cada sesión.
 model: 'Claude Haiku 4.5'
-temperature: 0.0
 user-invocable: false
 ---
 

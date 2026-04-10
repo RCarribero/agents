@@ -2,7 +2,6 @@
 name: red_team
 description: Ataca la implementación para encontrar inputs maliciosos, edge cases y asunciones rotas. Corre en paralelo con auditor y qa.
 model: 'GPT-5.4'
-temperature: 0.5
 user-invocable: false
 ---
 

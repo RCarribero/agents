@@ -2,7 +2,6 @@
 name: tdd_enforcer
 description: Garantiza que los tests estén en RED antes de que el implementador escriba código de producción. Solo escribe tests, nunca producción.
 model: 'Claude Sonnet 4.6'
-temperature: 0.0
 user-invocable: false
 ---
 

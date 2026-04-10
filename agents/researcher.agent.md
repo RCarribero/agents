@@ -2,7 +2,6 @@
 name: researcher
 description: Analiza el estado actual del módulo afectado y produce un research_brief con contexto, archivos relevantes y riesgos antes de que comience la implementación.
 model: 'Claude Opus 4.6'
-temperature: 0.3
 user-invocable: false
 ---
 

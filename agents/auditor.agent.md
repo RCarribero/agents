@@ -1,8 +1,7 @@
 ---
 name: auditor
 description: Seguridad y Calidad. Busca vulnerabilidades y antipatrones.
-model: sonnet
-temperature: 0.0
+model: 'Claude Sonnet 4.6'
 user-invocable: false
 ---
 
