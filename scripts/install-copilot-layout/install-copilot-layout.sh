@@ -565,6 +565,18 @@ Comportamiento esperado:
 " "$(prompt_label "$prompt_dir" "eval-gate")"
 done
 
+# Prompts complejos: se copian directo desde el source (no generados inline)
+for _extra_prompt in dockerize skill-installer; do
+  _src="$SOURCE_ROOT/.github/prompts/$_extra_prompt.prompt.md"
+  if [ -f "$_src" ]; then
+    for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
+      copy_file "$_src" "$prompt_dir/$_extra_prompt.prompt.md" "$(prompt_label "$prompt_dir" "$_extra_prompt")"
+    done
+  else
+    missing+=("$_extra_prompt.prompt.md")
+  fi
+done
+
 run_mcp_sync_layout || true
 
 echo "=== install-copilot-layout.sh ==="

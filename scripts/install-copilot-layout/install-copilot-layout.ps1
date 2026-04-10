@@ -559,6 +559,21 @@ foreach ($prompt in $globalPrompts) {
     }
 }
 
+# Prompts complejos: se copian directo desde el source (no generados inline)
+@('dockerize', 'skill-installer') | ForEach-Object {
+    $extraName   = $_
+    $extraSource = Join-Path $sourceRoot ".github/prompts/$extraName.prompt.md"
+    if (Test-Path $extraSource -PathType Leaf) {
+        foreach ($promptDir in $promptInstallDirs) {
+            $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $extraName
+            Copy-TemplateFile -Source $extraSource -Target (Join-Path $promptDir "$extraName.prompt.md") -Label $label -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+        }
+    }
+    else {
+        $missing.Add("$extraName.prompt.md")
+    }
+}
+
 try {
     Invoke-McpSyncLayout -UserRootDir $userRootDir -Synced $mcpSynced -Unchanged $mcpUnchanged -Warned $mcpWarned
     if ($mcpSynced.Count -gt 0 -or $mcpUnchanged.Count -gt 0) {
