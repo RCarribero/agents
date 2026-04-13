@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-011",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry_count llega exactamente a 2",
+      "cumplido": true,
+      "detalle": "La regla de escalacion se activa cuando retry_count >= 2."
+    },
+    {
+      "criterio": "status final es ESCALATE (no REJECTED)",
+      "cumplido": true,
+      "detalle": "El orchestrator detiene el ciclo y devuelve ESCALATE tras dos fallos consecutivos."
+    },
+    {
+      "criterio": "escalate_to es exactamente human",
+      "cumplido": true,
+      "detalle": "La salida requerida fija human como destino de la escalacion final."
+    },
+    {
+      "criterio": "historial contiene exactamente 2 intentos previos con sus razones",
+      "cumplido": true,
+      "detalle": "TASK_STATE.history hace append en cada reintento y preserva el historial completo de razones."
+    }
+  ],
+  "peso": "critico",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "simulacion_por_contrato"
+}

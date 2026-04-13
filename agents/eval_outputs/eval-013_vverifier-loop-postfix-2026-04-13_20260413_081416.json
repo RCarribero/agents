@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-013",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "memory_curator se invoca tras devops emitir SUCCESS",
+      "cumplido": true,
+      "detalle": "El orchestrator define Fase 5 con memory_curator parcial tras cada ciclo exitoso."
+    },
+    {
+      "criterio": "Solo las secciones AUTONOMOUS_LEARNINGS de los agentes involucrados se tocan",
+      "cumplido": true,
+      "detalle": "El modo parcial de memory_curator escribe bullets en AUTONOMOUS_LEARNINGS de los agentes participantes."
+    },
+    {
+      "criterio": "memoria_global.md NO es modificada en curacion parcial",
+      "cumplido": true,
+      "detalle": "La regla del modo parcial prohibe tocar memoria_global.md."
+    },
+    {
+      "criterio": "Cada agente tiene maximo 10 notas en AUTONOMOUS_LEARNINGS",
+      "cumplido": true,
+      "detalle": "memory_curator debe archivar notas antiguas si algun agente supera 10 entradas."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

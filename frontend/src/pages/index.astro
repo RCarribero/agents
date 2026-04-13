@@ -1,0 +1,75 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SessionsList from '../components/SessionsList.astro';
+
+interface SessionSummary {
+  id: string;
+  start: number | null;
+  end: number | null;
+  eventCount: number;
+}
+
+let sessions: SessionSummary[] = [];
+let error: string | null = null;
+
+try {
+  const res = await fetch('http://127.0.0.1:3010/sessions', {
+    method: 'GET',
+  });
+
+  if (!res.ok) {
+    error = `Backend error: ${res.statusText}`;
+  } else {
+    sessions = await res.json();
+  }
+} catch (err) {
+  error = `Failed to connect to backend. Make sure the server is running on http://127.0.0.1:3010`;
+}
+---
+
+<BaseLayout title="Copilot Observer - Sessions">
+  <div class="space-y-6">
+    <div class="rounded-lg bg-blue-50 border border-blue-200 p-4">
+      <h2 class="font-semibold text-blue-900">How to use</h2>
+      <ul class="mt-2 list-inside list-disc space-y-1 text-sm text-blue-800">
+        <li>The backend is listening on <code class="font-mono">127.0.0.1:3010</code></li>
+        <li>Sessions are loaded from your Copilot activity directory</li>
+        <li>Events are stored in SQLite and updated incrementally</li>
+        <li>Click on a session to view its events</li>
+      </ul>
+    </div>
+
+    {
+      error ? (
+        <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+          <h3 class="font-semibold text-red-900">Connection Error</h3>
+          <p class="mt-2 text-sm text-red-800">{error}</p>
+        </div>
+      ) : (
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-900">
+              Sessions <span class="text-gray-500">({sessions.length})</span>
+            </h2>
+            <button
+              id="btn-refresh"
+              class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Refresh
+            </button>
+          </div>
+          <SessionsList sessions={sessions} />
+        </div>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<script>
+  const btn = document.getElementById('btn-refresh');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      location.reload();
+    });
+  }
+</script>

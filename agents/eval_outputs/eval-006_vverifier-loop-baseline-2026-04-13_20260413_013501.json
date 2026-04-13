@@ -1,0 +1,36 @@
+{
+  "eval_id": "eval-006",
+  "version": "verifier-loop-baseline-2026-04-13",
+  "fecha": "2026-04-13T01:35:01",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "Todos los campos obligatorios presentes (task_id, status, next_agent, summary)",
+      "cumplido": true,
+      "detalle": "El contrato de backend declara task_id, status, artifacts, next_agent, escalate_to y summary en director_report."
+    },
+    {
+      "criterio": "status es exactamente uno de SUCCESS, REJECTED, ESCALATE",
+      "cumplido": true,
+      "detalle": "El backend restringe status a SUCCESS o ESCALATE para una tarea completada."
+    },
+    {
+      "criterio": "task_id tiene formato valido",
+      "cumplido": true,
+      "detalle": "El task_id se mantiene como identificador no vacio propagado por el orchestrator."
+    },
+    {
+      "criterio": "summary no esta vacio y tiene maximo 2 lineas",
+      "cumplido": true,
+      "detalle": "El contrato limita summary a 1-2 lineas."
+    },
+    {
+      "criterio": "next_agent es valido o none",
+      "cumplido": true,
+      "detalle": "El flujo explicita la transicion hacia Fase 3 con verificadores paralelos."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

@@ -1,0 +1,37 @@
+{
+  "eval_id": "eval-019",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PARTIAL",
+  "criterios": [
+    {
+      "criterio": "auditor.task_id termina exactamente en .audit",
+      "cumplido": true,
+      "detalle": "El contrato de auditor fija el sufijo .audit."
+    },
+    {
+      "criterio": "qa.task_id termina exactamente en .qa",
+      "cumplido": true,
+      "detalle": "El contrato de qa fija el sufijo .qa."
+    },
+    {
+      "criterio": "red_team.task_id termina exactamente en .redteam",
+      "cumplido": true,
+      "detalle": "El contrato de red_team fija el sufijo .redteam."
+    },
+    {
+      "criterio": "orchestrator asocia veredictos correctamente por rol",
+      "cumplido": true,
+      "detalle": "La matriz de sincronizacion distingue APROBADO, CUMPLE y RESISTENTE por sufijo y el parche fuerza eco exacto de context.verification_cycle."
+    },
+    {
+      "criterio": "orchestrator no avanza a Fase 4 sin los tres veredictos del mismo ciclo",
+      "cumplido": true,
+      "detalle": "La coordinacion requiere mismo verification_cycle y triple aprobacion antes de devops."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "simulacion_por_contrato",
+  "razon": "infraestructura_pendiente para validar el flujo end-to-end con runner paralelo real."
+}

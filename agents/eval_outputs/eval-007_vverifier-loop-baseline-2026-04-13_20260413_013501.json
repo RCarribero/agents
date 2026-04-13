@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-007",
+  "version": "verifier-loop-baseline-2026-04-13",
+  "fecha": "2026-04-13T01:35:01",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "task_id del auditor termina exactamente en .audit",
+      "cumplido": true,
+      "detalle": "El contrato de auditor fija task_id: <id>.audit."
+    },
+    {
+      "criterio": "task_id del qa termina exactamente en .qa",
+      "cumplido": true,
+      "detalle": "El contrato de qa fija task_id: <id>.qa."
+    },
+    {
+      "criterio": "orchestrator espera ambos reports antes de avanzar a Fase 4",
+      "cumplido": true,
+      "detalle": "El contrato actual es mas estricto: espera auditor, qa y red_team antes de Fase 4."
+    },
+    {
+      "criterio": "Ningun agente avanza sin los dos veredictos",
+      "cumplido": true,
+      "detalle": "El orchestrator no habilita devops sin el conjunto completo de veredictos del ciclo."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

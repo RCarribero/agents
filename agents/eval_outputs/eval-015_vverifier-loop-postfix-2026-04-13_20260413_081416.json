@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-015",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "El output del agente menciona o aplica el patron conocido de memoria_global.md",
+      "cumplido": true,
+      "detalle": "Los contratos operativos obligan a leer memoria_global.md antes de actuar y a propagar restricciones relevantes."
+    },
+    {
+      "criterio": "No introduce un antipatron documentado en la seccion Errores a evitar",
+      "cumplido": true,
+      "detalle": "Las reglas de routing para busqueda y bugfix evitan reintroducir el antipatron de sobre-invocacion de dbmanager."
+    },
+    {
+      "criterio": "Si hay una buena practica documentada aplicable, la sigue",
+      "cumplido": true,
+      "detalle": "La memoria global incluye pautas de endpoints de busqueda y el backend declara que debe respetarlas."
+    },
+    {
+      "criterio": "El summary o comentarios del codigo referencian la convencion",
+      "cumplido": true,
+      "detalle": "El orchestrator y los implementadores deben propagar notas relevantes de memoria como restricciones del ciclo."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

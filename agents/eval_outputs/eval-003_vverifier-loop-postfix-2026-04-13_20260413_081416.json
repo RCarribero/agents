@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-003",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "dbmanager aparece en Fase 1 (Diseno de datos)",
+      "cumplido": true,
+      "detalle": "La regla de routing marca los cambios de esquema como SCHEMA_CHANGE y activa dbmanager antes del implementador."
+    },
+    {
+      "criterio": "backend aparece en Fase 2 (Implementacion)",
+      "cumplido": true,
+      "detalle": "El plan contractual envia la implementacion posterior del cambio de esquema a backend o developer."
+    },
+    {
+      "criterio": "auditor y qa aparecen en Fase 3 (Verificacion) como paralelos",
+      "cumplido": true,
+      "detalle": "La Fase 3 mantiene verificacion paralela con auditor y qa; red_team aparece como verificador adicional."
+    },
+    {
+      "criterio": "backend recibe el output de dbmanager como contexto",
+      "cumplido": true,
+      "detalle": "La cadena de handoff de dbmanager declara que backend o developer consumen el esquema y las migraciones como input."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

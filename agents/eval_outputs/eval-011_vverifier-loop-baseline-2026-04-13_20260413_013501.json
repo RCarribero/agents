@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-011",
+  "version": "verifier-loop-baseline-2026-04-13",
+  "fecha": "2026-04-13T01:35:01",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry_count llega exactamente a 2",
+      "cumplido": true,
+      "detalle": "La regla de escalacion se activa con retry_count >= 2 y no antes."
+    },
+    {
+      "criterio": "status final es ESCALATE (no REJECTED)",
+      "cumplido": true,
+      "detalle": "El orchestrator eleva el ciclo al usuario tras dos rechazos o timeouts consecutivos."
+    },
+    {
+      "criterio": "escalate_to es exactamente human",
+      "cumplido": true,
+      "detalle": "La escalacion obligatoria apunta a human."
+    },
+    {
+      "criterio": "historial contiene exactamente 2 intentos previos con sus razones",
+      "cumplido": true,
+      "detalle": "El contrato exige conservar el historial completo de reintentos al escalar."
+    }
+  ],
+  "peso": "critico",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

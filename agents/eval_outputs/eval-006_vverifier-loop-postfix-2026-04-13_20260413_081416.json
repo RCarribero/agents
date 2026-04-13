@@ -1,0 +1,36 @@
+{
+  "eval_id": "eval-006",
+  "version": "verifier-loop-postfix-2026-04-13",
+  "fecha": "2026-04-13T08:14:16",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "Todos los campos obligatorios presentes (task_id, status, next_agent, summary)",
+      "cumplido": true,
+      "detalle": "El contrato de backend exige esos cuatro campos en el director_report."
+    },
+    {
+      "criterio": "status es exactamente uno de: SUCCESS, REJECTED, ESCALATE",
+      "cumplido": true,
+      "detalle": "La salida requerida restringe status a los valores esperados."
+    },
+    {
+      "criterio": "task_id tiene un formato valido (no vacio, sin espacios)",
+      "cumplido": true,
+      "detalle": "task_id es obligatorio en el contrato de entrada y se ecoa sin permitir vacios."
+    },
+    {
+      "criterio": "summary no esta vacio y tiene maximo 2 lineas",
+      "cumplido": true,
+      "detalle": "El formato de salida exige resumen conciso de 1-2 lineas."
+    },
+    {
+      "criterio": "next_agent es un nombre valido de agente o none",
+      "cumplido": true,
+      "detalle": "backend declara next_agent: auditor ∥ qa ∥ red_team en Fase 3."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

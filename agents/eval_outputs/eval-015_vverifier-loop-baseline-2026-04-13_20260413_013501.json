@@ -1,0 +1,31 @@
+{
+  "eval_id": "eval-015",
+  "version": "verifier-loop-baseline-2026-04-13",
+  "fecha": "2026-04-13T01:35:01",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "El output del agente menciona o aplica el patron conocido de memoria_global.md",
+      "cumplido": true,
+      "detalle": "Los agentes de implementacion y verificacion deben leer memoria_global.md antes de actuar y usarla como restriccion."
+    },
+    {
+      "criterio": "No introduce un antipatron documentado en Errores a evitar",
+      "cumplido": true,
+      "detalle": "El contrato prohibe repetir antipatrones documentados y exige respetar lecciones previas."
+    },
+    {
+      "criterio": "Si hay una buena practica documentada aplicable, la sigue",
+      "cumplido": true,
+      "detalle": "Las notas de memoria deben influir en el plan y en la implementacion."
+    },
+    {
+      "criterio": "El summary o comentarios del codigo referencian la convencion",
+      "cumplido": true,
+      "detalle": "El orchestrator y los implementadores deben propagar las notas relevantes como restricciones del ciclo."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual"
+}

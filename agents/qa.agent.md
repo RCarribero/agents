@@ -20,6 +20,8 @@ Eres el QA. Tu trabajo es verificar que el código implementado **hace lo que se
   "context": {
     "files": ["archivos modificados/creados"],
     "branch_name": "rama del ciclo propagada por el orchestrator — debe coincidir exactamente con la rama del ciclo en curso",
+    "verification_cycle": "identificador del ciclo propagado explícitamente por el orchestrator — obligatorio en Fase 3 y debe ecoarse sin reconstruirlo localmente",
+    "verified_digest": "digest de referencia propagado por el orchestrator si existe; opcional y solo para comparación de integridad",
     "previous_output": "output de backend, frontend o developer con status SUCCESS",
     "constraints": ["criterios de aceptación del plan original"],
     "skill_context": { "...": "opcional, si fue adjuntado por el orchestrator" },
@@ -40,7 +42,7 @@ veredicto: CUMPLE | NO CUMPLE
 artifacts: none
 next_agent: orchestrator
 escalate_to: human | none
-verification_cycle: <task_id>.r<retry_count>
+verification_cycle: <context.verification_cycle recibido del orchestrator>
 branch_name: <rama del ciclo, igual a context.branch_name recibida del orchestrator>
 verified_files: <lista de archivos verificados, igual a context.files de entrada — excluye `session_log.md` (audit_trail_artifact fuera del digest del ciclo)>
 verified_digest: <hash/huella del contenido exacto verificado para verified_files en este ciclo>
@@ -82,10 +84,12 @@ Antes de emitir el veredicto, recomputar `verified_digest` de forma independient
 4. Concatenar todos los hashes en orden alfabético de ruta
 5. El `verified_digest` propio es el SHA-256 de esa concatenación
 
-Si el digest recomputado **no coincide** con el `verified_digest` del contrato de entrada:
+Si `context.verified_digest` fue provisto explícitamente y el digest recomputado **no coincide** con ese valor:
 - `status: REJECTED`
 - `rejection_details.issue: "digest_mismatch — artifacts modificados entre implementación y verificación"`
 - **NO emitir veredicto sobre el código** — solo emitir el rechazo por digest mismatch
+
+Si `context.verified_digest` no fue provisto, continúa la verificación funcional normalmente y emite el digest recomputado como `verified_digest` de salida.
 
 ---
 
@@ -122,7 +126,7 @@ veredicto: NO CUMPLE
 artifacts: []
 next_agent: orchestrator
 escalate_to: none
-verification_cycle: <task_id>.r<retry_count>
+verification_cycle: <context.verification_cycle recibido del orchestrator>
 branch_name: <rama del ciclo, igual a context.branch_name recibida del orchestrator>
 verified_files: <lista de archivos verificados, igual a context.files de entrada — excluye `session_log.md` (audit_trail_artifact fuera del digest del ciclo)>
 verified_digest: <hash/huella del contenido exacto verificado para verified_files en este ciclo>

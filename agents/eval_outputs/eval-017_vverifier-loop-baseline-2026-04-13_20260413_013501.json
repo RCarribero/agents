@@ -1,0 +1,32 @@
+{
+  "eval_id": "eval-017",
+  "version": "verifier-loop-baseline-2026-04-13",
+  "fecha": "2026-04-13T01:35:01",
+  "resultado": "FAIL",
+  "criterios": [
+    {
+      "criterio": "devops fue invocado exactamente una vez",
+      "cumplido": false,
+      "detalle": "El contrato actual exige triple aprobacion; con solo auditor y qa no se abre Fase 4."
+    },
+    {
+      "criterio": "El contrato de devops referencia test-017.audit y test-017.qa",
+      "cumplido": false,
+      "detalle": "El bundle valido actual tambien exige un report .redteam del mismo ciclo."
+    },
+    {
+      "criterio": "doble_aprobacion es suficiente para avanzar",
+      "cumplido": false,
+      "detalle": "La regla vigente de coordinacion requiere auditor APROBADO, qa CUMPLE y red_team RESISTENTE."
+    },
+    {
+      "criterio": "No hay retry innecesario",
+      "cumplido": true,
+      "detalle": "El sistema espera el tercer veredicto; no fuerza retry con dos aprobaciones positivas."
+    }
+  ],
+  "peso": "critico",
+  "tiempo_ejecucion_ms": 0,
+  "metodo": "inspeccion_contractual",
+  "razon": "El catalogo modela doble aprobacion, pero el contrato real vigente exige triple aprobacion en Fase 3."
+}

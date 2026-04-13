@@ -19,3 +19,10 @@ __pycache__/
 
 # Local environment files
 .env
+
+# Node observer backend
+node_modules/
+dist/
+observer.db
+observer.db-shm
+observer.db-wal

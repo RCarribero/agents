@@ -82,7 +82,7 @@ task_state: <TASK_STATE JSON actualizado>
 0. **Modelo adaptativo.** Antes de empezar, verificar si el módulo objetivo tiene entradas en `memoria_global.md` o `skills_cache.md`:
    - Si **sí tiene entradas** (módulo conocido): operar con razonamiento reducido — priorizar síntesis rápida sobre análisis exhaustivo. Anotar `model_mode: fast` en el `director_report`.
    - Si **no tiene entradas** (módulo nuevo o sin historial): operar con máxima capacidad analítica. Anotar `model_mode: full` en el `director_report`.
-0a. **Solo lectura.** No creas, modificas ni eliminas archivos. Si necesitas aclarar algo sobre el objetivo, regístralo en `open_questions` del brief — no preguntes directamente.
+0a. **Solo lectura.** No creas, modificas ni eliminas archivos. **Excepción única:** escribe en `research_cache.json` al finalizar (ver regla 9). Si necesitas aclarar algo sobre el objetivo, regístralo en `open_questions` del brief — no preguntes directamente.
 0b. **Respeta TASK_STATE.** Usa `task_state` como estado compartido del ciclo y añade el `research_brief` resumido a `task_state.history` sin sobrescribir entradas previas.
 1. **Lee la memoria antes de investigar.** Revisa `memoria_global.md` y las secciones `AUTONOMOUS_LEARNINGS` de agentes relacionados. Los antipatrones documentados deben aparecer como riesgos en el brief si son relevantes.
 1b. **Enriquecer con contexto local.** Si el repo ya contiene documentación, evals, notas o reportes relevantes para el objetivo, incorpóralos a `current_state` y a `risks` cuando aporten contexto accionable. Si no existen, continúa sin bloquear.
@@ -94,6 +94,19 @@ task_state: <TASK_STATE JSON actualizado>
 6. **Si el objetivo es ambiguo** respecto al módulo afectado, investiga con criterio amplio y documenta la asunción en `current_state`.
 7. Si tras la investigación el riesgo es suficientemente alto como para necesitar más análisis estratégico, coloca `next_agent: analyst` en el informe.
 8. **Auto-aprendizaje.** Si encuentras una estructura de módulo, patrón o antipatrón relevante para futuras sesiones, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
+9. **Escribe al session research cache.** Al finalizar la investigación, serializa una entrada en `session-state/<session_id>/research_cache.json` (donde `session_id` se obtiene de `TASK_STATE.task_id` o del contexto de sesión activa). Actualiza el array `entries` del archivo (append si ya existe, crear si no):
+   ```json
+   {
+     "type": "research_brief",
+     "module": "<research_brief.module>",
+     "relevant_files": ["<research_brief.relevant_files>"],
+     "research_brief": { "...brief completo..." },
+     "researched_at": "<ISO timestamp>",
+     "source_task_id": "<TASK_STATE.task_id>",
+     "stale": false
+   }
+   ```
+   Este archivo es **exclusivo de la sesión activa** — no modificar ni leer `research_cache.json` de otras sesiones. Usa el MCP filesystem si está disponible; si no, anota el payload en el campo `notes` del `director_report` para que el orchestrator lo persista. No bloques si la escritura falla — anota el error en `issues` y continúa.
 
 ## Cadena de handoff
 

@@ -1,0 +1,1729 @@
+---
+import type { SessionAgentSummary } from '../types';
+
+interface Props {
+  sessionId: string;
+  agents: SessionAgentSummary[];
+}
+
+const { sessionId, agents } = Astro.props;
+
+const standaloneLayouts: Record<number, { x: number; y: number }[]> = {
+  1: [{ x: 50, y: 50 }],
+  2: [
+    { x: 28, y: 50 },
+    { x: 72, y: 50 },
+  ],
+  3: [
+    { x: 50, y: 22 },
+    { x: 26, y: 74 },
+    { x: 74, y: 74 },
+  ],
+  4: [
+    { x: 26, y: 30 },
+    { x: 74, y: 30 },
+    { x: 26, y: 74 },
+    { x: 74, y: 74 },
+  ],
+  5: [
+    { x: 50, y: 18 },
+    { x: 22, y: 40 },
+    { x: 78, y: 40 },
+    { x: 34, y: 78 },
+    { x: 66, y: 78 },
+  ],
+  6: [
+    { x: 20, y: 28 },
+    { x: 50, y: 18 },
+    { x: 80, y: 28 },
+    { x: 20, y: 74 },
+    { x: 50, y: 84 },
+    { x: 80, y: 74 },
+  ],
+};
+
+const anchoredLayouts: Record<number, { x: number; y: number }[]> = {
+  1: [{ x: 50, y: 68 }],
+  2: [
+    { x: 28, y: 68 },
+    { x: 72, y: 68 },
+  ],
+  3: [
+    { x: 18, y: 44 },
+    { x: 50, y: 76 },
+    { x: 82, y: 44 },
+  ],
+  4: [
+    { x: 18, y: 38 },
+    { x: 34, y: 76 },
+    { x: 66, y: 76 },
+    { x: 82, y: 38 },
+  ],
+  5: [
+    { x: 16, y: 34 },
+    { x: 28, y: 66 },
+    { x: 50, y: 80 },
+    { x: 72, y: 66 },
+    { x: 84, y: 34 },
+  ],
+  6: [
+    { x: 18, y: 30 },
+    { x: 30, y: 58 },
+    { x: 42, y: 80 },
+    { x: 58, y: 80 },
+    { x: 70, y: 58 },
+    { x: 82, y: 30 },
+  ],
+};
+
+function formatAgentStatus(status: SessionAgentSummary['status']): string {
+  if (status === 'active') return 'Activo';
+  if (status === 'selected') return 'Seleccionado';
+  return 'Completado';
+}
+
+function statusDescription(status: SessionAgentSummary['status']): string {
+  if (status === 'active') return 'Ejecutando trabajo ahora';
+  if (status === 'selected') return 'Preparado para el siguiente paso';
+  return 'Cerró su ejecución';
+}
+
+function statusRank(status: SessionAgentSummary['status']): number {
+  if (status === 'active') return 0;
+  if (status === 'selected') return 1;
+  return 2;
+}
+
+function monogram(value: string): string {
+  const parts = value
+    .split(/[\s_-]+/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return 'AG';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
+function buildOrbitSlots(count: number, centerX: number, centerY: number, radiusX: number, radiusY: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / Math.max(count, 1));
+    return {
+      x: Math.round((centerX + (Math.cos(angle) * radiusX)) * 100) / 100,
+      y: Math.round((centerY + (Math.sin(angle) * radiusY)) * 100) / 100,
+    };
+  });
+}
+
+function getLayoutSlots(count: number, hasAnchor: boolean) {
+  const layouts = hasAnchor ? anchoredLayouts : standaloneLayouts;
+  const preset = layouts[count];
+  if (preset) {
+    return preset;
+  }
+
+  return hasAnchor
+    ? buildOrbitSlots(count, 50, 58, 34, 24)
+    : buildOrbitSlots(count, 50, 52, 31, 25);
+}
+
+function sortAgentsForGraph(items: SessionAgentSummary[]) {
+  const anchor = items.find((agent) => agent.name === 'orchestrator') ?? null;
+  const rest = items
+    .filter((agent) => !anchor || agent.name !== anchor.name)
+    .slice()
+    .sort((left, right) => {
+      const rankDelta = statusRank(left.status) - statusRank(right.status);
+      if (rankDelta !== 0) {
+        return rankDelta;
+      }
+
+      return (right.lastSeen ?? 0) - (left.lastSeen ?? 0);
+    });
+
+  return anchor ? [anchor, ...rest] : rest;
+}
+
+function buildInitialGraphAgents(items: SessionAgentSummary[]) {
+  if (items.length === 0) return [];
+
+  const ordered = sortAgentsForGraph(items);
+  const anchor = ordered.find((agent) => agent.name === 'orchestrator') ?? null;
+  const slots = anchor
+    ? [{ x: 50, y: 16 }, ...getLayoutSlots(ordered.length - 1, true)]
+    : getLayoutSlots(ordered.length, false);
+
+  return ordered.map((agent, index) => ({
+    ...agent,
+    isAnchor: anchor !== null && index === 0,
+    position: slots[index] ?? { x: 50, y: 50 },
+    themeIndex: index % 4,
+    monogram: monogram(agent.displayName || agent.name),
+  }));
+}
+
+function buildInitialEdges(items: ReturnType<typeof buildInitialGraphAgents>) {
+  if (items.length <= 1) {
+    return [];
+  }
+
+  const anchor = items.find((agent) => agent.isAnchor) ?? null;
+  if (anchor) {
+    return items
+      .filter((agent) => agent.name !== anchor.name)
+      .map((agent) => ({ from: anchor.position, to: agent.position, kind: 'spoke' }));
+  }
+
+  return items.slice(0, -1).map((agent, index) => ({
+    from: agent.position,
+    to: items[index + 1].position,
+    kind: 'flow',
+  }));
+}
+
+function buildServerWirePath(from: { x: number; y: number }, to: { x: number; y: number }) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const horizontal = Math.abs(dx) >= Math.abs(dy);
+  const c1x = from.x + (dx * (horizontal ? 0.38 : 0.14));
+  const c1y = from.y + (dy * (horizontal ? 0.12 : 0.36));
+  const c2x = to.x - (dx * (horizontal ? 0.38 : 0.14));
+  const c2y = to.y - (dy * (horizontal ? 0.12 : 0.36));
+  return `M ${from.x} ${from.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${to.x} ${to.y}`;
+}
+
+const graphAgents = buildInitialGraphAgents(agents);
+const graphEdges = buildInitialEdges(graphAgents);
+---
+
+<section
+  id="agents-panel"
+  class="hidden rounded-[1.5rem] border border-gray-200 bg-white p-6 shadow-sm"
+>
+  <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div class="max-w-2xl">
+      <p class="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">Mapa de orquestación</p>
+      <h3 class="mt-2 text-2xl font-semibold text-gray-900">Red de agentes</h3>
+      <p id="agents-graph-description" class="mt-2 max-w-2xl text-sm text-gray-600">
+        {agents.length === 0
+          ? 'No se detectó actividad de subagentes en esta sesión.'
+          : `${agents.length} nodo(s) conectados. Haz click en cualquiera para abrir su historial de mensajes.`}
+      </p>
+    </div>
+
+    <div class="rounded-2xl border border-gray-200 bg-slate-50 px-4 py-3">
+      <p class="text-xs uppercase tracking-[0.2em] text-gray-500">Sesión</p>
+      <code class="mt-1 block text-xs text-gray-700">{sessionId}</code>
+    </div>
+  </div>
+
+  <div class="agent-graph-layout">
+    <div id="agents-graph" class="agent-graph-stage" data-session-id={sessionId}>
+      <div class="agent-graph-stage__mist" aria-hidden="true"></div>
+      <div class="agent-graph-stage__sparkles" aria-hidden="true"></div>
+      <svg
+        class="agent-graph-stage__wires"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        data-agent-wires
+        aria-hidden="true"
+      >
+        {
+          graphEdges.map((edge) => (
+            <path
+              d={buildServerWirePath(edge.from, edge.to)}
+              class="agent-wire agent-wire--spoke"
+            />
+          ))
+        }
+      </svg>
+
+      <div class="agent-graph-stage__nodes" data-agent-nodes>
+        {
+          graphAgents.length === 0 ? (
+            <div class="agent-graph-stage__empty">
+              <p>No se detectó actividad de subagentes en esta sesión.</p>
+            </div>
+          ) : (
+            graphAgents.map((agent, index) => (
+              <button
+                type="button"
+                class={`agent-node agent-node--${agent.status} agent-node--theme-${agent.themeIndex}`}
+                data-agent-name={agent.name}
+                data-agent-status={agent.status}
+                style={`--x:${agent.position.x}; --y:${agent.position.y}; --delay:${index * 120};`}
+              >
+                <span class="agent-node__tile">
+                  <span class="agent-node__status-dot"></span>
+                  <span class="agent-node__monogram">{agent.monogram}</span>
+                </span>
+                <span class="agent-node__body">
+                  <span class="agent-node__label">{agent.displayName}</span>
+                  <span class="agent-node__meta">{formatAgentStatus(agent.status)}</span>
+                  <span class="agent-node__caption">{statusDescription(agent.status)}</span>
+                </span>
+              </button>
+            ))
+          )
+        }
+      </div>
+    </div>
+
+    <aside class="agent-history-panel" data-agent-history-panel>
+      <div class="agent-history-panel__empty">
+        <p class="agent-history-panel__eyebrow">Historial</p>
+        <h4 class="agent-history-panel__title">Selecciona un agente</h4>
+        <p class="agent-history-panel__copy">
+          Al hacer click en un nodo verás su secuencia de mensajes, cambios de estado y errores dentro de la sesión.
+        </p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<script define:vars={{ sessionId, initialAgents: agents }}>
+  const graphElement = document.getElementById('agents-graph');
+  const nodesElement = graphElement?.querySelector('[data-agent-nodes]');
+  const wiresElement = graphElement?.querySelector('[data-agent-wires]');
+  const descriptionElement = document.getElementById('agents-graph-description');
+  const historyPanel = document.querySelector('[data-agent-history-panel]');
+
+  let currentAgents = Array.isArray(initialAgents) ? initialAgents : [];
+  let agentRunsByName = new Map();
+  let orderedRuns = [];
+  let selectedAgentName = null;
+  let historyLoaded = false;
+  let refreshHandle = 0;
+  let ws = null;
+  let lastPositionedAgents = [];
+  let wireFrameHandle = 0;
+
+  const standaloneLayouts = {
+    1: [{ x: 50, y: 50 }],
+    2: [
+      { x: 28, y: 50 },
+      { x: 72, y: 50 },
+    ],
+    3: [
+      { x: 50, y: 22 },
+      { x: 26, y: 74 },
+      { x: 74, y: 74 },
+    ],
+    4: [
+      { x: 26, y: 30 },
+      { x: 74, y: 30 },
+      { x: 26, y: 74 },
+      { x: 74, y: 74 },
+    ],
+    5: [
+      { x: 50, y: 18 },
+      { x: 22, y: 40 },
+      { x: 78, y: 40 },
+      { x: 34, y: 78 },
+      { x: 66, y: 78 },
+    ],
+    6: [
+      { x: 20, y: 28 },
+      { x: 50, y: 18 },
+      { x: 80, y: 28 },
+      { x: 20, y: 74 },
+      { x: 50, y: 84 },
+      { x: 80, y: 74 },
+    ],
+  };
+
+  const anchoredLayouts = {
+    1: [{ x: 50, y: 68 }],
+    2: [
+      { x: 28, y: 68 },
+      { x: 72, y: 68 },
+    ],
+    3: [
+      { x: 18, y: 44 },
+      { x: 50, y: 76 },
+      { x: 82, y: 44 },
+    ],
+    4: [
+      { x: 18, y: 38 },
+      { x: 34, y: 76 },
+      { x: 66, y: 76 },
+      { x: 82, y: 38 },
+    ],
+    5: [
+      { x: 16, y: 34 },
+      { x: 28, y: 66 },
+      { x: 50, y: 80 },
+      { x: 72, y: 66 },
+      { x: 84, y: 34 },
+    ],
+    6: [
+      { x: 18, y: 30 },
+      { x: 30, y: 58 },
+      { x: 42, y: 80 },
+      { x: 58, y: 80 },
+      { x: 70, y: 58 },
+      { x: 82, y: 30 },
+    ],
+  };
+
+  function isRecord(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function getText(value) {
+    return typeof value === 'string' ? value.trim() : '';
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  function clipText(value, limit = 420) {
+    const text = getText(value);
+    if (!text) return '';
+    if (text.length <= limit) return text;
+    return `${text.slice(0, limit).trim()}...`;
+  }
+
+  function formatDate(timestamp) {
+    if (!timestamp) return 'Sin hora';
+    return new Date(timestamp).toLocaleString();
+  }
+
+  function formatShortTime(timestamp) {
+    if (!timestamp) return 'Sin hora';
+    return new Date(timestamp).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function formatStatus(status) {
+    if (status === 'active') return 'Activo';
+    if (status === 'selected') return 'Seleccionado';
+    return 'Completado';
+  }
+
+  function statusDescription(status) {
+    if (status === 'active') return 'Ejecutando trabajo ahora';
+    if (status === 'selected') return 'Preparado para el siguiente paso';
+    return 'Cerró su ejecución';
+  }
+
+  function monogram(displayName, agentName) {
+    const source = getText(displayName) || getText(agentName) || 'AG';
+    const parts = source
+      .split(/[\s_-]+/)
+      .map((chunk) => chunk.trim())
+      .filter(Boolean);
+
+    if (parts.length === 0) return 'AG';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+
+  function statusRank(status) {
+    if (status === 'active') return 0;
+    if (status === 'selected') return 1;
+    return 2;
+  }
+
+  function buildOrbitSlots(count, centerX, centerY, radiusX, radiusY) {
+    return Array.from({ length: count }, (_, index) => {
+      const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / Math.max(count, 1));
+      return {
+        x: Math.round((centerX + (Math.cos(angle) * radiusX)) * 100) / 100,
+        y: Math.round((centerY + (Math.sin(angle) * radiusY)) * 100) / 100,
+      };
+    });
+  }
+
+  function getLayoutSlots(count, hasAnchor) {
+    const layouts = hasAnchor ? anchoredLayouts : standaloneLayouts;
+    const preset = layouts[count];
+    if (preset) {
+      return preset;
+    }
+
+    return hasAnchor
+      ? buildOrbitSlots(count, 50, 58, 34, 24)
+      : buildOrbitSlots(count, 50, 52, 31, 25);
+  }
+
+  function getEventData(event) {
+    if (!isRecord(event) || !isRecord(event.payload)) {
+      return null;
+    }
+
+    const payload = event.payload;
+    if (!isRecord(payload.data)) {
+      return null;
+    }
+
+    return payload.data;
+  }
+
+  function summarizeToolRequests(toolRequests) {
+    if (!Array.isArray(toolRequests)) {
+      return '';
+    }
+
+    const summaries = toolRequests
+      .map((request) => {
+        if (!isRecord(request)) {
+          return '';
+        }
+
+        const intention = getText(request.intentionSummary);
+        if (intention) {
+          return intention;
+        }
+
+        if (isRecord(request.arguments)) {
+          const intent = getText(request.arguments.intent);
+          if (intent) {
+            return intent;
+          }
+        }
+
+        return getText(request.name);
+      })
+      .filter(Boolean);
+
+    return summaries.join(' · ');
+  }
+
+  function buildMessageText(data) {
+    const content = clipText(data.content, 500);
+    if (content) {
+      return content;
+    }
+
+    const requestSummary = summarizeToolRequests(data.toolRequests);
+    if (requestSummary) {
+      return `Preparó herramientas: ${requestSummary}`;
+    }
+
+    return '';
+  }
+
+  function lifecycleText(eventType) {
+    if (eventType === 'subagent.selected') return 'Fue seleccionado por el orquestador';
+    if (eventType === 'subagent.started') return 'Comenzó su ejecución';
+    return 'Terminó su ejecución';
+  }
+
+  function buildAgentHistories(events) {
+    const runsByToolCallId = new Map();
+    const runsByAgent = new Map();
+    const runOrder = [];
+
+    function ensureRun(agentName, displayName, toolCallId) {
+      if (!runsByToolCallId.has(toolCallId)) {
+        const run = {
+          toolCallId,
+          agentName,
+          displayName,
+          selectedAt: null,
+          startedAt: null,
+          completedAt: null,
+          lastSeen: null,
+          status: 'selected',
+          entries: [],
+        };
+
+        runsByToolCallId.set(toolCallId, run);
+        runOrder.push(toolCallId);
+
+        if (!runsByAgent.has(agentName)) {
+          runsByAgent.set(agentName, []);
+        }
+
+        runsByAgent.get(agentName).push(run);
+      }
+
+      return runsByToolCallId.get(toolCallId);
+    }
+
+    for (const event of events) {
+      if (
+        event.type !== 'subagent.selected' &&
+        event.type !== 'subagent.started' &&
+        event.type !== 'subagent.completed'
+      ) {
+        continue;
+      }
+
+      const data = getEventData(event);
+      if (!data) {
+        continue;
+      }
+
+      const agentName = getText(data.agentName);
+      const displayName = getText(data.agentDisplayName) || agentName;
+      const toolCallId = getText(data.toolCallId);
+
+      if (!agentName || !toolCallId) {
+        continue;
+      }
+
+      const run = ensureRun(agentName, displayName, toolCallId);
+      run.lastSeen = event.timestamp ?? run.lastSeen;
+
+      if (event.type === 'subagent.selected') {
+        run.selectedAt = event.timestamp ?? run.selectedAt;
+        run.status = 'selected';
+      } else if (event.type === 'subagent.started') {
+        run.startedAt = event.timestamp ?? run.startedAt;
+        run.status = 'active';
+      } else if (event.type === 'subagent.completed') {
+        run.completedAt = event.timestamp ?? run.completedAt;
+        run.status = 'completed';
+      }
+
+      run.entries.push({
+        id: event.id,
+        timestamp: event.timestamp,
+        kind: 'status',
+        text: lifecycleText(event.type),
+      });
+    }
+
+    for (const event of events) {
+      const data = getEventData(event);
+      if (!data) {
+        continue;
+      }
+
+      const parentToolCallId = getText(data.parentToolCallId);
+      if (event.type === 'assistant.message' && parentToolCallId && runsByToolCallId.has(parentToolCallId)) {
+        const run = runsByToolCallId.get(parentToolCallId);
+        const text = buildMessageText(data);
+        if (!text) {
+          continue;
+        }
+
+        run.entries.push({
+          id: event.id,
+          timestamp: event.timestamp,
+          kind: 'message',
+          text,
+        });
+      }
+
+      if (event.type === 'tool.execution_complete' && parentToolCallId && runsByToolCallId.has(parentToolCallId)) {
+        if (data.success !== false) {
+          continue;
+        }
+
+        const run = runsByToolCallId.get(parentToolCallId);
+        const toolName = getText(data.toolName) || 'herramienta';
+        let errorText = '';
+        if (isRecord(data.result)) {
+          errorText = clipText(data.result.content, 240);
+        }
+
+        run.entries.push({
+          id: event.id,
+          timestamp: event.timestamp,
+          kind: 'error',
+          text: errorText ? `Falló ${toolName}: ${errorText}` : `Falló ${toolName}`,
+        });
+      }
+    }
+
+    for (const runs of runsByAgent.values()) {
+      for (const run of runs) {
+        const dedupedEntries = [];
+        const seen = new Set();
+
+        run.entries
+          .sort((left, right) => (left.timestamp ?? 0) - (right.timestamp ?? 0))
+          .forEach((entry) => {
+            const key = `${entry.kind}:${entry.timestamp ?? 0}:${entry.text}`;
+            if (seen.has(key)) {
+              return;
+            }
+            seen.add(key);
+            dedupedEntries.push(entry);
+          });
+
+        run.entries = dedupedEntries;
+      }
+
+      runs.sort((left, right) => (right.lastSeen ?? 0) - (left.lastSeen ?? 0));
+    }
+
+    return {
+      runsByAgent,
+      orderedRuns: runOrder.map((toolCallId) => runsByToolCallId.get(toolCallId)).filter(Boolean),
+    };
+  }
+
+  function buildTransitions(nextAgents) {
+    const previousByName = new Map(currentAgents.map((agent) => [agent.name, agent]));
+    const transitions = new Map();
+
+    for (const agent of nextAgents) {
+      const previous = previousByName.get(agent.name);
+      if (!previous || previous.status !== agent.status) {
+        transitions.set(agent.name, agent.status);
+      }
+    }
+
+    return transitions;
+  }
+
+  function sortAgentsForGraph(agents) {
+    if (!Array.isArray(agents)) {
+      return [];
+    }
+
+    const anchor = agents.find((agent) => agent.name === 'orchestrator') ?? null;
+    const rest = agents
+      .filter((agent) => !anchor || agent.name !== anchor.name)
+      .slice()
+      .sort((left, right) => {
+        const rankDelta = statusRank(left.status) - statusRank(right.status);
+        if (rankDelta !== 0) {
+          return rankDelta;
+        }
+
+        return (right.lastSeen ?? 0) - (left.lastSeen ?? 0);
+      });
+
+    return anchor ? [anchor, ...rest] : rest;
+  }
+
+  function getNodeMetrics(agentName, agent) {
+    const runs = agentRunsByName.get(agentName) ?? [];
+    const messageCount = runs.reduce(
+      (total, run) => total + run.entries.filter((entry) => entry.kind === 'message').length,
+      0,
+    );
+
+    const runCount = runs.length || agent.startedCount || agent.completedCount || agent.selectedCount;
+    return {
+      messageCount,
+      runCount,
+    };
+  }
+
+  function layoutAgents(agents) {
+    if (agents.length === 0) {
+      return [];
+    }
+
+    const anchor = agents.find((agent) => agent.name === 'orchestrator') ?? null;
+    const ordered = anchor ? [anchor, ...agents.filter((agent) => agent.name !== anchor.name)] : agents.slice();
+    const slots = anchor
+      ? [{ x: 50, y: 16 }, ...getLayoutSlots(ordered.length - 1, true)]
+      : getLayoutSlots(ordered.length, false);
+
+    return ordered.map((agent, index) => ({
+      ...agent,
+      isAnchor: anchor !== null && index === 0,
+      position: slots[index] ?? { x: 50, y: 50 },
+      themeIndex: index % 4,
+      monogram: monogram(agent.displayName, agent.name),
+      metrics: getNodeMetrics(agent.name, agent),
+    }));
+  }
+
+  function buildEdges(positionedAgents) {
+    const edges = [];
+    const seen = new Set();
+    const positions = new Map(positionedAgents.map((agent) => [agent.name, agent.position]));
+    const anchor = positionedAgents.find((agent) => agent.isAnchor) ?? null;
+
+    function pushEdge(from, to, kind) {
+      if (!from || !to || from === to || !positions.has(from) || !positions.has(to)) {
+        return;
+      }
+
+      const key = [from, to].sort().join('::');
+      if (seen.has(key)) {
+        return;
+      }
+
+      seen.add(key);
+      edges.push({
+        from,
+        to,
+        kind,
+      });
+    }
+
+    if (anchor) {
+      for (const agent of positionedAgents) {
+        if (agent.name !== anchor.name) {
+          pushEdge(anchor.name, agent.name, 'spoke');
+        }
+      }
+    }
+
+    for (let index = 0; index < orderedRuns.length - 1; index += 1) {
+      const currentRun = orderedRuns[index];
+      const nextRun = orderedRuns[index + 1];
+      pushEdge(currentRun.agentName, nextRun.agentName, 'flow');
+    }
+
+    return edges;
+  }
+
+  function renderSummary(count) {
+    if (!descriptionElement) {
+      return;
+    }
+
+    descriptionElement.textContent = count === 0
+      ? 'No se detectó actividad de subagentes en esta sesión.'
+      : `${count} nodo(s) conectados. Haz click en cualquiera para abrir su historial de mensajes.`;
+  }
+
+  function renderAgentNode(agent, transition = '') {
+    const transitionAttr = transition ? ` data-transition="${transition}"` : '';
+    const selectedClass = selectedAgentName === agent.name ? ' is-selected' : '';
+    const caption = historyLoaded
+      ? `${agent.metrics.runCount} ejec. · ${agent.metrics.messageCount} mensajes`
+      : `${agent.startedCount || agent.completedCount || agent.selectedCount} ejecuciones`;
+
+    return `
+      <button
+        type="button"
+        class="agent-node agent-node--${escapeHtml(agent.status)} agent-node--theme-${agent.themeIndex}${selectedClass}"
+        data-agent-name="${escapeHtml(agent.name)}"
+        data-agent-status="${escapeHtml(agent.status)}"
+        style="--x:${agent.position.x}; --y:${agent.position.y};"
+        ${transitionAttr}
+      >
+        <span class="agent-node__tile">
+          <span class="agent-node__status-dot"></span>
+          <span class="agent-node__monogram">${escapeHtml(agent.monogram)}</span>
+        </span>
+        <span class="agent-node__body">
+          <span class="agent-node__label">${escapeHtml(agent.displayName)}</span>
+          <span class="agent-node__meta">${escapeHtml(formatStatus(agent.status))}</span>
+          <span class="agent-node__caption">${escapeHtml(caption)}</span>
+        </span>
+      </button>
+    `;
+  }
+
+  function escapeSelector(value) {
+    const text = String(value ?? '');
+    if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+      return CSS.escape(text);
+    }
+
+    return text.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
+  }
+
+  function measureNodeAnchors(positionedAgents) {
+    const anchors = new Map();
+    if (!graphElement || !nodesElement) {
+      return anchors;
+    }
+
+    const stageRect = graphElement.getBoundingClientRect();
+    if (stageRect.width === 0 || stageRect.height === 0) {
+      return anchors;
+    }
+
+    for (const agent of positionedAgents) {
+      const selector = `[data-agent-name="${escapeSelector(agent.name)}"]`;
+      const button = nodesElement.querySelector(selector);
+      if (!(button instanceof HTMLElement)) {
+        continue;
+      }
+
+      const nodeRect = button.getBoundingClientRect();
+      anchors.set(agent.name, {
+        centerX: nodeRect.left - stageRect.left + (nodeRect.width / 2),
+        centerY: nodeRect.top - stageRect.top + (nodeRect.height / 2),
+        halfWidth: nodeRect.width / 2,
+        halfHeight: nodeRect.height / 2,
+        stageWidth: stageRect.width,
+        stageHeight: stageRect.height,
+      });
+    }
+
+    return anchors;
+  }
+
+  function getRectEdgePoint(anchor, dx, dy) {
+    const scaleX = dx === 0 ? Number.POSITIVE_INFINITY : anchor.halfWidth / Math.abs(dx);
+    const scaleY = dy === 0 ? Number.POSITIVE_INFINITY : anchor.halfHeight / Math.abs(dy);
+    const scale = Math.min(scaleX, scaleY);
+
+    return {
+      x: anchor.centerX + (dx * scale),
+      y: anchor.centerY + (dy * scale),
+    };
+  }
+
+  function getWireEndpoints(fromAnchor, toAnchor) {
+    const dx = toAnchor.centerX - fromAnchor.centerX;
+    const dy = toAnchor.centerY - fromAnchor.centerY;
+    const start = getRectEdgePoint(fromAnchor, dx, dy);
+    const end = getRectEdgePoint(toAnchor, -dx, -dy);
+
+    return {
+      x1: (start.x / fromAnchor.stageWidth) * 100,
+      y1: (start.y / fromAnchor.stageHeight) * 100,
+      x2: (end.x / toAnchor.stageWidth) * 100,
+      y2: (end.y / toAnchor.stageHeight) * 100,
+    };
+  }
+
+  function buildWirePath(points) {
+    const dx = points.x2 - points.x1;
+    const dy = points.y2 - points.y1;
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    const c1x = points.x1 + (dx * (horizontal ? 0.38 : 0.14));
+    const c1y = points.y1 + (dy * (horizontal ? 0.12 : 0.36));
+    const c2x = points.x2 - (dx * (horizontal ? 0.38 : 0.14));
+    const c2y = points.y2 - (dy * (horizontal ? 0.12 : 0.36));
+    return `M ${points.x1} ${points.y1} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${points.x2} ${points.y2}`;
+  }
+
+  function renderWires(positionedAgents) {
+    if (!wiresElement) {
+      return;
+    }
+
+    const edges = buildEdges(positionedAgents);
+    const anchors = measureNodeAnchors(positionedAgents);
+
+    wiresElement.innerHTML = edges
+      .map((edge) => {
+        const fromAnchor = anchors.get(edge.from);
+        const toAnchor = anchors.get(edge.to);
+        if (!fromAnchor || !toAnchor) {
+          const fallbackFrom = positionedAgents.find((agent) => agent.name === edge.from)?.position;
+          const fallbackTo = positionedAgents.find((agent) => agent.name === edge.to)?.position;
+          if (!fallbackFrom || !fallbackTo) {
+            return '';
+          }
+
+          return `
+            <path
+              d="M ${fallbackFrom.x} ${fallbackFrom.y} L ${fallbackTo.x} ${fallbackTo.y}"
+              class="agent-wire agent-wire--${edge.kind}"
+            />
+          `;
+        }
+
+        const points = getWireEndpoints(fromAnchor, toAnchor);
+
+        return `
+          <path
+            d="${buildWirePath(points)}"
+            class="agent-wire agent-wire--${edge.kind}"
+          />
+        `;
+      })
+      .join('');
+  }
+
+  function scheduleWireRealignment() {
+    if (!lastPositionedAgents.length) {
+      return;
+    }
+
+    window.cancelAnimationFrame(wireFrameHandle);
+    wireFrameHandle = window.requestAnimationFrame(() => {
+      renderWires(lastPositionedAgents);
+    });
+  }
+
+  function renderHistoryPanel() {
+    if (!historyPanel) {
+      return;
+    }
+
+    if (currentAgents.length === 0) {
+      historyPanel.innerHTML = `
+        <div class="agent-history-panel__empty">
+          <p class="agent-history-panel__eyebrow">Historial</p>
+          <h4 class="agent-history-panel__title">Sin actividad</h4>
+          <p class="agent-history-panel__copy">Esta sesión no registró subagentes.</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (!selectedAgentName) {
+      historyPanel.innerHTML = `
+        <div class="agent-history-panel__empty">
+          <p class="agent-history-panel__eyebrow">Historial</p>
+          <h4 class="agent-history-panel__title">Selecciona un agente</h4>
+          <p class="agent-history-panel__copy">
+            Al hacer click en un nodo verás su secuencia de mensajes, cambios de estado y errores dentro de la sesión.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    if (!historyLoaded) {
+      historyPanel.innerHTML = `
+        <div class="agent-history-panel__empty">
+          <p class="agent-history-panel__eyebrow">Historial</p>
+          <h4 class="agent-history-panel__title">Cargando mensajes</h4>
+          <p class="agent-history-panel__copy">Estoy reconstruyendo el recorrido del agente seleccionado.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const agent = currentAgents.find((item) => item.name === selectedAgentName);
+    if (!agent) {
+      selectedAgentName = null;
+      renderHistoryPanel();
+      return;
+    }
+
+    const runs = agentRunsByName.get(selectedAgentName) ?? [];
+    const messageCount = runs.reduce(
+      (total, run) => total + run.entries.filter((entry) => entry.kind === 'message').length,
+      0,
+    );
+
+    historyPanel.innerHTML = `
+      <div class="agent-history-panel__header">
+        <div>
+          <p class="agent-history-panel__eyebrow">Historial</p>
+          <h4 class="agent-history-panel__title">${escapeHtml(agent.displayName)}</h4>
+          <p class="agent-history-panel__copy">${escapeHtml(statusDescription(agent.status))}</p>
+        </div>
+        <span class="agent-history-panel__badge agent-history-panel__badge--${escapeHtml(agent.status)}">
+          ${escapeHtml(formatStatus(agent.status))}
+        </span>
+      </div>
+      <div class="agent-history-panel__stats">
+        <div>
+          <span>Ejecuciones</span>
+          <strong>${runs.length || agent.startedCount || agent.selectedCount}</strong>
+        </div>
+        <div>
+          <span>Mensajes</span>
+          <strong>${messageCount}</strong>
+        </div>
+        <div>
+          <span>Última actividad</span>
+          <strong>${escapeHtml(formatShortTime(agent.lastSeen))}</strong>
+        </div>
+      </div>
+      <div class="agent-history-panel__scroll">
+        ${runs.length === 0
+          ? `
+            <div class="agent-history-panel__empty">
+              <h4 class="agent-history-panel__title">Sin mensajes visibles</h4>
+              <p class="agent-history-panel__copy">No se encontraron mensajes asociables a este agente dentro de la sesión.</p>
+            </div>
+          `
+          : runs
+              .map((run, index) => {
+                const runTime = run.completedAt ?? run.startedAt ?? run.selectedAt;
+                return `
+                  <details class="agent-run" ${index === 0 ? 'open' : ''}>
+                    <summary>
+                      <span class="agent-run__title">Run ${runs.length - index}</span>
+                      <span class="agent-run__meta">
+                        <span class="agent-run__badge agent-run__badge--${escapeHtml(run.status)}">${escapeHtml(formatStatus(run.status))}</span>
+                        <span>${escapeHtml(formatDate(runTime))}</span>
+                      </span>
+                    </summary>
+                    <div class="agent-run__timeline">
+                      ${run.entries
+                        .map((entry) => `
+                          <article class="agent-history-entry agent-history-entry--${escapeHtml(entry.kind)}">
+                            <span class="agent-history-entry__time">${escapeHtml(formatShortTime(entry.timestamp))}</span>
+                            <div class="agent-history-entry__body">
+                              <p>${escapeHtml(entry.text)}</p>
+                            </div>
+                          </article>
+                        `)
+                        .join('')}
+                    </div>
+                  </details>
+                `;
+              })
+              .join('')}
+      </div>
+    `;
+  }
+
+  function renderGraph(transitions = new Map()) {
+    if (!nodesElement) {
+      return;
+    }
+
+    if (currentAgents.length === 0) {
+      nodesElement.innerHTML = `
+        <div class="agent-graph-stage__empty">
+          <p>No se detectó actividad de subagentes en esta sesión.</p>
+        </div>
+      `;
+      if (wiresElement) {
+        wiresElement.innerHTML = '';
+      }
+      renderSummary(0);
+      renderHistoryPanel();
+      return;
+    }
+
+    const positionedAgents = layoutAgents(sortAgentsForGraph(currentAgents));
+    lastPositionedAgents = positionedAgents;
+    nodesElement.innerHTML = positionedAgents
+      .map((agent) => renderAgentNode(agent, transitions.get(agent.name) ?? ''))
+      .join('');
+    renderWires(positionedAgents);
+    scheduleWireRealignment();
+    renderSummary(currentAgents.length);
+    renderHistoryPanel();
+  }
+
+  async function refreshGraphData() {
+    try {
+      const [agentsResponse, eventsResponse] = await Promise.all([
+        fetch(`http://127.0.0.1:3010/sessions/${encodeURIComponent(sessionId)}/agents`),
+        fetch(`http://127.0.0.1:3010/sessions/${encodeURIComponent(sessionId)}/events`),
+      ]);
+
+      if (!agentsResponse.ok || !eventsResponse.ok) {
+        return;
+      }
+
+      const nextAgents = await agentsResponse.json();
+      const nextEvents = await eventsResponse.json();
+      const transitions = buildTransitions(nextAgents);
+      const history = buildAgentHistories(Array.isArray(nextEvents) ? nextEvents : []);
+
+      currentAgents = Array.isArray(nextAgents) ? nextAgents : [];
+      agentRunsByName = history.runsByAgent;
+      orderedRuns = history.orderedRuns;
+      historyLoaded = true;
+
+      if (selectedAgentName && !currentAgents.some((agent) => agent.name === selectedAgentName)) {
+        selectedAgentName = null;
+      }
+
+      renderGraph(transitions);
+    } catch (error) {
+      console.error('[observer] Failed to refresh agent graph:', error);
+    }
+  }
+
+  function scheduleRefresh() {
+    window.clearTimeout(refreshHandle);
+    refreshHandle = window.setTimeout(() => {
+      void refreshGraphData();
+    }, 180);
+  }
+
+  function connectGraphSocket() {
+    if (ws) {
+      ws.close();
+    }
+
+    ws = new WebSocket('ws://127.0.0.1:3010/events/ws');
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'events.appended' && payload.sessionId === sessionId) {
+          scheduleRefresh();
+        }
+      } catch (error) {
+        console.error('[observer] Failed to parse graph websocket update:', error);
+      }
+    };
+
+    ws.onerror = () => {
+      console.error('[observer] Agent graph websocket errored. Falling back to timed refresh.');
+    };
+  }
+
+  nodesElement?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const button = target.closest('[data-agent-name]');
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+
+    selectedAgentName = button.dataset.agentName ?? null;
+    renderGraph();
+  });
+
+  renderGraph();
+  void refreshGraphData();
+  connectGraphSocket();
+
+  const refreshInterval = window.setInterval(() => {
+    void refreshGraphData();
+  }, 9000);
+
+  window.addEventListener('resize', scheduleWireRealignment);
+
+  window.addEventListener('beforeunload', () => {
+    window.clearTimeout(refreshHandle);
+    window.clearInterval(refreshInterval);
+    window.cancelAnimationFrame(wireFrameHandle);
+    if (ws) {
+      ws.close();
+    }
+  });
+</script>
+
+<style is:global>
+  .agent-graph-layout {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .agent-graph-stage {
+    position: relative;
+    min-height: 28rem;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    border: 1px solid rgb(226 232 240);
+    background:
+      linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      radial-gradient(circle at 18% 24%, rgba(191, 219, 254, 0.52), transparent 24%),
+      radial-gradient(circle at 84% 18%, rgba(219, 234, 254, 0.58), transparent 26%),
+      radial-gradient(circle at 52% 78%, rgba(224, 231, 255, 0.48), transparent 28%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+    background-size: 2.9rem 2.9rem, 2.9rem 2.9rem, auto, auto, auto, auto;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    isolation: isolate;
+  }
+
+  .agent-graph-stage__mist,
+  .agent-graph-stage__sparkles,
+  .agent-graph-stage__wires,
+  .agent-graph-stage__nodes {
+    position: absolute;
+    inset: 0;
+  }
+
+  .agent-graph-stage__mist {
+    background:
+      radial-gradient(circle at 16% 22%, rgba(186, 230, 253, 0.32), transparent 18%),
+      radial-gradient(circle at 82% 26%, rgba(219, 234, 254, 0.36), transparent 20%),
+      radial-gradient(circle at 56% 76%, rgba(224, 231, 255, 0.22), transparent 20%);
+  }
+
+  .agent-graph-stage__sparkles {
+    opacity: 0.55;
+    background-image:
+      radial-gradient(circle at 13% 18%, rgba(148, 163, 184, 0.85) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 31% 64%, rgba(148, 163, 184, 0.8) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 48% 28%, rgba(191, 219, 254, 0.92) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 77% 22%, rgba(148, 163, 184, 0.8) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 86% 62%, rgba(191, 219, 254, 0.82) 0 1px, transparent 1.6px);
+  }
+
+  .agent-graph-stage__nodes {
+    z-index: 2;
+  }
+
+  .agent-graph-stage__empty {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: min(24rem, calc(100% - 2rem));
+    transform: translate(-50%, -50%);
+    border-radius: 1rem;
+    border: 1px dashed rgb(203 213 225);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 1rem 1.15rem;
+    text-align: center;
+    color: rgb(71 85 105);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  .agent-wire {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .agent-wire--spoke {
+    stroke: rgba(96, 165, 250, 0.7);
+    stroke-width: 0.42;
+    stroke-dasharray: 3 5;
+  }
+
+  .agent-wire--flow {
+    stroke: rgba(59, 130, 246, 0.88);
+    stroke-width: 0.48;
+  }
+
+  .agent-node {
+    --node-top: rgba(59, 130, 246, 0.92);
+    --node-bottom: rgba(29, 78, 216, 0.8);
+    --node-ring: rgba(96, 165, 250, 0.18);
+    --node-status: rgb(148 163 184);
+    position: absolute;
+    left: calc(var(--x) * 1%);
+    top: calc(var(--y) * 1%);
+    width: clamp(10rem, 18vw, 12rem);
+    transform: translate(-50%, -50%);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.8rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 1.1rem;
+    background: rgba(255, 255, 255, 0.96);
+    padding: 0.85rem 0.95rem;
+    text-align: left;
+    color: rgb(15 23 42);
+    cursor: pointer;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08), 0 2px 4px rgba(15, 23, 42, 0.04);
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  }
+
+  .agent-node__tile {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: linear-gradient(145deg, var(--node-top), var(--node-bottom));
+    box-shadow: 0 10px 20px var(--node-ring);
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .agent-node__status-dot {
+    position: absolute;
+    top: 0.38rem;
+    right: 0.38rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--node-status);
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.28);
+  }
+
+  .agent-node__monogram {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+
+  .agent-node__body {
+    display: grid;
+    min-width: 0;
+    gap: 0.18rem;
+  }
+
+  .agent-node__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: rgb(15 23 42);
+  }
+
+  .agent-node__meta {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.16rem 0.55rem;
+    background: rgb(239 246 255);
+    color: rgb(30 64 175);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .agent-node__caption {
+    font-size: 0.72rem;
+    line-height: 1.5;
+    color: rgb(100 116 139);
+  }
+
+  .agent-node:hover,
+  .agent-node:focus-visible,
+  .agent-node.is-selected {
+    transform: translate(-50%, -50%) translateY(-2px);
+    border-color: rgb(147 197 253);
+    background: rgb(248 250 255);
+    box-shadow: 0 18px 36px rgba(59, 130, 246, 0.14), 0 0 0 4px rgba(191, 219, 254, 0.52);
+  }
+
+  .agent-node.is-selected .agent-node__meta {
+    background: rgb(219 234 254);
+    color: rgb(29 78 216);
+  }
+
+  .agent-node--active {
+    --node-status: rgb(16 185 129);
+  }
+
+  .agent-node--active .agent-node__meta {
+    background: rgb(236 253 245);
+    color: rgb(5 150 105);
+  }
+
+  .agent-node--selected {
+    --node-status: rgb(245 158 11);
+  }
+
+  .agent-node--selected .agent-node__meta {
+    background: rgb(255 251 235);
+    color: rgb(180 83 9);
+  }
+
+  .agent-node--completed {
+    --node-status: rgb(148 163 184);
+  }
+
+  .agent-node--theme-0 {
+    --node-top: rgba(59, 130, 246, 0.96);
+    --node-bottom: rgba(37, 99, 235, 0.84);
+    --node-ring: rgba(96, 165, 250, 0.2);
+  }
+
+  .agent-node--theme-1 {
+    --node-top: rgba(14, 165, 233, 0.94);
+    --node-bottom: rgba(3, 105, 161, 0.82);
+    --node-ring: rgba(56, 189, 248, 0.18);
+  }
+
+  .agent-node--theme-2 {
+    --node-top: rgba(99, 102, 241, 0.9);
+    --node-bottom: rgba(67, 56, 202, 0.82);
+    --node-ring: rgba(129, 140, 248, 0.18);
+  }
+
+  .agent-node--theme-3 {
+    --node-top: rgba(71, 85, 105, 0.92);
+    --node-bottom: rgba(51, 65, 85, 0.82);
+    --node-ring: rgba(148, 163, 184, 0.16);
+  }
+
+  .agent-node[data-transition='active'] {
+    animation: node-raise 420ms ease-out;
+  }
+
+  .agent-node[data-transition='selected'] {
+    animation: node-raise 360ms ease-out;
+  }
+
+  .agent-node[data-transition='completed'] {
+    animation: node-settle 360ms ease-out;
+  }
+
+  .agent-history-panel {
+    min-height: 28rem;
+    border-radius: 1.5rem;
+    border: 1px solid rgb(226 232 240);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.98));
+    padding: 1.25rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    color: rgb(51 65 85);
+  }
+
+  .agent-history-panel__empty {
+    display: grid;
+    align-content: center;
+    gap: 0.5rem;
+    min-height: 100%;
+  }
+
+  .agent-history-panel__header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .agent-history-panel__eyebrow {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgb(2 132 199);
+  }
+
+  .agent-history-panel__title {
+    margin-top: 0.35rem;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: rgb(15 23 42);
+  }
+
+  .agent-history-panel__copy {
+    margin-top: 0.3rem;
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: rgb(100 116 139);
+  }
+
+  .agent-history-panel__badge,
+  .agent-run__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+  }
+
+  .agent-history-panel__badge--active,
+  .agent-run__badge--active {
+    background: rgb(236 253 245);
+    border-color: rgb(167 243 208);
+    color: rgb(5 150 105);
+  }
+
+  .agent-history-panel__badge--selected,
+  .agent-run__badge--selected {
+    background: rgb(255 251 235);
+    border-color: rgb(253 230 138);
+    color: rgb(180 83 9);
+  }
+
+  .agent-history-panel__badge--completed,
+  .agent-run__badge--completed {
+    background: rgb(241 245 249);
+    border-color: rgb(203 213 225);
+    color: rgb(71 85 105);
+  }
+
+  .agent-history-panel__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+  }
+
+  .agent-history-panel__stats div {
+    border-radius: 1rem;
+    border: 1px solid rgb(226 232 240);
+    background: rgb(248 250 252);
+    padding: 0.8rem 0.9rem;
+  }
+
+  .agent-history-panel__stats span {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .agent-history-panel__stats strong {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: rgb(15 23 42);
+  }
+
+  .agent-history-panel__scroll {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.85rem;
+    max-height: 21rem;
+    overflow: auto;
+    padding-right: 0.25rem;
+  }
+
+  .agent-run {
+    border-radius: 1rem;
+    border: 1px solid rgb(226 232 240);
+    background: rgb(255 255 255);
+    overflow: hidden;
+  }
+
+  .agent-run summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 0.9rem 1rem;
+    color: rgb(51 65 85);
+  }
+
+  .agent-run summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .agent-run__title {
+    font-weight: 700;
+    color: rgb(15 23 42);
+  }
+
+  .agent-run__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8rem;
+    color: rgb(100 116 139);
+  }
+
+  .agent-run__timeline {
+    display: grid;
+    gap: 0.9rem;
+    padding: 0 1rem 1rem 1.35rem;
+  }
+
+  .agent-history-entry {
+    position: relative;
+    display: grid;
+    gap: 0.35rem;
+    padding-left: 1rem;
+    border-left: 1px solid rgb(203 213 225);
+  }
+
+  .agent-history-entry::before {
+    content: '';
+    position: absolute;
+    left: -0.38rem;
+    top: 0.28rem;
+    width: 0.72rem;
+    height: 0.72rem;
+    border-radius: 999px;
+    background: rgb(148 163 184);
+    box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.8);
+  }
+
+  .agent-history-entry--message::before {
+    background: rgb(59 130 246);
+    box-shadow: 0 0 0 4px rgba(191, 219, 254, 0.8);
+  }
+
+  .agent-history-entry--error::before {
+    background: rgb(244 63 94);
+    box-shadow: 0 0 0 4px rgba(254, 205, 211, 0.82);
+  }
+
+  .agent-history-entry__time {
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .agent-history-entry__body {
+    border-radius: 0.95rem;
+    background: rgb(248 250 252);
+    border: 1px solid rgb(226 232 240);
+    padding: 0.8rem 0.9rem;
+  }
+
+  .agent-history-entry__body p {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: rgb(51 65 85);
+  }
+
+  @keyframes node-raise {
+    from {
+      opacity: 0.55;
+      transform: translate(-50%, -50%) translateY(4px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) translateY(0) scale(1);
+    }
+  }
+
+  @keyframes node-settle {
+    from {
+      opacity: 0.55;
+      transform: translate(-50%, -50%) scale(1.02);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
+
+  @media (min-width: 1080px) {
+    .agent-graph-layout {
+      grid-template-columns: minmax(0, 1.55fr) minmax(21rem, 0.95fr);
+      align-items: stretch;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .agent-graph-stage {
+      min-height: 24rem;
+    }
+
+    .agent-node {
+      width: min(10.5rem, 36vw);
+    }
+
+    .agent-history-panel__stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .agent-graph-stage {
+      min-height: 22rem;
+    }
+
+    .agent-node {
+      width: min(9rem, 40vw);
+      gap: 0.6rem;
+      padding: 0.7rem 0.75rem;
+    }
+
+    .agent-node__tile {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 0.85rem;
+    }
+
+    .agent-node__caption {
+      display: none;
+    }
+
+    .agent-history-panel {
+      min-height: 24rem;
+    }
+
+    .agent-history-panel__stats {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .agent-run summary {
+      align-items: start;
+      flex-direction: column;
+    }
+  }
+</style>
