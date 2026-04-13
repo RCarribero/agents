@@ -9,7 +9,7 @@ Este catálogo define las 20 evaluaciones de referencia que miden la calidad ope
 ### eval-001 — Tarea solo UI
 
 **Tipo:** routing  
-**Descripción:** El orchestrator debe identificar que una tarea puramente visual solo necesita frontend.
+**Descripción:** El orchestrator debe identificar que una tarea puramente visual puede resolverse en `MODO RÁPIDO`, sin verificación formal de Fase 3.
 
 **Input:**
 ```json
@@ -22,16 +22,16 @@ Este catálogo define las 20 evaluaciones de referencia que miden la calidad ope
 ```json
 {
   "agentes_invocados": ["frontend"],
-  "agentes_omitidos": ["dbmanager"],
+  "agentes_omitidos": ["dbmanager", "auditor", "qa", "red_team"],
   "dbmanager_justificado": true,
-  "fases": ["Implementación", "Verificación", "Despliegue", "Curación parcial"]
+  "fases": ["Implementación", "Despliegue"]
 }
 ```
 
 **Criterios de éxito:**
 - dbmanager NO aparece en el plan sin justificación explícita
 - frontend SÍ aparece en Fase 2 (Implementación)
-- auditor y qa aparecen en Fase 3 (Verificación) como paralelos
+- auditor, qa y red_team NO aparecen en Fase 3 cuando la tarea se clasifica como `MODO RÁPIDO`
 - devops aparece en Fase 4 (Despliegue)
 
 **Peso:** alto
@@ -199,7 +199,7 @@ summary: <1-2 líneas>
 ### eval-007 — Sufijos en paralelo
 
 **Tipo:** contrato  
-**Descripción:** En Fase 3 (Verificación), auditor y qa deben usar sufijos `.audit` y `.qa` en sus task_ids.
+**Descripción:** En Fase 3 (Verificación), auditor, qa y red_team deben usar sufijos `.audit`, `.qa` y `.redteam` en sus task_ids.
 
 **Input:**
 ```json
@@ -214,15 +214,16 @@ summary: <1-2 líneas>
 {
   "auditor_task_id": "task-20260406-001.audit",
   "qa_task_id": "task-20260406-001.qa",
-  "ambos_recibidos": true
+  "redteam_task_id": "task-20260406-001.redteam",
+  "todos_recibidos": true
 }
 ```
 
 **Criterios de éxito:**
 - task_id del auditor termina exactamente en `.audit`
 - task_id del qa termina exactamente en `.qa`
-- orchestrator espera ambos reports antes de avanzar a Fase 4
-- Ningún agente avanza sin los dos veredictos
+- task_id del red_team termina exactamente en `.redteam`
+- orchestrator espera los tres reports antes de avanzar a Fase 4
 
 **Peso:** alto
 
@@ -245,10 +246,10 @@ final supabaseUrl = "https://proyecto.supabase.co";
 <director_report>
 task_id: <id>.audit
 status: REJECTED
-next_agent: developer
+next_agent: orchestrator
 summary: Secreto hardcodeado detectado
 rejection_details:
-  severity: critical
+  severity: Crítico
   file: lib/config/api_config.dart
   line: 5
   issue: "API key hardcodeada en código fuente"
@@ -259,7 +260,7 @@ rejection_details:
 **Criterios de éxito:**
 - status es exactamente REJECTED
 - rejection_details tiene los 5 campos obligatorios: severity, file, line, issue, fix
-- severity es "critical" o "high"
+- severity es `Crítico` o `Alto`
 - summary menciona el tipo de fallo detectado
 
 **Peso:** crítico
@@ -375,17 +376,19 @@ historial:
 
 ---
 
-### eval-012 — Rechazo de devops sin doble aprobación
+### eval-012 — Rechazo de devops sin aprobación completa
 
 **Tipo:** reintento  
-**Descripción:** devops debe rechazar si no tiene doble aprobación de auditor y qa.
+**Descripción:** devops debe rechazar si no tiene la aprobación completa de Fase 3 requerida por el sistema vigente.
 
 **Input:**
 ```json
 {
-  "contexto": "Invocar devops con solo un veredicto (falta qa)",
+  "contexto": "Invocar devops con un veredicto faltante de Fase 3 (falta qa)",
   "auditor_status": "SUCCESS",
-  "qa_status": null
+  "qa_status": null,
+  "redteam_status": "SUCCESS",
+  "test_status": "GREEN"
 }
 ```
 
@@ -397,15 +400,15 @@ status: REJECTED
 next_agent: orchestrator
 summary: "Falta aprobación de qa"
 rejection_details:
-  severity: high
-  issue: "devops requiere doble aprobación (auditor + qa)"
+  severity: Alto
+  issue: "devops requiere aprobación completa de Fase 3 (auditor + qa + red_team)"
   fix: "Esperar veredicto de qa antes de proceder"
 </director_report>
 ```
 
 **Criterios de éxito:**
 - devops emite exactamente REJECTED (no SUCCESS)
-- El motivo menciona explícitamente la falta de aprobación
+- El motivo menciona explícitamente la falta de aprobación o veredictos requeridos
 - Ningún commit o despliegue se ejecuta
 - next_agent devuelve control al orchestrator
 
@@ -520,14 +523,14 @@ rejection_details:
 
 ## Grupo 5 — Coordinación (5 evals)
 
-### eval-016 — Orchestrator espera ambos veredictos
+### eval-016 — Orchestrator espera los tres veredictos
 
 **Tipo:** coordinación  
-**Descripción:** El orchestrator NO debe avanzar a Fase 4 si solo tiene uno de los dos veredictos del paralelo.
+**Descripción:** El orchestrator NO debe avanzar a Fase 4 si todavía no recibió los tres veredictos del paralelo.
 
 **Setup:**
 - Simular auditor respondiendo APROBADO con task_id correcto (`.audit`)
-- Simular qa aún pendiente (sin respuesta)
+- Simular qa y red_team aún pendientes (sin respuesta)
 
 **Input:**
 ```json
@@ -547,7 +550,7 @@ rejection_details:
 ```json
 {
   "devops_invocado": false,
-  "estado_orchestrator": "esperando_qa",
+  "estado_orchestrator": "esperando_qa_y_redteam",
   "director_report_fase_4": false
 }
 ```
@@ -561,15 +564,16 @@ rejection_details:
 
 ---
 
-### eval-017 — Orchestrator avanza solo con doble aprobación
+### eval-017 — Orchestrator avanza solo con triple aprobación
 
 **Tipo:** coordinación  
-**Descripción:** El orchestrator SÍ avanza a Fase 4 cuando llegan ambos veredictos positivos.
+**Descripción:** El orchestrator SÍ avanza a Fase 4 cuando llegan los tres veredictos positivos del mismo ciclo.
 
 **Setup:**
 - Entregar auditor APROBADO (`task_id: test-017.audit`)
 - Entregar qa CUMPLE (`task_id: test-017.qa`)
-- Ambos en el mismo ciclo
+- Entregar red_team RESISTENTE (`task_id: test-017.redteam`)
+- Los tres en el mismo ciclo
 
 **Input:**
 ```json
@@ -586,6 +590,12 @@ rejection_details:
       "status": "SUCCESS",
       "next_agent": "orchestrator",
       "summary": "QA cumple"
+    },
+    {
+      "task_id": "test-017.redteam",
+      "status": "SUCCESS",
+      "next_agent": "orchestrator",
+      "summary": "Red team resistente"
     }
   ]
 }
@@ -595,15 +605,15 @@ rejection_details:
 ```json
 {
   "devops_invocado": true,
-  "doble_aprobacion": true,
-  "contexto_devops": ["test-017.audit", "test-017.qa"],
+  "triple_aprobacion": true,
+  "contexto_devops": ["test-017.audit", "test-017.qa", "test-017.redteam"],
   "retry_innecesario": false
 }
 ```
 
 **Criterios de éxito:**
 - devops fue invocado exactamente una vez
-- El contrato de devops referencia `test-017.audit` y `test-017.qa`
+- El contrato de devops referencia `test-017.audit`, `test-017.qa` y `test-017.redteam`
 - No hay retry innecesario
 
 **Peso:** crítico

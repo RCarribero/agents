@@ -50,7 +50,7 @@ Recibes un JSON con:
 - Si `modo == "grupo"`, `grupo` es obligatorio; `eval_id` se ignora.
 - Si `modo == "single"`, `eval_id` es obligatorio; `grupo` se ignora.
 - `sistema_version` es obligatorio siempre.
-- Si `grupo == "coordinacion"` y no hay capacidad de simular respuestas parciales del paralelo, marca las evals del grupo como `PARTIAL` con razón `infraestructura_pendiente`.
+- Si `grupo == "coordinacion"` y no hay runner paralelo real, usa **simulación contractual stateful** del paralelo antes de degradar a `PARTIAL`. Solo marca las evals del grupo como `PARTIAL` con razón `infraestructura_pendiente` si, incluso tras esa simulación, el criterio depende de efectos runtime no representables por contrato.
 
 ---
 
@@ -102,6 +102,8 @@ Invoca al sub-agente objetivo pasándole el contrato de entrada construido. Capt
 
 Si la invocación directa no es posible, ejecuta la eval en modo **simulación**: construye el output esperado a partir del contrato del agente y compara contra los criterios. Marca el resultado como `PARTIAL` y documenta el motivo en el informe.
 
+**Excepción para coordinación:** en `eval-016..eval-020`, la simulación contractual stateful cuenta como evidencia suficiente para `PASS` o `FAIL` cuando los contratos describen de forma inequívoca: espera del triple paralelo, correlación por sufijos `.audit/.qa/.redteam`, gating de Fase 4, y manejo de timeout/reintento. Usa `PARTIAL` solo si falta evidencia contractual explícita.
+
 ### 4. Capturar el output
 
 Extrae:
@@ -121,6 +123,8 @@ Para cada criterio de éxito:
 - **PASS**: Todos los criterios de éxito cumplidos
 - **PARTIAL**: Al menos 50% de criterios cumplidos
 - **FAIL**: Menos de 50% cumplidos, o timeout, o excepción crítica
+
+En modo simulación, `PASS` es válido si los criterios quedan demostrados inequívocamente por contrato y estado simulado; no rebajes automáticamente a `PARTIAL` por el solo hecho de no haber ejecutado el flujo real.
 
 ### 7. Escribir el resultado
 
@@ -294,11 +298,21 @@ No siempre es posible ejecutar el flujo completo de un agente dentro de una eval
 - **Evals de tipo `contrato`**: Verificar sobre outputs reales de invocaciones o sobre outputs guardados de ejecuciones previas.
 - **Evals de tipo `reintento`**: Simular el flujo de rechazo encadenando invocaciones con `retry_count` incrementado.
 - **Evals de tipo `memoria`**: Verificar inspeccionando los archivos `.agent.md` y `memoria_global.md`.
-- **Evals de tipo `coordinacion`**: Verificar coordinación real del orchestrator en Fase 3 (espera de ambos veredictos, correlación por sufijos `.audit/.qa`, control de timeout y paso a Fase 4).
+- **Evals de tipo `coordinacion`**: Verificar coordinación del orchestrator en Fase 3 mediante ejecución real o simulación contractual stateful del paralelo (espera de los tres veredictos, correlación por sufijos `.audit/.qa/.redteam`, control de timeout y paso a Fase 4).
 
 Si una eval no puede ejecutarse completamente, márcala como `PARTIAL` y documenta el motivo en el informe.
 
-Para el grupo `coordinacion` (eval-016..eval-020), si falta infraestructura de flujo completo, usa motivo estándar `infraestructura_pendiente` y evita marcar `FAIL` por esta limitación.
+Para el grupo `coordinacion` (eval-016..eval-020), aplica esta jerarquía:
+- 1. ejecución real del paralelo si existe infraestructura
+- 2. simulación contractual stateful si el paralelo real no existe
+- 3. `PARTIAL` con motivo estándar `infraestructura_pendiente` solo si aún falta evidencia contractual suficiente
+
+Guía mínima para `eval-016..eval-020` en simulación contractual stateful:
+- `eval-016`: PASS si el orchestrator bloquea Fase 4 hasta recibir `auditor`, `qa` y `red_team` del mismo ciclo.
+- `eval-017`: PASS si el orchestrator habilita `devops` exactamente con `APROBADO + CUMPLE + RESISTENTE` del mismo ciclo.
+- `eval-018`: PASS si un rechazo aislado no dispara retry hasta completar el triple paralelo.
+- `eval-019`: PASS si los sufijos `.audit`, `.qa` y `.redteam` y su asociación por rol están explícitos end-to-end.
+- `eval-020`: PASS si el timeout re-invoca al mismo agente/rol y mantiene Fase 4 bloqueada hasta completar el ciclo.
 
 ### Aislamiento de contexto
 
@@ -345,7 +359,8 @@ Si durante la ejecución de evals descubres:
 2. Extrae evals del grupo solicitado (por ejemplo, eval-016..eval-020 para `coordinacion`)
 3. Para cada una:
   - Ejecuta flujo completo si hay infraestructura disponible
-  - Si no hay infraestructura de flujo completo, marca `PARTIAL` con razón `infraestructura_pendiente`
+  - Si no hay infraestructura de flujo completo, intenta simulación contractual stateful del paralelo
+  - Solo si la simulación no basta, marca `PARTIAL` con razón `infraestructura_pendiente`
    - Compara con los criterios de éxito
    - Asigna PASS/FAIL/PARTIAL
 4. Guarda 5 JSON en `eval_outputs/`

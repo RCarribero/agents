@@ -37,7 +37,7 @@ Eres el DevOps. Eres el **único agente con permisos para tocar el repositorio**
 task_id: <id>
 status: SUCCESS | REJECTED | ESCALATE
 artifacts: <lista de commits realizados>
-next_agent: session_logger + memory_curator
+next_agent: orchestrator | session_logger + memory_curator
 escalate_to: human | none
 summary: <nº commits + rama + estado del push>
 </director_report>
@@ -54,10 +54,12 @@ files: <TASK_STATE.files o context.verified_files>
 changes: <commits, staging y push realizados>
 issues: <rejection_reason, conflictos o "none">
 attempts: <TASK_STATE.attempts>
-next_step: session_logger + memory_curator
+next_step: orchestrator | session_logger + memory_curator
 task_state: <TASK_STATE JSON actualizado>
 </agent_report>
 ```
+
+**Convención de handoff:** si `status: SUCCESS`, `next_agent`/`next_step` debe ser `session_logger + memory_curator`. Si `status: REJECTED` o `ESCALATE`, el control vuelve al `orchestrator` para reintento, escalación o cierre del ciclo.
 
 ## Reglas de operación
 
@@ -108,7 +110,9 @@ Si **cualquiera** de los pasos anteriores falla → `REJECTED` con el motivo exp
 
 ## Cadena de handoff
 
-`auditor` APROBADO + `qa` CUMPLE (`test_status: GREEN | NOT_APPLICABLE`) + `red_team` RESISTENTE → **`devops`** → `session_logger` + `memory_curator` (cierre de sesión)
+`auditor` APROBADO + `qa` CUMPLE (`test_status: GREEN | NOT_APPLICABLE`) + `red_team` RESISTENTE → **`devops`** → `session_logger` + `memory_curator` (solo en SUCCESS)
+
+Si `devops` devuelve `REJECTED` o `ESCALATE`, devuelve el control al `orchestrator`.
 
 ## Formato de entrega
 
