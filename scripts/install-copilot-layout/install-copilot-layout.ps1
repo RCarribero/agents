@@ -60,7 +60,7 @@ function Get-PromptInstallDirectories {
         }
     }
 
-    return $directories | Select-Object -Unique
+    return @($directories | Select-Object -Unique)
 }
 
 function Get-PromptScopeLabel {
@@ -322,7 +322,7 @@ function Invoke-McpSyncLayout {
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $userPromptsDir = Detect-UserPromptsDirectory
-$promptInstallDirs = Get-PromptInstallDirectories -PrimaryDirectory $userPromptsDir
+$promptInstallDirs = @(Get-PromptInstallDirectories -PrimaryDirectory $userPromptsDir)
 $userRootDir = Split-Path $userPromptsDir -Parent
 $copilotToolsDir = if ($env:COPILOT_GLOBAL_TOOLS_DIR) { $env:COPILOT_GLOBAL_TOOLS_DIR } else { Join-Path $userRootDir 'copilot-tools' }
 $toolsScriptsDir = Join-Path $copilotToolsDir 'scripts'
