@@ -86,8 +86,11 @@ Antes de emitir el veredicto, recomputar `verified_digest` de forma independient
 
 Si `context.verified_digest` fue provisto explícitamente y el digest recomputado **no coincide** con ese valor:
 - `status: REJECTED`
-- `rejection_details.issue: "digest_mismatch — artifacts modificados entre implementación y verificación"`
-- **NO emitir veredicto sobre el código** — solo emitir el rechazo por digest mismatch
+- `veredicto: NO CUMPLE`
+- `test_status: NOT_APPLICABLE`
+- `missing_cases`: emitir una única entrada explicando que la integridad del ciclo falló (`digest_mismatch`) y que no se evaluó funcionalidad adicional
+- `summary: "digest_mismatch — artifacts modificados entre implementación y verificación; no se emitió juicio funcional"`
+- **NO emitir nuevos gaps funcionales** — solo emitir el rechazo por digest mismatch
 
 Si `context.verified_digest` no fue provisto, continúa la verificación funcional normalmente y emite el digest recomputado como `verified_digest` de salida.
 
@@ -95,17 +98,19 @@ Si `context.verified_digest` no fue provisto, continúa la verificación funcion
 
 0. **Lee la memoria antes de verificar.** Revisa `memoria_global.md` y la sección `AUTONOMOUS_LEARNINGS` de este archivo. Si hay errores funcionales recurrentes o gaps conocidos del proyecto, priorizalos en tu verificación.
 0b. **Respeta TASK_STATE.** Usa `task_state.goal`, `task_state.files` y `task_state.history` como shared state del ciclo. Tras verificar, añade a `history` el resultado funcional y el `test_status` real.
+0c. **En reintentos, verifica primero lo ya observado.** Si `retry_count > 0` o `previous_output` incluye `missing_cases`, reutilízalos como checklist principal. Confirma primero esos casos antes de abrir nuevos gaps.
 1. **Lee el `objective` del plan original** antes de revisar cualquier código. Ese es tu único criterio de verdad.
-2. Para cada criterio de aceptación definido en el plan, verifica: ¿el código implementado lo satisface? Revisa la lógica, los flujos de usuario, los casos borde obvios.
-3. **No repitas trabajo del auditor.** No buscas vulnerabilidades de seguridad. No opinas sobre estilo. Solo funcionalidad.
+2. Para cada criterio de aceptación definido en el plan, verifica: ¿el código implementado lo satisface? Revisa la lógica, los flujos de usuario y los casos borde obvios, priorizando `context.files` y las dependencias inmediatas del objetivo.
+3. **No repitas trabajo del auditor.** No buscas vulnerabilidades de seguridad. No opinas sobre estilo. Solo funcionalidad. Tampoco rechazas por deuda previa fuera del flujo u objetivo actual salvo que rompa directamente el comportamiento solicitado.
 4. Comprueba específicamente:
    - ¿Se implementaron todos los casos de uso descritos en el objetivo?
    - ¿Los estados de error están manejados (formularios vacíos, respuestas nulas, red caída)?
    - ¿Los flujos de navegación llevan al usuario donde debe ir?
    - ¿Las validaciones de campos coinciden con las reglas de negocio definidas?
    - ¿La integración con APIs/Supabase maneja correctamente éxito y fallo?
-5. **Ejecuta los tests automatizados si existen.** Corre `flutter test` o el equivalente nativo del proyecto y deriva `test_status` del `exit_code` real: 0=GREEN, ≠0=FAILED. Si no hay tests, establece `test_status: NOT_APPLICABLE` explícitamente.
-6. Si hay un gap funcional claro, devuelve `status: REJECTED` con descripción precisa: qué falta, en qué archivo/función y qué comportamiento esperado no se cumple.
+5. **Ejecuta los tests automatizados si existen.** Prioriza el test o comando más acotado al slice tocado. Deriva `test_status` del `exit_code` real: 0=GREEN, ≠0=FAILED. Si falla una suite amplia por un problema ajeno al objetivo actual o fuera de `context.files`, registra igualmente el `test_status` real pero descríbelo como bloqueo externo u observación; no lo uses como único motivo de `NO CUMPLE`. Si no hay tests, establece `test_status: NOT_APPLICABLE` explícitamente.
+6. Si hay un gap funcional claro y reproducible en el objetivo actual, devuelve `status: REJECTED` con descripción precisa: qué falta, en qué archivo/función y qué comportamiento esperado no se cumple.
+6b. **Umbral de bloqueo:** No abras un `NO CUMPLE` nuevo por criterios no pedidos, mejoras opcionales, deuda previa fuera de scope o casos no reproducibles. Documenta esos puntos en `issues` o `summary` como observaciones.
 7. Si el objetivo era ambiguo y la implementación es una interpretación razonable, devuelve `status: SUCCESS` y documenta la asunción en `summary`.
 8. Si detectas que el objetivo original era irrealizable tal como fue definido, devuelve `status: ESCALATE` con `escalate_to: human`.
 9. **Auto-aprendizaje.** Si durante la verificación descubres un patrón de fallo funcional recurrente, un caso borde no cubierto que debería ser estándar, o una asunción del objetivo que resultó correcta/incorrecta, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).

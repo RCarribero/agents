@@ -38,18 +38,24 @@ async function main(): Promise<void> {
 
   try {
     const sources = await discoverSourcePaths();
-    console.log(`[observer] session-state root: ${sources.sessionStateRoot ?? 'not found'}`);
+    console.log(`[observer] workspaceStorage root: ${sources.workspaceStorageRoot ?? 'not found'}`);
+    console.log(`[observer] session-state root (legacy): ${sources.sessionStateRoot ?? 'not found'}`);
     console.log(`[observer] copilot-chat roots: ${sources.copilotChatRoots.length}`);
 
-    const scanResult = await scanSessions({ db, sessionStateRoot: sources.sessionStateRoot });
+    const scanResult = await scanSessions({
+      db,
+      workspaceStorageRoot: sources.workspaceStorageRoot,
+      sessionStateRoot: sources.sessionStateRoot,
+    });
     console.log(
-      `[observer] initial scan: ${scanResult.scannedSessions} sessions, ${scanResult.loadedEvents} events, ${scanResult.errors} errors`,
+      `[observer] initial scan (${scanResult.source}): ${scanResult.scannedSessions} sessions, ${scanResult.loadedEvents} events, ${scanResult.errors} errors`,
     );
     console.log(`[observer] database: ${db.path}`);
 
-    if (sources.sessionStateRoot) {
+    if (sources.workspaceStorageRoot || sources.sessionStateRoot) {
       watcher = await startSessionWatcher({
         db,
+        workspaceStorageRoot: sources.workspaceStorageRoot,
         sessionStateRoot: sources.sessionStateRoot,
         onEvents: (sessionId, events) => {
           eventBus.emitNewEvents({ sessionId, events });
@@ -59,12 +65,15 @@ async function main(): Promise<void> {
 
       console.log('[observer] watcher enabled.');
     } else {
-      console.warn('[observer] watcher disabled because no session-state root was found.');
+      console.warn(
+        '[observer] watcher disabled because neither workspaceStorage nor session-state root was found.',
+      );
     }
 
     server = await createApiServer({
       db,
       enableWebsocket: true,
+      workspaceStorageRoot: sources.workspaceStorageRoot,
       sessionStateRoot: sources.sessionStateRoot,
     });
     const host = process.env.HOST ?? '127.0.0.1';

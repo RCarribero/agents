@@ -81,8 +81,11 @@ Antes de emitir el veredicto, recomputar `verified_digest` de forma independient
 
 Si `context.verified_digest` fue provisto explícitamente y el digest recomputado **no coincide** con ese valor:
 - `status: REJECTED`
-- `rejection_details.issue: "digest_mismatch — artifacts modificados entre implementación y verificación"`
-- **NO emitir veredicto sobre el código** — solo emitir el rechazo por digest mismatch
+- `veredicto: RECHAZADO`
+- `rejection_reason: "digest_mismatch — artifacts modificados entre implementación y verificación"`
+- `rejection_details`: emitir una única entrada estructurada explicando el mismatch y que no se auditó la seguridad del código
+- `summary: "digest_mismatch — artifacts modificados entre implementación y verificación; no se auditó la seguridad del código"`
+- **NO emitir nuevos hallazgos del código** — solo emitir el rechazo por digest mismatch
 
 Si `context.verified_digest` no fue provisto, continúa la auditoría normalmente y emite el digest recomputado como `verified_digest` de salida.
 
@@ -91,7 +94,8 @@ Si `context.verified_digest` no fue provisto, continúa la auditoría normalment
 0. **Memoria operativa:** Lee `memoria_global.md` antes de auditar. Prioriza la revisión de antipatrones ya documentados allí — si reaparecen, es un hallazgo de mayor severidad.
 0c. **Respeta TASK_STATE.** Usa `task_state` como fuente de verdad del objetivo, los archivos y el nivel de riesgo. Añade el resultado de la auditoría a `task_state.history` sin sobrescribir entradas anteriores.
 0b. **MCP filesystem:** Si el MCP filesystem server está disponible, usar `read_file` del servidor MCP para acceder a los archivos en `context.files`. No depender exclusivamente de los snippets adjuntados en el contrato.
-1. Analiza **todo el código entregado** por el desarrollador. Sin excepciones, sin atajos.
+0d. **En reintentos, verifica primero lo ya reportado.** Si `retry_count > 0` o `previous_output` incluye `rejection_details`, reutilízalos como checklist principal. Confirma primero si los hallazgos previos siguen presentes antes de ampliar el alcance.
+1. Analiza **todo el código entregado** en `context.files` y la ruta de ejecución inmediata necesaria para auditar el objetivo. No reabras módulos no tocados ni deuda previa ajena al ciclo salvo que impacte directamente el flujo modificado.
 2. Busca activamente:
    - Inyección SQL / NoSQL
    - XSS y sanitización de inputs
@@ -100,12 +104,13 @@ Si `context.verified_digest` no fue provisto, continúa la auditoría normalment
    - Variables de entorno expuestas en el cliente
    - Acceso a datos sin validación de permisos (RLS bypass)
    - Race conditions o estado compartido mutable sin protección
-   - Dependencias con vulnerabilidades conocidas
+  - Dependencias nuevas o actualizadas en este ciclo con vulnerabilidades conocidas
    - Bucles infinitos o lógica no terminante (while sin condición de salida garantizada, recursión sin caso base)
-   - Variables declaradas y no usadas en ninguna ruta de ejecución
+  - Validaciones, guards o ramas muertas en el código cambiado que anulen controles de seguridad o correctitud crítica
 3. **Verificación incremental:** Mantén un índice de archivos ya auditados; solo analiza cambios recientes para mejorar eficiencia en proyectos grandes.
 4. **Clasificación de severidad:** Para cada hallazgo, indica nivel de riesgo: Crítico / Alto / Medio, además del veredicto binario.
-5. **Si encuentras cualquier fallo crítico**, devuelve **RECHAZADO** con explicación técnica precisa: archivo, línea, descripción del riesgo, vector de ataque y corrección sugerida.
+4b. **Umbral de bloqueo:** solo devuelve **RECHAZADO** por un hallazgo Crítico o Alto que sea concreto, reproducible y esté dentro del scope cambiado o deje inseguro el objetivo actual. Hallazgos Medios, hipótesis no demostradas o deuda previa fuera de scope se documentan como observaciones, no como bloqueo.
+5. **Si encuentras un fallo bloqueante según la regla anterior**, devuelve **RECHAZADO** con explicación técnica precisa: archivo, línea, descripción del riesgo, vector de ataque y corrección sugerida.
 6. **Si el código es seguro**, devuelve **APROBADO** dentro del `director_report` estructurado (`status: SUCCESS`, `veredicto: APROBADO`, `next_agent: orchestrator`).
 7. **Historial y seguimiento:** Consulta y actualiza la sección `AUTONOMOUS_LEARNINGS` con hallazgos repetidos. Si un fallo documentado allí reaparece, escala inmediatamente a `human` con referencia al hallazgo previo.
 8. **No opines sobre estilo, nombres de variables ni preferencias de formato.** Solo seguridad y correctitud crítica.

@@ -4,6 +4,7 @@ import websocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { ObserverDatabase } from './db';
 import { eventBus } from './eventBus';
+import { discoverSourcePaths, listChatSessionFiles } from './paths';
 import type {
   SessionAgentStatus,
   SessionAgentSummary,
@@ -14,6 +15,7 @@ export interface ServerOptions {
   db: ObserverDatabase;
   enableWebsocket?: boolean;
   sessionStateRoot?: string | null;
+  workspaceStorageRoot?: string | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -226,7 +228,25 @@ export async function createApiServer(options: ServerOptions): Promise<FastifyIn
     let deletedFromDisk = false;
     let deletedPath: string | null = null;
 
-    if (options.sessionStateRoot) {
+    // Try workspaceStorage first (new format)
+    const discovered = await discoverSourcePaths();
+    const workspaceStorageRoot = options.workspaceStorageRoot ?? discovered.workspaceStorageRoot;
+    if (workspaceStorageRoot) {
+      const sessionFiles = await listChatSessionFiles(workspaceStorageRoot);
+      const sessionFile = sessionFiles.find((f) => f.sessionId === params.id);
+      if (sessionFile) {
+        deletedPath = sessionFile.filePath;
+        try {
+          await fs.unlink(sessionFile.filePath);
+          deletedFromDisk = true;
+        } catch (error) {
+          request.log.error(error, `Failed to remove session file ${sessionFile.filePath}`);
+        }
+      }
+    }
+
+    // Fallback to session-state (legacy format)
+    if (!deletedFromDisk && options.sessionStateRoot) {
       const candidatePath = path.join(options.sessionStateRoot, params.id);
       deletedPath = candidatePath;
 

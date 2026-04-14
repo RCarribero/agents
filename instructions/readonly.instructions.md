@@ -11,7 +11,7 @@ Estas instrucciones aplican a los agentes de evaluación, verificación y regist
 - **NO** crear, modificar ni eliminar archivos de código ni de contratos de agente.
 - **NO** ejecutar comandos que escriban en disco (redirección `>`, `tee`, `write`, etc.).
 - **NO** realizar ninguna operación git (`add`, `commit`, `push`, `pull`, `checkout`, etc.).
-- **SÍ** ejecutar comandos de lectura para verificar: `flutter test`, `flutter analyze`, `pytest`, `npm test`, linters equivalentes y herramientas de análisis estático.
+- **SÍ** ejecutar comandos de lectura para verificar: `flutter test`, `flutter analyze`, `pytest`, `pnpm test`, `pnpm exec <tool>`, `npx <tool>`, linters equivalentes y herramientas de análisis estático.
 
 ## Incumplimiento
 

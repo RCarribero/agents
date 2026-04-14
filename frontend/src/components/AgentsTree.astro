@@ -1,12 +1,13 @@
 ---
-import type { SessionAgentSummary } from '../types';
+import type { SessionAgentSummary, SessionStats } from '../types';
 
 interface Props {
   sessionId: string;
   agents: SessionAgentSummary[];
+  stats?: SessionStats | null;
 }
 
-const { sessionId, agents } = Astro.props;
+const { sessionId, agents, stats = null } = Astro.props;
 
 const standaloneLayouts: Record<number, { x: number; y: number }[]> = {
   1: [{ x: 50, y: 50 }],
@@ -79,19 +80,22 @@ const anchoredLayouts: Record<number, { x: number; y: number }[]> = {
 function formatAgentStatus(status: SessionAgentSummary['status']): string {
   if (status === 'active') return 'Activo';
   if (status === 'selected') return 'Seleccionado';
+  if (status === 'idle') return 'Inactivo';
   return 'Completado';
 }
 
 function statusDescription(status: SessionAgentSummary['status']): string {
   if (status === 'active') return 'Ejecutando trabajo ahora';
   if (status === 'selected') return 'Preparado para el siguiente paso';
+  if (status === 'idle') return 'Disponible, sin actividad';
   return 'Cerró su ejecución';
 }
 
 function statusRank(status: SessionAgentSummary['status']): number {
   if (status === 'active') return 0;
   if (status === 'selected') return 1;
-  return 2;
+  if (status === 'completed') return 2;
+  return 3;
 }
 
 function monogram(value: string): string {
@@ -207,9 +211,15 @@ const graphEdges = buildInitialEdges(graphAgents);
       <h3 class="mt-2 text-2xl font-semibold text-gray-900">Red de agentes</h3>
       <p id="agents-graph-description" class="mt-2 max-w-2xl text-sm text-gray-600">
         {agents.length === 0
-          ? 'No se detectó actividad de subagentes en esta sesión.'
+          ? 'Se mostrarán todos los agentes disponibles del catálogo.'
           : `${agents.length} nodo(s) conectados. Haz click en cualquiera para abrir su historial de mensajes.`}
       </p>
+      {stats && (
+        <p class="mt-3 text-xs text-gray-500">
+          <strong>Tokens de la sesión:</strong> {stats.totalTokens.toLocaleString()}
+          {stats.tokenSampleCount > 0 && ` (muestra de ${stats.tokenSampleCount} evento${stats.tokenSampleCount !== 1 ? 's' : ''})`}
+        </p>
+      )}
     </div>
 
     <div class="rounded-2xl border border-gray-200 bg-slate-50 px-4 py-3">
@@ -243,7 +253,7 @@ const graphEdges = buildInitialEdges(graphAgents);
         {
           graphAgents.length === 0 ? (
             <div class="agent-graph-stage__empty">
-              <p>No se detectó actividad de subagentes en esta sesión.</p>
+              <p>Se mostrarán todos los agentes del catálogo cuando estén disponibles.</p>
             </div>
           ) : (
             graphAgents.map((agent, index) => (
@@ -407,12 +417,14 @@ const graphEdges = buildInitialEdges(graphAgents);
   function formatStatus(status) {
     if (status === 'active') return 'Activo';
     if (status === 'selected') return 'Seleccionado';
+    if (status === 'idle') return 'Inactivo';
     return 'Completado';
   }
 
   function statusDescription(status) {
     if (status === 'active') return 'Ejecutando trabajo ahora';
     if (status === 'selected') return 'Preparado para el siguiente paso';
+    if (status === 'idle') return 'Disponible, sin actividad';
     return 'Cerró su ejecución';
   }
 
@@ -432,7 +444,8 @@ const graphEdges = buildInitialEdges(graphAgents);
   function statusRank(status) {
     if (status === 'active') return 0;
     if (status === 'selected') return 1;
-    return 2;
+    if (status === 'completed') return 2;
+    return 3;
   }
 
   function buildOrbitSlots(count, centerX, centerY, radiusX, radiusY) {
@@ -784,7 +797,7 @@ const graphEdges = buildInitialEdges(graphAgents);
     }
 
     descriptionElement.textContent = count === 0
-      ? 'No se detectó actividad de subagentes en esta sesión.'
+      ? 'Se mostrarán todos los agentes del catálogo.'
       : `${count} nodo(s) conectados. Haz click en cualquiera para abrir su historial de mensajes.`;
   }
 
@@ -953,8 +966,8 @@ const graphEdges = buildInitialEdges(graphAgents);
       historyPanel.innerHTML = `
         <div class="agent-history-panel__empty">
           <p class="agent-history-panel__eyebrow">Historial</p>
-          <h4 class="agent-history-panel__title">Sin actividad</h4>
-          <p class="agent-history-panel__copy">Esta sesión no registró subagentes.</p>
+          <h4 class="agent-history-panel__title">Catálogo disponible</h4>
+          <p class="agent-history-panel__copy">Los agentes se mostrarán en la red cuando se actividad se detecte.</p>
         </div>
       `;
       return;
@@ -1070,7 +1083,7 @@ const graphEdges = buildInitialEdges(graphAgents);
     if (currentAgents.length === 0) {
       nodesElement.innerHTML = `
         <div class="agent-graph-stage__empty">
-          <p>No se detectó actividad de subagentes en esta sesión.</p>
+          <p>Se mostrarán todos los agentes del catálogo.</p>
         </div>
       `;
       if (wiresElement) {
@@ -1094,9 +1107,10 @@ const graphEdges = buildInitialEdges(graphAgents);
 
   async function refreshGraphData() {
     try {
-      const [agentsResponse, eventsResponse] = await Promise.all([
+      const [agentsResponse, eventsResponse, statsResponse] = await Promise.all([
         fetch(`http://127.0.0.1:3010/sessions/${encodeURIComponent(sessionId)}/agents`),
         fetch(`http://127.0.0.1:3010/sessions/${encodeURIComponent(sessionId)}/events`),
+        fetch(`http://127.0.0.1:3010/sessions/${encodeURIComponent(sessionId)}/stats`),
       ]);
 
       if (!agentsResponse.ok || !eventsResponse.ok) {
@@ -1401,6 +1415,20 @@ const graphEdges = buildInitialEdges(graphAgents);
     --node-status: rgb(148 163 184);
   }
 
+  .agent-node--idle {
+    --node-status: rgb(148 163 184);
+    opacity: 0.6;
+  }
+
+  .agent-node--idle .agent-node__meta {
+    background: rgb(241 245 249);
+    color: rgb(71 85 105);
+  }
+
+  .agent-node--idle .agent-node__tile {
+    opacity: 0.7;
+  }
+
   .agent-node--theme-0 {
     --node-top: rgba(59, 130, 246, 0.96);
     --node-bottom: rgba(37, 99, 235, 0.84);
@@ -1513,6 +1541,13 @@ const graphEdges = buildInitialEdges(graphAgents);
 
   .agent-history-panel__badge--completed,
   .agent-run__badge--completed {
+    background: rgb(241 245 249);
+    border-color: rgb(203 213 225);
+    color: rgb(71 85 105);
+  }
+
+  .agent-history-panel__badge--idle,
+  .agent-run__badge--idle {
     background: rgb(241 245 249);
     border-color: rgb(203 213 225);
     color: rgb(71 85 105);

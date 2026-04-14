@@ -100,6 +100,72 @@ export async function listSessionDirectories(sessionStateRoot: string): Promise<
   }
 }
 
+export interface SessionFile {
+  filePath: string;
+  sessionId: string;
+  workspaceId: string | null;
+}
+
+export function getWorkspaceIdForChatSessionFile(filePath: string): string | null {
+  const parentDir = path.dirname(filePath);
+  if (path.basename(parentDir).toLowerCase() !== 'chatsessions') {
+    return null;
+  }
+
+  const workspaceId = path.basename(path.dirname(parentDir));
+  return workspaceId || null;
+}
+
+export async function listChatSessionFiles(workspaceStorageRoot: string): Promise<SessionFile[]> {
+  const sessionFiles: SessionFile[] = [];
+
+  try {
+    const workspaceEntries = await fs.readdir(workspaceStorageRoot, { withFileTypes: true });
+
+    for (const workspaceEntry of workspaceEntries) {
+      if (!workspaceEntry.isDirectory()) {
+        continue;
+      }
+
+      const chatSessionsDir = path.join(workspaceStorageRoot, workspaceEntry.name, 'chatSessions');
+      const dirExists = await pathExists(chatSessionsDir);
+      if (!dirExists) {
+        continue;
+      }
+
+      try {
+        const sessionEntries = await fs.readdir(chatSessionsDir, { withFileTypes: true });
+
+        for (const sessionEntry of sessionEntries) {
+          if (sessionEntry.isDirectory()) {
+            continue;
+          }
+
+          if (!sessionEntry.name.endsWith('.jsonl')) {
+            continue;
+          }
+
+          const filePath = path.join(chatSessionsDir, sessionEntry.name);
+          const sessionId = path.basename(sessionEntry.name, '.jsonl');
+          sessionFiles.push({
+            filePath,
+            sessionId,
+            workspaceId: workspaceEntry.name,
+          });
+        }
+      } catch (error) {
+        console.error(`[paths] Failed to list session files in ${chatSessionsDir}:`, error);
+      }
+    }
+
+    sessionFiles.sort((a, b) => a.sessionId.localeCompare(b.sessionId));
+  } catch (error) {
+    console.error(`[paths] Failed to list workspace entries in ${workspaceStorageRoot}:`, error);
+  }
+
+  return sessionFiles;
+}
+
 export async function getFileSize(filePath: string): Promise<number | null> {
   try {
     const stats = await fs.stat(filePath);

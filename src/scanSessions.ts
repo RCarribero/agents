@@ -1,51 +1,82 @@
 import path from 'node:path';
 import { createObserverDatabase, type ObserverDatabase } from './db';
-import { discoverSourcePaths, listSessionDirectories } from './paths';
+import { discoverSourcePaths, listChatSessionFiles, listSessionDirectories } from './paths';
 import { readSession } from './readSession';
 
 export interface ScanSummary {
-  sessionStateRoot: string | null;
   scannedSessions: number;
   loadedEvents: number;
   errors: number;
+  source: string;
 }
 
 export async function scanSessions(options: {
   db: ObserverDatabase;
   sessionStateRoot?: string | null;
+  workspaceStorageRoot?: string | null;
 }): Promise<ScanSummary> {
-  const sessionStateRoot = options.sessionStateRoot ?? (await discoverSourcePaths()).sessionStateRoot;
+  const discovered = await discoverSourcePaths();
+  const workspaceStorageRoot = options.workspaceStorageRoot ?? discovered.workspaceStorageRoot;
+  const sessionStateRoot = options.sessionStateRoot ?? discovered.sessionStateRoot;
 
-  if (!sessionStateRoot) {
-    console.warn('[scanSessions] Session-state root not found.');
+  // Prefer workspaceStorage over legacy session-state
+  if (workspaceStorageRoot) {
+    const sessionFiles = await listChatSessionFiles(workspaceStorageRoot);
+    let loadedEvents = 0;
+    let errors = 0;
+
+    for (const file of sessionFiles) {
+      try {
+        const events = await readSession(file.filePath);
+        options.db.replaceSession(file.sessionId, events, {
+          workspaceId: file.workspaceId,
+        });
+        loadedEvents += events.length;
+      } catch (error) {
+        errors += 1;
+        console.error(`[scanSessions] Failed to ingest ${file.filePath}:`, error);
+      }
+    }
+
     return {
-      sessionStateRoot: null,
-      scannedSessions: 0,
-      loadedEvents: 0,
-      errors: 0,
+      scannedSessions: sessionFiles.length,
+      loadedEvents,
+      errors,
+      source: 'workspaceStorage/chatSessions',
     };
   }
 
-  const sessionDirs = await listSessionDirectories(sessionStateRoot);
-  let loadedEvents = 0;
-  let errors = 0;
+  // Fallback to legacy session-state
+  if (sessionStateRoot) {
+    const sessionDirs = await listSessionDirectories(sessionStateRoot);
+    let loadedEvents = 0;
+    let errors = 0;
 
-  for (const sessionDir of sessionDirs) {
-    try {
-      const events = await readSession(sessionDir);
-      options.db.replaceSession(path.basename(sessionDir), events);
-      loadedEvents += events.length;
-    } catch (error) {
-      errors += 1;
-      console.error(`[scanSessions] Failed to ingest ${sessionDir}:`, error);
+    for (const sessionDir of sessionDirs) {
+      try {
+        const events = await readSession(sessionDir);
+        options.db.replaceSession(path.basename(sessionDir), events);
+        loadedEvents += events.length;
+      } catch (error) {
+        errors += 1;
+        console.error(`[scanSessions] Failed to ingest ${sessionDir}:`, error);
+      }
     }
+
+    return {
+      scannedSessions: sessionDirs.length,
+      loadedEvents,
+      errors,
+      source: 'session-state (legacy)',
+    };
   }
 
+  console.warn('[scanSessions] Neither workspaceStorage nor session-state root found.');
   return {
-    sessionStateRoot,
-    scannedSessions: sessionDirs.length,
-    loadedEvents,
-    errors,
+    scannedSessions: 0,
+    loadedEvents: 0,
+    errors: 0,
+    source: 'none',
   };
 }
 

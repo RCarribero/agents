@@ -23,6 +23,12 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - Widgets pequeños y reutilizables — preferred `shared/` si generalizable
 - `flutter analyze --no-fatal-infos` debe pasar antes de cualquier entrega
 
+### Node.js / TypeScript / JavaScript
+- En este workspace, preferir `pnpm` para instalar dependencias y ejecutar scripts (`pnpm install`, `pnpm dev`, `pnpm build`, `pnpm test`)
+- Para binarios locales, preferir `pnpm exec`; usar `npx` solo para herramientas one-shot o cuando `pnpm exec` no aplique
+- Evitar `npm install`, `npm run`, `npm test`, `npm exec` y ejemplos basados en `npm` salvo compatibilidad explícita exigida por el proyecto o por el usuario
+- No introducir ni regenerar `package-lock.json` como parte de cambios nuevos sin instrucción explícita del usuario
+
 ### SQL / Migraciones
 - Si la tarea requiere migraciones, ubicarlas en la ruta del proyecto activo con nombre `YYYYMMDD_NNN_descripcion.sql`
 - Siempre idempotentes (IF NOT EXISTS, OR REPLACE)
@@ -92,3 +98,4 @@ DB migrations en commit separado (`feat(db):`) antes del commit de lógica cuand
 
 - **`/skill-installer`** (`prompts/skill-installer.prompt.md`) — detecta el stack del proyecto activo y construye el `skill_context`; invocar manualmente antes de una sesión de trabajo nueva o tras cambios de stack.
 - **`/dockerize`** (`prompts/dockerize.prompt.md`) — dockeriza el proyecto activo (Dockerfile multi-stage, docker-compose, .dockerignore) + setup local del entorno + carpeta `docker-launcher/` con scripts de setup/build/launch para Bash y PowerShell.
+- **`/productionize`** (`prompts/productionize.prompt.md`) — decide el target deployable del repo, reutiliza la lógica de `/dockerize`, limpia artefactos obsoletos con criterio y reescribe `README.md` con foco profesional para GitHub.

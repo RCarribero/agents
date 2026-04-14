@@ -1,7 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { ObserverDatabase } from './db';
-import { getFileSize, listSessionDirectories } from './paths';
+import {
+  discoverSourcePaths,
+  getFileSize,
+  getWorkspaceIdForChatSessionFile,
+  listChatSessionFiles,
+  listSessionDirectories,
+} from './paths';
 import { parseEvent } from './parser';
 import { readSession } from './readSession';
 import type { JsonObject } from './types';
@@ -17,12 +23,28 @@ export interface SessionWatcher {
 
 export interface WatcherOptions {
   db: ObserverDatabase;
-  sessionStateRoot: string;
+  sessionStateRoot?: string | null;
+  workspaceStorageRoot?: string | null;
   onEvents?: (sessionId: string, events: JsonObject[]) => void;
 }
 
-function isEventsFile(filePath: string): boolean {
-  return path.basename(filePath).toLowerCase() === 'events.jsonl';
+function isSessionFile(filePath: string): boolean {
+  const fileName = path.basename(filePath).toLowerCase();
+  return fileName === 'events.jsonl' || fileName.endsWith('.jsonl');
+}
+
+function extractSessionId(filePath: string): string {
+  const fileName = path.basename(filePath);
+  if (fileName === 'events.jsonl') {
+    // Legacy format: directory name is session ID
+    return path.basename(path.dirname(filePath));
+  }
+  // New format: .jsonl file name (without extension) is session ID
+  return path.basename(fileName, '.jsonl');
+}
+
+function extractWorkspaceId(filePath: string): string | null {
+  return getWorkspaceIdForChatSessionFile(filePath);
 }
 
 async function readTextSlice(
@@ -57,23 +79,62 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
   const chokidar = await import('chokidar');
   const cursors = new Map<string, FileCursor>();
   const inFlight = new Map<string, Promise<void>>();
-  const sessionDirs = await listSessionDirectories(options.sessionStateRoot);
 
-  for (const sessionDir of sessionDirs) {
-    const filePath = path.join(sessionDir, 'events.jsonl');
-    const size = await getFileSize(filePath);
-    if (size !== null) {
-      cursors.set(filePath, { position: size, remainder: '' });
+  const discovered = await discoverSourcePaths();
+  const workspaceStorageRoot = options.workspaceStorageRoot ?? discovered.workspaceStorageRoot;
+  const sessionStateRoot = options.sessionStateRoot ?? discovered.sessionStateRoot;
+  const watchPaths: string[] = [];
+
+  // Prefer workspaceStorage
+  if (workspaceStorageRoot) {
+    const sessionFiles = await listChatSessionFiles(workspaceStorageRoot);
+    for (const file of sessionFiles) {
+      const size = await getFileSize(file.filePath);
+      if (size !== null) {
+        cursors.set(file.filePath, { position: size, remainder: '' });
+      }
     }
+
+    // Watch all workspace IDs' chatSessions directories
+    try {
+      const workspaceEntries = await fs.readdir(workspaceStorageRoot, { withFileTypes: true });
+      for (const entry of workspaceEntries) {
+        if (entry.isDirectory()) {
+          const chatSessionsDir = path.join(workspaceStorageRoot, entry.name, 'chatSessions');
+          watchPaths.push(chatSessionsDir);
+        }
+      }
+    } catch (error) {
+      console.error(`[watcher] Failed to scan workspaceStorage:`, error);
+    }
+  } else if (sessionStateRoot) {
+    // Fallback to legacy session-state
+    const sessionDirs = await listSessionDirectories(sessionStateRoot);
+    for (const sessionDir of sessionDirs) {
+      const filePath = path.join(sessionDir, 'events.jsonl');
+      const size = await getFileSize(filePath);
+      if (size !== null) {
+        cursors.set(filePath, { position: size, remainder: '' });
+      }
+    }
+    watchPaths.push(sessionStateRoot);
+  } else {
+    console.warn('[watcher] No workspaceStorage or session-state root found.');
+    return {
+      close: async () => {
+        // noop
+      },
+    };
   }
 
   const handleFullResync = async (filePath: string): Promise<void> => {
-    const sessionPath = path.dirname(filePath);
-    const sessionId = path.basename(sessionPath);
+    const sessionId = extractSessionId(filePath);
 
     try {
-      const events = await readSession(sessionPath);
-      options.db.replaceSession(sessionId, events);
+      const events = await readSession(filePath);
+      options.db.replaceSession(sessionId, events, {
+        workspaceId: extractWorkspaceId(filePath),
+      });
 
       const size = await getFileSize(filePath);
       if (size !== null) {
@@ -133,8 +194,10 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
         return;
       }
 
-      const sessionId = path.basename(path.dirname(filePath));
-      options.db.appendEvents(sessionId, parsedEvents);
+      const sessionId = extractSessionId(filePath);
+      options.db.appendEvents(sessionId, parsedEvents, {
+        workspaceId: extractWorkspaceId(filePath),
+      });
       options.onEvents?.(sessionId, parsedEvents);
     } catch (error) {
       console.error(`[watcher] Failed to process ${filePath}:`, error);
@@ -155,9 +218,9 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
     inFlight.set(filePath, next);
   };
 
-  const watcher = chokidar.watch(options.sessionStateRoot, {
+  const watcher = chokidar.watch(watchPaths, {
     ignoreInitial: true,
-    depth: 2,
+    depth: workspaceStorageRoot ? 0 : 2, // workspaceStorage has chatSessions at depth 0, legacy has events.jsonl at depth 1
     awaitWriteFinish: {
       stabilityThreshold: 250,
       pollInterval: 100,
@@ -165,7 +228,7 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
   });
 
   watcher.on('add', (filePath) => {
-    if (!isEventsFile(filePath)) {
+    if (!isSessionFile(filePath)) {
       return;
     }
 
@@ -173,7 +236,7 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
   });
 
   watcher.on('change', (filePath) => {
-    if (!isEventsFile(filePath)) {
+    if (!isSessionFile(filePath)) {
       return;
     }
 
@@ -181,7 +244,7 @@ export async function startSessionWatcher(options: WatcherOptions): Promise<Sess
   });
 
   watcher.on('unlink', (filePath) => {
-    if (!isEventsFile(filePath)) {
+    if (!isSessionFile(filePath)) {
       return;
     }
 

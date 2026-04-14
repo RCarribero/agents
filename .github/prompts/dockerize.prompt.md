@@ -35,9 +35,9 @@ Ejecuta los comandos correspondientes al stack detectado. Si alguno falla, regis
 ```bash
 # Verifica runtime
 node --version || echo "WARN: Node.js no encontrado — instálalo desde https://nodejs.org"
-# Instala dependencias (detecta el lockfile para elegir el gestor)
-[ -f "pnpm-lock.yaml" ] && pnpm install || \
-  ([ -f "yarn.lock" ] && yarn install || npm install)
+# Instala dependencias evitando npm por defecto
+[ -f "pnpm-lock.yaml" ] && pnpm install --frozen-lockfile || \
+  ([ -f "yarn.lock" ] && yarn install || pnpm install)
 ```
 
 **Python / FastAPI / Django / Flask:**
@@ -71,6 +71,7 @@ Genera `Dockerfile` en la raíz. Reglas estrictas:
 - El proceso de la imagen final corre como usuario **no-root**.
 - Añade `HEALTHCHECK` para servicios HTTP.
 - Documenta brevemente cada stage con un comentario.
+- En stacks Node.js / Next.js / React, preferir `pnpm` + `corepack`; evita `npm` salvo compatibilidad explícita exigida por el proyecto.
 
 Plantillas por stack:
 
@@ -79,15 +80,15 @@ Plantillas por stack:
 # Stage 1: dependencias de producción
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY package.json pnpm-lock.yaml* ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
 # Stage 2: build completo
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN corepack enable && pnpm build
 
 # Stage 3: runtime mínimo
 FROM node:20-alpine AS runner
@@ -147,8 +148,8 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 ```dockerfile
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
+COPY package.json pnpm-lock.yaml* ./
+RUN corepack enable && pnpm install --frozen-lockfile --prod
 
 FROM node:20-alpine AS runner
 WORKDIR /app

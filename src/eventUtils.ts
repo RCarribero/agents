@@ -20,6 +20,98 @@ export function getEventType(event: JsonObject): string {
   return 'unknown';
 }
 
+function parseTimestampFromRecord(record: JsonObject): number | null {
+  const candidateKeys = ['timestamp', 'startTime', 'endTime', 'createdAt', 'updatedAt', 'creationDate'];
+
+  for (const key of candidateKeys) {
+    const parsed = parseTimestampValue(record[key]);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function parseTimestampFromUnknown(value: unknown): number | null {
+  if (isJsonObject(value)) {
+    const directTimestamp = parseTimestampFromRecord(value);
+    if (directTimestamp !== null) {
+      return directTimestamp;
+    }
+
+    if (isJsonObject(value.data)) {
+      const nestedDataTimestamp = parseTimestampFromRecord(value.data);
+      if (nestedDataTimestamp !== null) {
+        return nestedDataTimestamp;
+      }
+    }
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nestedTimestamp = parseTimestampFromUnknown(item);
+      if (nestedTimestamp !== null) {
+        return nestedTimestamp;
+      }
+    }
+  }
+
+  return null;
+}
+
+function parseTitleValue(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+export function getSessionTitle(event: JsonObject): string | null {
+  const directTitle = parseTitleValue(event.title) ?? parseTitleValue(event.customTitle);
+  if (directTitle) {
+    return directTitle;
+  }
+
+  if (
+    event.kind === 1 &&
+    Array.isArray(event.k) &&
+    event.k.some((item) => item === 'customTitle')
+  ) {
+    const titleFromCustomEntry = parseTitleValue(event.v);
+    if (titleFromCustomEntry) {
+      return titleFromCustomEntry;
+    }
+  }
+
+  if (isJsonObject(event.v)) {
+    const nestedTitle = parseTitleValue(event.v.title) ?? parseTitleValue(event.v.customTitle);
+    if (nestedTitle) {
+      return nestedTitle;
+    }
+  }
+
+  return null;
+}
+
+export function mergeSessionTitle(
+  currentTitle: string | null | undefined,
+  events: JsonObject[],
+): string | null {
+  let nextTitle = currentTitle ?? null;
+
+  for (const event of events) {
+    const title = getSessionTitle(event);
+    if (title) {
+      nextTitle = title;
+    }
+  }
+
+  return nextTitle;
+}
+
 function parseTimestampValue(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return Math.trunc(value);
@@ -49,19 +141,17 @@ export function getEventTimestamp(event: JsonObject): number | null {
     return topLevelTimestamp;
   }
 
-  if (!isJsonObject(event.data)) {
-    return null;
+  const directTimestamp = parseTimestampFromRecord(event);
+  if (directTimestamp !== null) {
+    return directTimestamp;
   }
 
-  const nestedKeys = ['timestamp', 'startTime', 'endTime', 'createdAt', 'updatedAt'];
-  for (const key of nestedKeys) {
-    const nestedTimestamp = parseTimestampValue(event.data[key]);
-    if (nestedTimestamp !== null) {
-      return nestedTimestamp;
-    }
+  const nestedDataTimestamp = parseTimestampFromUnknown(event.data);
+  if (nestedDataTimestamp !== null) {
+    return nestedDataTimestamp;
   }
 
-  return null;
+  return parseTimestampFromUnknown(event.v);
 }
 
 export function serializeEvent(event: JsonObject): string {

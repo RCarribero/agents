@@ -436,18 +436,21 @@ foreach ($prompt in $globalPrompts) {
 }
 
 # Prompts complejos: se copian directo desde el source (no generados inline)
-@('dockerize', 'skill-installer') | ForEach-Object {
-    $extraName   = $_
-    $extraSource = Join-Path $sourceRoot ".github/prompts/$extraName.prompt.md"
-    if (Test-Path $extraSource -PathType Leaf) {
+if (Test-Path $sourcePromptsDir -PathType Container) {
+    Get-ChildItem -Path $sourcePromptsDir -Filter '*.prompt.md' -File | Sort-Object Name | ForEach-Object {
+        $extraName = $_.BaseName -replace '\.prompt$', ''
+        if ($extraName -eq 'start') {
+            return
+        }
+
         foreach ($promptDir in $promptInstallDirs) {
             $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $extraName
-            Copy-TemplateFile -Source $extraSource -Target (Join-Path $promptDir "$extraName.prompt.md") -Label $label -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+            Copy-TemplateFile -Source $_.FullName -Target (Join-Path $promptDir $_.Name) -Label $label -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
         }
     }
-    else {
-        $missing.Add("$extraName.prompt.md")
-    }
+}
+else {
+    $missing.Add('global-prompts:*.prompt.md')
 }
 
 try {
@@ -523,4 +526,4 @@ if ($mcpWarned.Count -gt 0) {
 }
 
 Write-Output ''
-Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize y /skill-installer como prompts globales.'
+Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize y /skill-installer como prompts globales.'

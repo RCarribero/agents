@@ -10,8 +10,42 @@ interface IndexedEvent {
   event: JsonObject;
 }
 
-export async function readSession(sessionPath: string): Promise<JsonObject[]> {
-  const eventsPath = path.join(sessionPath, 'events.jsonl');
+async function getSessionFilePath(input: string): Promise<string | null> {
+  // If input is a direct .jsonl file, use it
+  if (input.endsWith('.jsonl')) {
+    const exists = await pathExists(input);
+    if (exists) {
+      return input;
+    }
+    return null;
+  }
+
+  // If input is a directory, look for events.jsonl inside (legacy format)
+  const eventsPath = path.join(input, 'events.jsonl');
+  const exists = await pathExists(eventsPath);
+  if (exists) {
+    return eventsPath;
+  }
+
+  return null;
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function readSession(sessionPathOrFile: string): Promise<JsonObject[]> {
+  const eventsPath = await getSessionFilePath(sessionPathOrFile);
+
+  if (!eventsPath) {
+    console.error(`[readSession] No events file found for ${sessionPathOrFile}`);
+    return [];
+  }
 
   let rawContent = '';
   try {

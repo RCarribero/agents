@@ -32,7 +32,7 @@ frontend/
 
 ```bash
 cd ..  # Go to root (.copilot)
-npm start
+pnpm start
 ```
 
 Backend will listen on `http://127.0.0.1:3010`.
@@ -40,7 +40,7 @@ Backend will listen on `http://127.0.0.1:3010`.
 ### Start the frontend dev server
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 Frontend will be available at `http://127.0.0.1:3011`.
@@ -48,8 +48,8 @@ Frontend will be available at `http://127.0.0.1:3011`.
 ### Build for production
 
 ```bash
-npm run build
-npm run preview  # Preview the built site locally
+pnpm build
+pnpm preview  # Preview the built site locally
 ```
 
 ## Features
@@ -113,7 +113,7 @@ Currently hardcoded to `http://127.0.0.1:3010`. To change:
 Make sure the backend is running:
 ```bash
 # In the root .copilot directory
-npm start
+pnpm start
 ```
 
 ### Build errors
@@ -121,6 +121,6 @@ npm start
 Clear Astro cache and reinstall:
 ```bash
 rm -r node_modules dist .astro
-npm install
-npm run build
+pnpm install
+pnpm build
 ```

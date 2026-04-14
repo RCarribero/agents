@@ -11,8 +11,9 @@ Uso:
 
 Descripción:
   Instala prompts globales en el perfil de VS Code y un toolkit de soporte en
-  el perfil del usuario. Después de esto, /start, /dockerize y
-  /skill-installer estarán disponibles en cualquier carpeta/workspace.
+  el perfil del usuario. Después de esto, /start, /dockerize,
+  /productionize y /skill-installer estarán disponibles en cualquier
+  carpeta/workspace.
 
 Opciones:
   --force     Sobrescribe archivos existentes en el destino.
@@ -402,16 +403,21 @@ Comportamiento esperado:
 done
 
 # Prompts complejos: se copian directo desde el source (no generados inline)
-for _extra_prompt in dockerize skill-installer; do
-  _src="$SOURCE_ROOT/.github/prompts/$_extra_prompt.prompt.md"
-  if [ -f "$_src" ]; then
+if [ -d "$SOURCE_ROOT/.github/prompts" ]; then
+  while IFS= read -r -d '' _prompt_path; do
+    _prompt_file="$(basename "$_prompt_path")"
+    _prompt_name="${_prompt_file%.prompt.md}"
+    if [ "$_prompt_name" = "start" ]; then
+      continue
+    fi
+
     for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
-      copy_file "$_src" "$prompt_dir/$_extra_prompt.prompt.md" "$(prompt_label "$prompt_dir" "$_extra_prompt")"
+      copy_file "$_prompt_path" "$prompt_dir/$_prompt_file" "$(prompt_label "$prompt_dir" "$_prompt_name")"
     done
-  else
-    missing+=("$_extra_prompt.prompt.md")
-  fi
-done
+  done < <(find "$SOURCE_ROOT/.github/prompts" -maxdepth 1 -type f -name '*.prompt.md' -print0 | sort -z)
+else
+  missing+=("global-prompts:*.prompt.md")
+fi
 
 run_mcp_sync_layout || true
 
@@ -484,4 +490,4 @@ if [ ${#mcp_warned[@]} -gt 0 ]; then
 fi
 
 echo ""
-echo "Siguiente paso: recarga VS Code para ver /start, /dockerize y /skill-installer como prompts globales."
+echo "Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize y /skill-installer como prompts globales."

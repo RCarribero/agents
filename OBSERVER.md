@@ -7,19 +7,19 @@ Local backend + frontend dashboard for reading, parsing, and visualizing Copilot
 ### Prerequisites
 
 - Node.js 16+ 
-- npm
+- pnpm
 
 ### Backend Setup
 
 ```bash
 # Install backend dependencies
-npm install
+pnpm install
 
 # Initial scan of all Copilot sessions
-npm run scan
+pnpm scan
 
 # Start backend server (listening on 127.0.0.1:3010)
-npm start
+pnpm start
 ```
 
 The backend will:
@@ -35,10 +35,10 @@ The backend will:
 cd frontend
 
 # Install frontend dependencies (already done)
-npm install
+pnpm install
 
 # Start dev server (listening on 127.0.0.1:3011)
-npm run dev
+pnpm dev
 ```
 
 Open `http://127.0.0.1:3011` in your browser to view the dashboard.
@@ -221,7 +221,7 @@ Broadcasts new events as they're detected:
 
 ### No events showing
 
-- Run `npm run scan` to load initial data
+- Run `pnpm scan` to load initial data
 - Check `observer.db` exists
 - Run `sqlite3 observer.db "SELECT COUNT(*) FROM events"` to verify
 - Check backend logs for parsing errors

@@ -1,13 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SessionsList from '../components/SessionsList.astro';
-
-interface SessionSummary {
-  id: string;
-  start: number | null;
-  end: number | null;
-  eventCount: number;
-}
+import type { SessionSummary } from '../types';
 
 let sessions: SessionSummary[] = [];
 let error: string | null = null;
@@ -48,9 +42,12 @@ try {
       ) : (
         <div class="space-y-4">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-bold text-gray-900">
-              Sessions <span class="text-gray-500">({sessions.length})</span>
-            </h2>
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">
+                Sessions <span class="text-gray-500">({sessions.length})</span>
+              </h2>
+              <p class="text-sm text-gray-500">Agrupadas por proyecto y ordenadas por última actividad.</p>
+            </div>
             <button
               id="btn-refresh"
               class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"

@@ -8,13 +8,16 @@ interface Props {
 
 const { session, active = false } = Astro.props;
 
+const sessionLabel = session.title?.trim() ? session.title : session.id;
+const showSecondaryId = sessionLabel !== session.id;
+
 function formatDate(timestamp: number | null): string {
-  if (!timestamp) return 'N/A';
+  if (timestamp === null) return 'N/A';
   return new Date(timestamp).toLocaleString();
 }
 
 function formatDuration(start: number | null, end: number | null): string {
-  if (!start || !end) return 'N/A';
+  if (start === null || end === null) return 'N/A';
   const ms = end - start;
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -37,7 +40,8 @@ function formatDuration(start: number | null, end: number | null): string {
 >
   <div class="flex items-center justify-between">
     <div class="flex flex-1 flex-col">
-      <code class="mb-1 text-xs font-mono text-gray-500">{session.id}</code>
+      <span class="mb-1 truncate text-sm font-semibold text-gray-900">{sessionLabel}</span>
+      {showSecondaryId && <code class="mb-1 text-xs font-mono text-gray-500">{session.id}</code>}
       <div class="flex items-center gap-6 text-sm text-gray-600">
         <span>
           <strong>{session.eventCount}</strong> events

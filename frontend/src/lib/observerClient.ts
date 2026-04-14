@@ -1,4 +1,4 @@
-import type { NewEventsPayload, SessionAgentSummary, SessionSummary, StoredEvent } from '../types';
+import type { NewEventsPayload, SessionAgentSummary, SessionSummary, SessionStats, StoredEvent } from '../types';
 
 export class ObserverClient {
   private backendUrl: string;
@@ -23,6 +23,12 @@ export class ObserverClient {
     const res = await fetch(`${this.backendUrl}/sessions/${sessionId}/agents`);
     if (!res.ok) throw new Error(`Failed to fetch agents: ${res.statusText}`);
     return res.json() as Promise<SessionAgentSummary[]>;
+  }
+
+  async getSessionStats(sessionId: string) {
+    const res = await fetch(`${this.backendUrl}/sessions/${sessionId}/stats`);
+    if (!res.ok) throw new Error(`Failed to fetch session stats: ${res.statusText}`);
+    return res.json() as Promise<SessionStats>;
   }
 
   async deleteSession(sessionId: string) {

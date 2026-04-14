@@ -151,9 +151,9 @@ get_test_cmd() {
   local stack="$1"
   case "$stack" in
     *flutter*)    echo "flutter test" ;;
-    *nextjs*)     echo "npm test -- --passWithNoTests" ;;
-    *react*)      echo "npm test -- --passWithNoTests" ;;
-    *node*)       echo "npm test" ;;
+    *nextjs*)     echo "pnpm test -- --passWithNoTests" ;;
+    *react*)      echo "pnpm test -- --passWithNoTests" ;;
+    *node*)       echo "pnpm test" ;;
     *fastapi*)    echo "pytest" ;;
     *python*)     echo "pytest" ;;
     *go*)         echo "go test ./..." ;;
@@ -167,9 +167,9 @@ get_lint_cmd() {
   local stack="$1"
   case "$stack" in
     *flutter*)    echo "flutter analyze" ;;
-    *nextjs*)     echo "npm run lint" ;;
-    *react*)      echo "npm run lint" ;;
-    *node*)       echo "npm run lint" ;;
+    *nextjs*)     echo "pnpm lint" ;;
+    *react*)      echo "pnpm lint" ;;
+    *node*)       echo "pnpm lint" ;;
     *fastapi*)    echo "python -m ruff check ." ;;
     *python*)     echo "python -m ruff check ." ;;
     *go*)         echo "golangci-lint run" ;;

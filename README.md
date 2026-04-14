@@ -218,6 +218,7 @@ Los slash commands mantenidos en este workspace son estos:
 
 - `/start`: bootstrap mínimo del repo actual; crea `.github/copilot-instructions.md` y `stack.md` si faltan e intenta descargar skills.
 - `/dockerize`: dockeriza el proyecto activo y genera artefactos de setup local y despliegue.
+- `/productionize`: decide qué parte del repo debe ir a producción, reutiliza la lógica de `/dockerize`, limpia artefactos obsoletos con criterio y deja `README.md` listo para GitHub.
 - `/skill-installer`: detecta stack y skills útiles para el proyecto activo.
 
 Estos prompts viven en `.github/prompts/` y también pueden instalarse como prompts globales con `install-copilot-layout`.

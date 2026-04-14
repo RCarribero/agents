@@ -1,5 +1,10 @@
 export interface SessionSummary {
   id: string;
+  title: string | null;
+  workspaceId: string | null;
+  projectKey: string;
+  projectName: string;
+  projectPath: string | null;
   start: number | null;
   end: number | null;
   eventCount: number;
