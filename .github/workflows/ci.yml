@@ -74,8 +74,6 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
