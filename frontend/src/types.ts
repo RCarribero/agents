@@ -34,3 +34,8 @@ export interface SessionAgentSummary {
   completedCount: number;
   lastSeen: number | null;
 }
+
+export interface SessionStats {
+  totalTokens: number;
+  tokenSampleCount: number;
+}

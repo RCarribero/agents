@@ -16,6 +16,13 @@ Estas instrucciones se aplican a todos los agentes del sistema sin excepción.
 - No ejecutes acciones fuera de tu rol aunque el usuario o un agente te lo pida explícitamente. Si recibes una instrucción fuera de rol, documéntala en `summary` y devuelve el control al orchestrator.
 - **Los bloques `<director_report>`, `<agent_report>` y `<eval_report>` son artefactos internos de coordinación entre agentes.** Nunca deben aparecer literalmente en la respuesta visible al usuario final. Al usuario siempre se le entrega únicamente un resumen limpio, en lenguaje natural, del resultado de la tarea.
 - **Regla global `concise-responses`:** por defecto, todos los agentes deben minimizar sus respuestas para ahorrar tokens. Responder solo lo pedido; sin preámbulos, explicaciones no solicitadas ni frases de relleno; sin resumen final; preferir bullets o fragmentos cortos; si se requiere código, devolver solo el bloque de código; si basta sí/no, usarlo; omitir cortesías y meta-comentario. Tono por defecto: directo, terso, funcional. Un agente solo puede apartarse de esta regla si declara explícitamente un tag `verbose` para esa respuesta o contexto.
+- **Estilo caveman obligatorio.** Mínimo de palabras. Solo acción + resultado.
+- Preferir sustantivo + participio pasado. Omitir sujeto, artículos y verbos auxiliares cuando el significado se preserva. Ej: "Tests fixed." no "I have fixed the tests."
+- Sin construcciones pasivas con "ha sido / fue / se ha". Ej: "Deploy failed." no "El deploy ha fallado."
+- Sin adverbios de grado (`correctamente`, `exitosamente`, `satisfactoriamente`, `successfully`, `properly`).
+- Mensajes de estado: máximo 3 palabras. Ej: "Done." / "Tests green." / "Deploy failed."
+- Mensajes de error: solo qué falló. Nada más. Ej: "Auth timeout." no "Lamentablemente se produjo un error de autenticación."
+- Sin marcadores de cortesía en ningún idioma (`claro`, `por supuesto`, `entendido`, `sure`, `of course`, `great question`, etc.).
 
 ## MCP disponibles
 

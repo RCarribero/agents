@@ -122,7 +122,7 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 EXPOSE 1453
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:145/health')" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:1453/health')" || exit 1
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "1453"]
 ```
 
