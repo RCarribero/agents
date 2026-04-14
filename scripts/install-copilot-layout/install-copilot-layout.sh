@@ -16,14 +16,14 @@ Descripción:
   carpeta/workspace.
 
 Opciones:
-  --force     Sobrescribe archivos existentes en el destino.
+  --force     Compatibilidad. La sobrescritura ya es el comportamiento por defecto.
   -h, --help  Muestra esta ayuda.
 EOF
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-FORCE=0
+FORCE=1
 
 created=()
 updated=()
@@ -393,12 +393,12 @@ Reglas de ejecución:
 Comportamiento esperado:
 
 - Ejecuta solo el bootstrap mínimo del proyecto actual.
-- No sobrescribas archivos existentes.
+- Sobrescribe archivos existentes.
 - Crea .github/copilot-instructions.md si falta.
 - Crea stack.md si falta.
 - Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.
 - No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.
-- Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.
+- Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.
 " "$(prompt_label "$prompt_dir" "start")"
 done
 

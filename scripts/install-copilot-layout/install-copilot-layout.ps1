@@ -5,6 +5,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$overwriteExisting = $true
+
 function Detect-UserPromptsDirectory {
     if ($env:VSCODE_USER_PROMPTS_FOLDER) {
         return $env:VSCODE_USER_PROMPTS_FOLDER
@@ -347,7 +349,7 @@ New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/workfl
 
 $canonicalInstructions = Join-Path $sourceRoot '.github/copilot-instructions.md'
 if (Test-Path $canonicalInstructions -PathType Leaf) {
-    Copy-TemplateFile -Source $canonicalInstructions -Target (Join-Path $toolsTemplatesDir '.github/copilot-instructions.md') -Label 'toolkit:.github/copilot-instructions.md' -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    Copy-TemplateFile -Source $canonicalInstructions -Target (Join-Path $toolsTemplatesDir '.github/copilot-instructions.md') -Label 'toolkit:.github/copilot-instructions.md' -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
 }
 else {
     $missing.Add('toolkit:.github/copilot-instructions.md')
@@ -356,7 +358,7 @@ else {
 $sourcePromptsDir = Join-Path $sourceRoot '.github/prompts'
 if (Test-Path $sourcePromptsDir -PathType Container) {
     Get-ChildItem -Path $sourcePromptsDir -Filter '*.prompt.md' -File | Sort-Object Name | ForEach-Object {
-        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/prompts' $_.Name)) -Label "toolkit:.github/prompts/$($_.Name)" -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/prompts' $_.Name)) -Label "toolkit:.github/prompts/$($_.Name)" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
     }
 }
 else {
@@ -366,7 +368,7 @@ else {
 $sourceWorkflowsDir = Join-Path $sourceRoot '.github/workflows'
 if (Test-Path $sourceWorkflowsDir -PathType Container) {
     Get-ChildItem -Path $sourceWorkflowsDir -Filter '*.yml' -File | Sort-Object Name | ForEach-Object {
-        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/workflows' $_.Name)) -Label "toolkit:.github/workflows/$($_.Name)" -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/workflows' $_.Name)) -Label "toolkit:.github/workflows/$($_.Name)" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
     }
 }
 else {
@@ -375,7 +377,7 @@ else {
 
 $rootEnvTemplate = Join-Path $sourceRoot '.env.example'
 if (Test-Path $rootEnvTemplate -PathType Leaf) {
-    Copy-TemplateFile -Source $rootEnvTemplate -Target (Join-Path $toolsTemplatesDir '.env.example') -Label 'toolkit:.env.example' -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    Copy-TemplateFile -Source $rootEnvTemplate -Target (Join-Path $toolsTemplatesDir '.env.example') -Label 'toolkit:.env.example' -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
 }
 else {
     $missing.Add('toolkit:.env.example')
@@ -396,7 +398,7 @@ foreach ($relativePath in $relativeFiles) {
     $source = Join-Path $sourceRoot $relativePath
     if (Test-Path $source -PathType Leaf) {
         $target = Join-Path $copilotToolsDir $relativePath
-        Copy-TemplateFile -Source $source -Target $target -Label "toolkit:$relativePath" -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+        Copy-TemplateFile -Source $source -Target $target -Label "toolkit:$relativePath" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
     }
     else {
         $missing.Add("toolkit:$relativePath")
@@ -417,12 +419,12 @@ $globalPrompts = @(
         )
         ExpectedBehavior = @(
             'Ejecuta solo el bootstrap mínimo del proyecto actual.',
-            'No sobrescribas archivos existentes.',
+            'Sobrescribe archivos existentes.',
             'Crea .github/copilot-instructions.md si falta.',
             'Crea stack.md si falta.',
             'Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.',
             'No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.',
-            'Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.'
+            'Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.'
         )
     }
 )
@@ -431,7 +433,7 @@ foreach ($prompt in $globalPrompts) {
     $content = New-GlobalPromptContent -Name $prompt.Name -Description $prompt.Description -Intro $prompt.Intro -WindowsCommands $prompt.WindowsCommands -BashCommands $prompt.BashCommands -ExpectedBehavior $prompt.ExpectedBehavior
     foreach ($promptDir in $promptInstallDirs) {
         $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $prompt.Name
-        Write-GlobalPrompt -TargetPath (Join-Path $promptDir $prompt.FileName) -Name $prompt.Name -Label $label -Content $content -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+        Write-GlobalPrompt -TargetPath (Join-Path $promptDir $prompt.FileName) -Name $prompt.Name -Label $label -Content $content -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
     }
 }
 
@@ -445,7 +447,7 @@ if (Test-Path $sourcePromptsDir -PathType Container) {
 
         foreach ($promptDir in $promptInstallDirs) {
             $label = Get-PromptScopeLabel -UserRootDir $userRootDir -PromptDirectory $promptDir -PromptName $extraName
-            Copy-TemplateFile -Source $_.FullName -Target (Join-Path $promptDir $_.Name) -Label $label -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+            Copy-TemplateFile -Source $_.FullName -Target (Join-Path $promptDir $_.Name) -Label $label -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
         }
     }
 }

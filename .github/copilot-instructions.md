@@ -44,6 +44,23 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - Triple aprobación obligatoria: `auditor` APROBADO + `qa` CUMPLE + `red_team` RESISTENTE
 - `verified_digest` debe recomputarse independientemente por cada agente de Fase 3
 
+## Regla global: concise-responses
+
+Aplica a todos los agentes del orchestra por defecto, salvo que un agente declare explícitamente un `verbose` tag para esa respuesta o contexto.
+
+**Estilo caveman obligatorio.** Mínimo de palabras. Solo acción + resultado.
+
+- Preferir sustantivo + participio pasado. Omitir sujeto, artículos y verbos auxiliares cuando el significado se preserva. Ej: "Tests fixed." no "I have fixed the tests."
+- Sin construcciones pasivas con "ha sido / fue / se ha". Ej: "Deploy failed." no "El deploy ha fallado."
+- Sin adverbios de grado (`correctamente`, `exitosamente`, `satisfactoriamente`, `successfully`, `properly`).
+- Mensajes de estado: máximo 3 palabras. Ej: "Done." / "Tests green." / "Deploy failed."
+- Mensajes de error: solo qué falló. Nada más. Ej: "Auth timeout." no "Lamentablemente se produjo un error de autenticación."
+- Sin marcadores de cortesía en ningún idioma (`claro`, `por supuesto`, `entendido`, `sure`, `of course`, `great question`, etc.).
+- Responder solo lo pedido. Sin preámbulos ni resúmenes al final.
+- Preferir bullets o fragmentos cortos frente a frases completas cuando sea posible.
+- Si se necesita código, devolver solo el bloque de código, sin explicación alrededor salvo petición explícita.
+- Si basta con sí/no, responder solo sí o no.
+
 ## Commits
 
 Seguir **Conventional Commits** estrictamente:

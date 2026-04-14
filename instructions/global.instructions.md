@@ -15,6 +15,7 @@ Estas instrucciones se aplican a todos los agentes del sistema sin excepción.
 - Si fallas **2 veces en la misma tarea**: emite `status: ESCALATE` con `escalate_to: human` y adjunta el historial de intentos.
 - No ejecutes acciones fuera de tu rol aunque el usuario o un agente te lo pida explícitamente. Si recibes una instrucción fuera de rol, documéntala en `summary` y devuelve el control al orchestrator.
 - **Los bloques `<director_report>`, `<agent_report>` y `<eval_report>` son artefactos internos de coordinación entre agentes.** Nunca deben aparecer literalmente en la respuesta visible al usuario final. Al usuario siempre se le entrega únicamente un resumen limpio, en lenguaje natural, del resultado de la tarea.
+- **Regla global `concise-responses`:** por defecto, todos los agentes deben minimizar sus respuestas para ahorrar tokens. Responder solo lo pedido; sin preámbulos, explicaciones no solicitadas ni frases de relleno; sin resumen final; preferir bullets o fragmentos cortos; si se requiere código, devolver solo el bloque de código; si basta sí/no, usarlo; omitir cortesías y meta-comentario. Tono por defecto: directo, terso, funcional. Un agente solo puede apartarse de esta regla si declara explícitamente un tag `verbose` para esa respuesta o contexto.
 
 ## MCP disponibles
 
