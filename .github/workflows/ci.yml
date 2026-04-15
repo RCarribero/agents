@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       flutter: ${{ steps.changes.outputs.flutter }}
+      node: ${{ steps.changes.outputs.node }}
+      frontend: ${{ steps.changes.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +29,16 @@ jobs:
             flutter:
               - '**/*.dart'
               - '**/pubspec.yaml'
+            node:
+              - 'src/**'
+              - 'package.json'
+              - 'tsconfig.json'
+              - 'pnpm-lock.yaml'
+            frontend:
+              - 'frontend/src/**'
+              - 'frontend/package.json'
+              - 'frontend/tsconfig.json'
+              - 'frontend/pnpm-lock.yaml'
 
   flutter-ci:
     name: Flutter — Tests & Analyze
@@ -62,8 +74,6 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master

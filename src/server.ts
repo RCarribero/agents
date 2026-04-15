@@ -8,6 +8,7 @@ import { discoverSourcePaths, listChatSessionFiles } from './paths';
 import type {
   SessionAgentStatus,
   SessionAgentSummary,
+  SessionStats,
   StoredEventRow,
 } from './types';
 
@@ -145,6 +146,36 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+function extractTokenCount(payload: unknown): number | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  // Common token usage locations in Copilot event payloads
+  const candidates: unknown[] = [
+    (payload as Record<string, unknown>).tokenCount,
+    (payload as Record<string, unknown>).totalTokens,
+    isRecord((payload as Record<string, unknown>).usage)
+      ? ((payload as Record<string, unknown>).usage as Record<string, unknown>).totalTokens
+      : undefined,
+    isRecord((payload as Record<string, unknown>).usage)
+      ? ((payload as Record<string, unknown>).usage as Record<string, unknown>).total_tokens
+      : undefined,
+    isRecord((payload as Record<string, unknown>).data) &&
+    isRecord(((payload as Record<string, unknown>).data as Record<string, unknown>).usage)
+      ? (((payload as Record<string, unknown>).data as Record<string, unknown>).usage as Record<string, unknown>).totalTokens
+      : undefined,
+  ];
+
+  for (const c of candidates) {
+    if (typeof c === 'number' && c >= 0) {
+      return c;
+    }
+  }
+
+  return null;
+}
+
 export async function createApiServer(options: ServerOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: true });
 
@@ -212,6 +243,31 @@ export async function createApiServer(options: ServerOptions): Promise<FastifyIn
     }
 
     return extractSessionAgents(options.db.listSessionEvents(params.id));
+  });
+
+  app.get('/sessions/:id/stats', async (request, reply) => {
+    const params = request.params as { id: string };
+    const session = options.db.getSession(params.id);
+
+    if (!session) {
+      reply.code(404);
+      return { error: `Session ${params.id} not found` };
+    }
+
+    const rows = options.db.listSessionEvents(params.id);
+    let totalTokens = 0;
+    let tokenSampleCount = 0;
+
+    for (const row of rows) {
+      const payload = deserializePayload(row.payload);
+      const tokens = extractTokenCount(payload);
+      if (tokens !== null) {
+        totalTokens += tokens;
+        tokenSampleCount += 1;
+      }
+    }
+
+    return { totalTokens, tokenSampleCount } satisfies SessionStats;
   });
 
   app.delete('/sessions/:id', async (request, reply) => {

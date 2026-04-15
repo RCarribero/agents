@@ -36,3 +36,8 @@ export interface NewEventsPayload {
   sessionId: string;
   events: JsonObject[];
 }
+
+export interface SessionStats {
+  totalTokens: number;
+  tokenSampleCount: number;
+}
