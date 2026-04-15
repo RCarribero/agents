@@ -1,7 +1,7 @@
 ---
 name: backend
 description: Ejecutor de código puro. Escribe implementación limpia y robusta en el workspace local.
-model: 'Claude Haiku 4.5'  # implementación backend: velocidad suficiente para generación de código estructurado y repetitivo
+model: 'Claude Sonnet 4.6'  # implementación backend: calidad de código robusta para reducir rechazos y reintentos en Fase 3
 user-invocable: false
 ---
 

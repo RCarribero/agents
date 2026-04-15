@@ -189,143 +189,12 @@ El orchestrator espera **los tres** `director_report` (identificados por sufijos
 
 El orchestrator clasifica la tarea **antes de planificar** y activa solo las fases necesarias.
 
-### Regla de clasificación (primer paso obligatorio)
+**Especificación completa:** Ver [`lib/task_classification.md`](lib/task_classification.md) para la regla de clasificación (MODO CONSULTA / RÁPIDO / COMPLETO), checklist de risk level, tabla de señales, reglas de routing de dbmanager, routing de developer vs backend, y formato de escalación de modo.
 
-Antes de cualquier otra decisión, el orchestrator clasifica la tarea en uno de tres modos:
-
-```
-¿La tarea es una pregunta, consulta o petición de explicación?
-  → MODO CONSULTA → responder directamente, sin fases, sin agentes
-
-¿La tarea modifica menos de 5 archivos, no toca esquema,
-no requiere migración y el cambio es localizado?
-  → MODO RÁPIDO → flujo mínimo
-
-¿La tarea es una feature nueva, toca esquema, afecta múltiples
-módulos o tiene riesgo alto?
-  → MODO COMPLETO → flujo actual completo
-```
-
-### MODO CONSULTA
-
-**Cuándo:** preguntas, explicaciones, revisiones de código, búsquedas en el codebase.
-**Ejemplos:** "¿qué hace esta función?", "¿dónde se maneja el auth?", "explícame este error"
-
-```
-Agentes activos: ninguno
-Fases activas: ninguna
-Acción: orchestrator responde directamente usando researcher si necesita contexto
-Tiempo esperado: segundos
-```
-
-### MODO RÁPIDO
-
-**Cuándo:** cambios pequeños y localizados con riesgo bajo.
-**Ejemplos:** cambiar un color, corregir un typo, ajustar un texto, fix de una línea,
-añadir un campo simple a un formulario, cambiar un mensaje de error.
-
-**Señales de modo rápido:**
-- Menos de 5 archivos afectados
-- Sin cambio de esquema ni migraciones
-- Sin nuevos providers, servicios o dependencias
-- El cambio es reversible en menos de 1 minuto
-
-```
-Fases activas:
-  ├── Fase 2b: Implementador directo (sin tdd_enforcer, sin researcher)
-  └── Fase 4: devops
-
-Agentes omitidos: researcher, tdd_enforcer,
-                  analyst, dbmanager, auditor, qa, red_team,
-                  memory_curator, session_logger
-
-Verificación mínima:
-  El implementador corre lint/analyze antes de entregar.
-  Si falla lint → corregir antes de pasar a devops.
-  Si el implementador detecta que el cambio es más complejo
-  de lo esperado → notificar al orchestrator → escalar a MODO COMPLETO
-
-Tiempo esperado: 30-90 segundos
-```
-
-### MODO COMPLETO
-
-**Cuándo:** todo lo demás — features, migraciones, cambios en múltiples módulos,
-cualquier cosa con riesgo medio o alto.
-
-```
-Fases activas: todas (flujo actual sin cambios)
-Tiempo esperado: el habitual
-```
-
-### Tabla de clasificación rápida
-
-| Señal en la tarea | Modo |
-|---|---|
-| "¿qué", "cómo", "dónde", "explica", "muéstrame" | CONSULTA |
-| "cambia el color", "corrige el texto", "arregla este typo" | RÁPIDO |
-| "añade un campo simple", "cambia este mensaje" | RÁPIDO |
-| "falla", "bug", "error" + cambio localizado obvio | RÁPIDO |
-| "implementa", "crea", "añade feature", "nueva pantalla" | COMPLETO |
-| "migración", "tabla", "RLS", "esquema" | COMPLETO |
-| "refactor", "reestructura", "mueve módulo" | COMPLETO |
-| ambiguo o no clasificable | COMPLETO (por defecto seguro) |
-
-### Checklist de nivel de riesgo MEDIUM vs HIGH
-
-Usar esta verificación al clasificar riesgo en TASK_STATE antes de activar fases:
-
-**Señales HIGH** — al menos una debe estar presente:
-- Cambio de esquema de base de datos (nueva tabla, columna, índice, FK)
-- Código de autenticación, autorización o RLS
-- Infraestructura (CI/CD, Docker, variables de entorno de producción)
-- Migraciones de datos irreversibles
-- Cambios en contratos de API públicos o webhooks
-
-**Señales MEDIUM** — ninguna de HIGH pero al menos una de estas:
-- Lógica de negocio nueva o modificada
-- 3 o más archivos afectados
-- Flujos de usuario críticos (checkout, login, pago)
-- Dependencias externas nuevas
-
-**Regla de desempate:** Si la clasificación es ambigua entre MEDIUM y HIGH, usar **MEDIUM** (no HIGH). HIGH activa validaciones extra que no deben dispararse innecesariamente. Solo escalar a HIGH cuando la evidencia es clara.
-
-### Escalación de modo durante ejecución
-
-El implementador puede escalar de `MODO RÁPIDO` a `MODO COMPLETO` si detecta:
-- Más archivos afectados de los esperados
-- Dependencias no previstas
-- Riesgo no obvio en el cambio
-
-Formato de escalación:
-
-```xml
-<director_report>
-task_id: quick-001
-status: ESCALATE
-next_agent: orchestrator
-escalate_to: none
-summary: Cambio más complejo de lo esperado — requiere MODO COMPLETO
-reason: El fix de UI toca el provider de estado — riesgo de regresión
-</director_report>
-```
-
-El orchestrator recibe la escalación, reclasifica como `MODO COMPLETO` y reinicia
-el flujo desde Fase 0a con el contexto acumulado.
-
-### Documentar el modo en cada plan
-
-El orchestrator indica el modo al inicio de cada plan:
-
-```markdown
-## Plan: Cambiar color del botón primario
-**MODO:** RÁPIDO
-**Motivo:** 1 archivo, sin esquema, cambio reversible
-
-## Plan: Implementar sistema de notificaciones
-**MODO:** COMPLETO
-**Motivo:** nueva feature, múltiples módulos, nueva tabla
-```
+**Resumen de modos:**
+- **MODO CONSULTA**: sin fases, sin agentes — responder directamente
+- **MODO RÁPIDO**: Fase 2b (implementador) → Fase 3b (QA ligero) → Fase 4 (devops)
+- **MODO COMPLETO**: flujo completo de fases (0a → 0 → 1 → 2a → 2 → 3 → 4 → 5)
 
 ## Flujo de decisión
 
@@ -339,10 +208,10 @@ Siempre
 ¿Dominio desconocido o tarea compleja? → [check research_cache.json vía regla 0e para analyst]
   └─ cache hit (análisis previo)       → inyectar análisis cacheado (omitir analyst)
   └─ cache miss                        → analyst (Fase 0)
-¿Toca esquema, migraciones o RLS?      → dbmanager (Fase 1) [ver regla de routing abajo]
+¿Toca esquema, migraciones o RLS?      → dbmanager (Fase 1) [ver routing en task_classification.md]
 ¿Hay lógica nueva a implementar?       → tdd_enforcer (Fase 2a) → tests en RED
 ¿Toca UI o componentes?                → frontend (Fase 2) [con test_output si aplica]
-¿Toca lógica/backend/datos?            → developer (Fase 2) [con test_output si aplica]
+¿Toca lógica/backend/datos?            → developer | backend (Fase 2) [ver routing en task_classification.md]
 ¿Hay código nuevo/modificado?          → auditor ∥ qa ∥ red_team (Fase 3, paralelo)
 ¿Los tres aprueban?                    → devops (Fase 4)
 ¿Rechazo con retry_count < 2?          → re-invocar implementador con contexto de rechazo
@@ -352,108 +221,11 @@ Siempre
 ¿Cerrando sesión?                      → memory_curator completo
 ```
 
-### Regla de routing para dbmanager
-
-**Invocar dbmanager SOLO si la tarea requiere alguna de estas operaciones:**
-- CREATE TABLE o nueva entidad de datos
-- ALTER TABLE (añadir, renombrar o eliminar columna)
-- ADD COLUMN / DROP COLUMN
-- Nueva RLS policy o modificación de política existente
-- Migración de datos estructural
-- Nuevo índice no trivial (índice compuesto, parcial o funcional sobre columna nueva)
-
-**NO invocar dbmanager si la tarea es:**
-- Búsqueda, consulta o filtrado sobre esquema existente
-- Optimización de query sin cambio de índices
-- Bugfix de lógica de aplicación (normalización, validación, formateo)
-- Lectura de datos o construcción de listados
-- UI o lógica que consulta tablas ya definidas
-
-**Esta tabla se aplica solo a tareas ya clasificadas como `MODO RÁPIDO` o `MODO COMPLETO`. Las tareas en `MODO CONSULTA` se responden directamente y no pasan por aquí.**
-
-**Clasificación de tipo de tarea antes de decidir:**
-```
-¿La descripción contiene alguna de estas palabras?
-  → "falla", "bug", "error", "rompe", "no funciona", "incorrecto"
-  → Tipo: BUGFIX → flujo: [developer | backend] → auditor ∥ qa ∥ red_team → devops
-  → dbmanager: OMITIDO salvo que el bugfix requiera rollback de migración
-
-¿La descripción contiene alguna de estas palabras?
-  → "buscar", "consultar", "listar", "filtrar", "mostrar", "obtener"
-  → Tipo: CONSULTA → flujo: [backend | frontend] → auditor ∥ qa ∥ red_team → devops
-  → dbmanager: OMITIDO
-
-¿La descripción contiene alguna de estas palabras?
-  → "añadir campo", "nueva tabla", "migración", "esquema", "columna", "RLS"
-  → Tipo: SCHEMA_CHANGE → flujo: dbmanager → [backend | frontend] → auditor ∥ qa ∥ red_team → devops
-  → dbmanager: REQUERIDO
-
-¿Ninguna de las anteriores?
-  → Tipo: FEATURE → revisar si hay cambio de esquema implícito
-  → Si hay duda: preguntar al usuario antes de incluir dbmanager
-```
-
-**En el plan, documentar siempre la decisión:**
-```markdown
-**dbmanager:** OMITIDO — tarea de consulta sin cambio de esquema
-**dbmanager:** OMITIDO — bugfix de lógica de aplicación
-**dbmanager:** REQUERIDO — añadir columna `bio` a tabla `profiles`
-```
-
 ### Regla de protección de agentes
 
-**¿La tarea modifica un `.agent.md` o el contrato estándar del sistema?**
+**Especificación completa:** Ver [`lib/agent_protection_protocol.md`](lib/agent_protection_protocol.md) para el trigger de evaluación, reglas de autoridad, casos especiales (hotfix, timeout, sin baseline), formato de reporte y logging.
 
-→ **ANTES de aplicar cualquier cambio:**
-
-1. **Ejecutar baseline:** Invocar `eval_runner` con `modo: "full"` → guardar resultado como `PRE_CHANGE_SCORE`
-2. **Aplicar cambio propuesto:** Modificar el archivo `.agent.md` o archivo de contrato
-3. **Ejecutar post-change:** Invocar `eval_runner` con `modo: "full"` → guardar resultado como `POST_CHANGE_SCORE`
-4. **Comparar scores:**
-
-   **Si `POST_CHANGE_SCORE >= PRE_CHANGE_SCORE` Y ninguna eval crítica nueva en FAIL:**
-   - → Cambio APROBADO → continuar flujo normal
-   - → Emitir reporte de comparación en el `director_report`
-
-   **Si `POST_CHANGE_SCORE < PRE_CHANGE_SCORE` O alguna eval crítica pasa a FAIL:**
-   - → REVERTIR cambio inmediatamente
-   - → Escalar a human con diff de scores completo
-   - → Incluir en escalación: qué eval falló, score antes/después, archivo modificado
-
-**IMPORTANTE:**
-- `eval_runner` es observador pasivo — solo ejecuta evals y devuelve reportes, nunca modifica archivos
-- El `orchestrator` conserva autoridad exclusiva para aprobar y revertir cambios a `.agent.md`. La edición material puede delegarse al implementador designado bajo esa autoridad, pero la decisión de aplicar o revertir es siempre del orchestrator. Los subagentes **no modifican `.agent.md` por cuenta propia**.
-- Esta regla aplica también al propio `orchestrator.agent.md` — meta-validación incluida
-
-**Casos especiales:**
-
-- **Hotfix urgente:** El usuario puede autorizar saltar el trigger con `APROBAR_SIN_EVAL`. La autorización es de **un solo uso** — queda ligada de forma exclusiva al `task_id`, `verification_cycle` (`<task_id_base>.r<N>` o `<task_id_base>.override<N>.r<M>`), `branch_name`, lista exacta de artifacts y `verified_digest` en el momento de la aprobación. Cualquier cambio en archivos, `branch_name`, nuevo reintento, diferente `verification_cycle` **o cualquier cambio de contenido que altere `verified_digest`** invalida la autorización previa y exige una nueva aprobación explícita del usuario. Registrar en `session_log.md` con motivo explícito, `verification_cycle`, `branch_name` y artifacts exactos. **Cuando se use APROBAR_SIN_EVAL, el bundle enviado a `devops` debe incluir obligatoriamente `eval_gate_status: SKIPPED_BY_AUTHORIZATION` y `eval_authorization_scope: { task_id, verification_cycle, branch_name, artifacts, verified_digest }` exactos. Sin estos campos completos en el bundle, Fase 4 no puede abrirse y `devops` debe rechazar.**
-- **eval_runner tarda más de 2 minutos:** El cambio queda en estado **PENDIENTE SIN VALIDAR** — no se considera activo ni aprobado. Notificar al usuario. Si el usuario no instruye explícitamente cómo proceder, **revertir el cambio**. Nunca continuar el flujo como si el cambio estuviera aprobado.
-- **Sin baseline previo:** No se puede aprobar automáticamente el primer estado modificado sin baseline. Opciones: (a) ejecutar `eval_runner` en modo baseline-only para registrar el estado pre-cambio antes de modificar, o (b) el usuario autoriza explícitamente con `APROBAR_SIN_EVAL`. El sistema **no aprueba ni avanza** sin una de estas dos condiciones.
-
-**Formato del reporte de comparación:**
-
-```markdown
-## Eval Comparison Report
-
-| Métrica       | Pre-cambio | Post-cambio | Delta   |
-|---------------|------------|-------------|---------|
-| Score general | 93%        | 95%         | +2% ✅  |
-| Routing       | 100%       | 100%        | 0%  ✅  |
-| Contratos     | 75%        | 75%         | 0%  ✅  |
-| Reintentos    | 100%       | 100%        | 0%  ✅  |
-| Memoria       | 100%       | 100%        | 0%  ✅  |
-| Críticos FAIL | 0          | 0           | 0   ✅  |
-
-Decisión: APROBADO — score igual o mejor, sin nuevos críticos
-```
-
-**Logging en session_log.md:**
-
-Por cada activación del trigger, añadir entrada:
-```
-[YYYY-MM-DD HH:MM] EVAL_TRIGGER | task: <id> | orchestrator → eval_runner | status: APROBADO|REJECTED|SKIPPED | artifacts: [<ruta/exacta.agent.md>] | pre: XX% → post: YY% | verification_cycle: <task_id>.r<N> | retry_count: N [| escalado: human]
-```
+**Resumen:** Si la tarea modifica un `.agent.md` → ejecutar `eval_runner` pre/post cambio → aprobar solo si score no baja y no hay nuevos críticos. APROBAR_SIN_EVAL es de un solo uso, ligado a task_id + verification_cycle + verified_digest exactos.
 
 ## Formato de entrega
 

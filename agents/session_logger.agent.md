@@ -76,7 +76,7 @@ task_state: <TASK_STATE JSON actualizado>
    **EVAL_TRIGGER fresco para ciclos de override:** Cuando un ciclo es abierto por override humano (Regla 8b del orchestrator) y toca archivos `.agent.md` o depende de `APROBAR_SIN_EVAL`, el `EVAL_TRIGGER` debe registrarse con el `verification_cycle` **nuevo** del ciclo (formato `<task_id_base>.override<N>.r0`) — no con el `verification_cycle` de ningún ciclo anterior. El nuevo trigger y el trigger histórico previo conviven en el log como entradas independientes; el nuevo es el vigente para ese ciclo y no puede omitirse ni heredarse del ciclo previo.
 5. **No toma decisiones.** Solo registra lo que ya ocurrió. No analiza, no opina.
 6. **`session_log.md` es un artefacto de auditoría append-only (`audit_trail_artifact`).** No forma parte de `verified_files` ni de la computación de `verified_digest` en ningún ciclo. El logger registra el `verified_digest` del scope de contratos verificados (que excluye a `session_log.md`), pero `session_log.md` en sí mismo no contribuye al digest que registra. `devops` no debe usar `session_log.md` para validar ni para construir el snapshot aprobado.
-6. **Invocado tras cada transición relevante:** especialmente después de Fase 2a (tdd_enforcer), Fase 3 (veredictos parallelos), Fase 4 (devops), y siempre tras ESCALATE.
+7. **Invocado tras cada transición relevante:** especialmente después de Fase 2a (tdd_enforcer), Fase 3 (veredictos parallelos), Fase 4 (devops), y siempre tras ESCALATE.
 
 ## Encabezado de session_log.md (si hay que crearlo)
 

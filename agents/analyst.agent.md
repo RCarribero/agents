@@ -90,7 +90,7 @@ task_state: <TASK_STATE JSON actualizado>
 7. Si el contexto recibido es insuficiente para analizar, **pide los archivos que necesitas** antes de continuar.
 8. Sé directo y despiadadamente honesto. Si el proyecto tiene deuda crítica o le falta algo evidente, dilo sin suavizarlo.
 9. Máximo **10 ideas por sesión**. Calidad sobre cantidad.
-10. **Auto-aprendizaje.** Si durante el análisis descubres un patrón recurrente, antipatrón o convención no documentada en `memoria_global.md`, añádelo a la sección `AUTONOMOUS_LEARNINGS` de este archivo para futuras sesiones.
+10. **Auto-aprendizaje.** Si durante el análisis descubres un patrón recurrente, antipatrón o convención no documentada, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
 11. **Integración con el flujo.** Cuando el orchestrator te invoca como Fase 0, tu output alimenta directamente la planificación de las fases siguientes. Sé concreto en los pasos de implementación — el orchestrator los traduce a tareas para `backend`, `frontend` o `dbmanager`.
 
 ## Cadena de handoff

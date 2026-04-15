@@ -72,22 +72,10 @@ task_state: <TASK_STATE JSON actualizado con el resultado del ataque>
 
 ### REGLA DE DIGEST (obligatoria)
 
-Antes de emitir el veredicto, recomputar `verified_digest` de forma independiente sobre los archivos recibidos en `context.files`:
-
-1. Listar todos los archivos en `context.files`
-2. Para cada archivo: leer contenido actual en disco
-3. Calcular hash SHA-256 de cada contenido
-4. Concatenar todos los hashes en orden alfabético de ruta
-5. El `verified_digest` propio es el SHA-256 de esa concatenación
-
-Si `context.verified_digest` fue provisto explícitamente y el digest recomputado **no coincide** con ese valor:
-- `status: ESCALATE`
-- `veredicto: NO EVALUADO`
+Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.md) sobre los archivos recibidos en `context.files`. En caso de `digest_mismatch`:
+- `status: ESCALATE`, `veredicto: NO EVALUADO`
 - `vulnerabilities: []`
-- `summary: "digest_mismatch — artifacts modificados entre implementación y verificación; no se emitió veredicto de ataque"`
-- **NO emitir nuevos hallazgos del código** — solo emitir el rechazo por digest mismatch, escalando al orchestrator
-
-Si `context.verified_digest` no fue provisto, continúa el ataque normalmente y emite el digest recomputado como `verified_digest` de salida.
+- **NO emitir nuevos hallazgos del codigo** — solo emitir el rechazo por digest mismatch, escalando al orchestrator
 
 ---
 

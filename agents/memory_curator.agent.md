@@ -102,6 +102,7 @@ Se invoca con `objective: "curación completa"` en el contrato de entrada.
    - Si es incorrecta o redundante con `memoria_global.md`, elimínala.
    - Mantén máximo 10 notas por agente; archiva las más antiguas si se excede.
 8. **Mantén `memoria_global.md` limpio.** Si detectas entradas obsoletas, contradictorias o ya irrelevantes, márcalas para eliminación o corrígelas. La memoria debe ser un recurso vivo y preciso, no un log infinito.
+9. **Límite de tamaño.** Máximo 50 entradas en `memoria_global.md`. Al superarlo, archiva las más antiguas (por fecha) a `agents/lib/memoria_global_archive.md`. Los agentes solo leen `memoria_global.md`, no el archivo — esto controla el consumo de tokens en cada invocación.
 
 ## Cadena de handoff
 

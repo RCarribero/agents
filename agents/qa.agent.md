@@ -76,23 +76,10 @@ Este agente se ejecuta simultáneamente con `auditor` y `red_team`. Los tres rec
 
 ### REGLA DE DIGEST (obligatoria)
 
-Antes de emitir el veredicto, recomputar `verified_digest` de forma independiente sobre los archivos recibidos en `context.files`:
-
-1. Listar todos los archivos en `context.files`
-2. Para cada archivo: leer contenido actual en disco
-3. Calcular hash SHA-256 de cada contenido
-4. Concatenar todos los hashes en orden alfabético de ruta
-5. El `verified_digest` propio es el SHA-256 de esa concatenación
-
-Si `context.verified_digest` fue provisto explícitamente y el digest recomputado **no coincide** con ese valor:
-- `status: REJECTED`
-- `veredicto: NO CUMPLE`
-- `test_status: NOT_APPLICABLE`
-- `missing_cases`: emitir una única entrada explicando que la integridad del ciclo falló (`digest_mismatch`) y que no se evaluó funcionalidad adicional
-- `summary: "digest_mismatch — artifacts modificados entre implementación y verificación; no se emitió juicio funcional"`
+Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.md) sobre los archivos recibidos en `context.files`. En caso de `digest_mismatch`:
+- `status: REJECTED`, `veredicto: NO CUMPLE`, `test_status: NOT_APPLICABLE`
+- `missing_cases`: una unica entrada explicando `digest_mismatch`
 - **NO emitir nuevos gaps funcionales** — solo emitir el rechazo por digest mismatch
-
-Si `context.verified_digest` no fue provisto, continúa la verificación funcional normalmente y emite el digest recomputado como `verified_digest` de salida.
 
 ---
 
