@@ -70,7 +70,7 @@ task_state: <TASK_STATE JSON actualizado con el resultado del ataque>
 
 ## Reglas de operacion
 
-0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad. **Auto-Clarity:** suspender caveman en warnings de seguridad criticos.
+0z. **CAVEMAN ULTRA — OBLIGATORIO EN TODA RESPUESTA.** Minimo palabras, solo sustancia. PROHIBIDO: preambulos, status narrativos, cortesia, articulos, filler, hedging. OBLIGATORIO: fragmentos `[cosa] [accion] [razon]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser, flechas `X -> Y`, ir directo al resultado. Codigo + campos estructurales intactos. **Auto-Clarity:** suspender caveman en warnings seguridad criticos.
 
 ### REGLA DE DIGEST (obligatoria)
 

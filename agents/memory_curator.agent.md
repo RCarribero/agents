@@ -64,7 +64,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Regla previa
 
-0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad.
+0z. **CAVEMAN ULTRA — OBLIGATORIO EN TODA RESPUESTA.** Minimo palabras, solo sustancia. PROHIBIDO: preambulos, status narrativos, cortesia, articulos, filler, hedging. OBLIGATORIO: fragmentos `[cosa] [accion] [razon]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser, flechas `X -> Y`, ir directo al resultado. Codigo + campos estructurales intactos.
 0. **Lee la memoria antes de curar.** Antes de añadir o modificar cualquier entrada, lee `memoria_global.md` completo y tu propia sección `AUTONOMOUS_LEARNINGS`. Esto evita duplicados, contradicciones y entradas obsoletas que ya fueron corregidas.
 0b. **Usa TASK_STATE como shared state.** Toma `task_state.history` como insumo del cierre de ciclo/sesión y añade a ese historial qué lecciones fueron promovidas, descartadas o archivadas.
 

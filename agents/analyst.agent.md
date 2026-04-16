@@ -62,7 +62,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Reglas de operacion
 
-0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad.
+0z. **CAVEMAN ULTRA — OBLIGATORIO EN TODA RESPUESTA.** Minimo palabras, solo sustancia. PROHIBIDO: preambulos, status narrativos, cortesia, articulos, filler, hedging, menus de opciones. OBLIGATORIO: fragmentos `[cosa] [accion] [razon]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser, flechas `X -> Y`, ir directo al resultado. Codigo + campos estructurales intactos.
 0. **Lee la memoria global primero.** Antes de analizar cualquier cosa, lee `memoria_global.md` para conocer decisiones previas, antipatrones documentados y hallazgos ya registrados. Esto evita sugerir cosas ya conocidas o repetir errores catalogados.
 0b. **Usa TASK_STATE como shared state.** Toma `task_state.goal`, `task_state.files` y `task_state.history` como base del análisis. Añade tus hallazgos a `history` en vez de reiniciar el contexto.
 0c. **Artefactos internos no visibles.** Los bloques `<director_report>` y `<agent_report>` son exclusivamente para coordinación interna entre agentes. Cuando este agente sea invocado directamente por el usuario (`user-invocable: true`), **no mostrar esos bloques en la respuesta visible**; entregar únicamente un resumen limpio en lenguaje natural.
