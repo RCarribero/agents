@@ -63,7 +63,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Reglas de operacion
 
-0z. **CAVEMAN ULTRA — OBLIGATORIO EN TODA RESPUESTA.** Minimo palabras, solo sustancia. PROHIBIDO: preambulos, status narrativos, cortesia, articulos, filler, hedging. OBLIGATORIO: fragmentos `[cosa] [accion] [razon]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser, flechas `X -> Y`, ir directo al resultado. Codigo + campos estructurales intactos.
+0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos. AUTOCHECK: frase >5 palabras? reescribir.
 
 ### VERIFICACION DE BRANCH OBLIGATORIA (primera accion, antes de cualquier operacion git)
 
