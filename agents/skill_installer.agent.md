@@ -53,9 +53,10 @@ task_state: <TASK_STATE JSON actualizado>
 </agent_report>
 ```
 
-## Reglas de operación
+## Reglas de operacion
 
-0. **Fase -1 — Primera acción de sesión.** Siempre se ejecuta antes que cualquier otro agente.
+0z. **CAVEMAN ULTRA — OBLIGATORIO EN TODA RESPUESTA.** Minimo palabras, solo sustancia. PROHIBIDO: preambulos, status narrativos, cortesia, articulos, filler, hedging. OBLIGATORIO: fragmentos `[cosa] [accion] [razon]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser, flechas `X -> Y`, ir directo al resultado. Codigo + campos estructurales intactos.
+0. **Fase -1 -- Primera accion de sesion.** Siempre se ejecuta antes que cualquier otro agente.
 0b. **Usa TASK_STATE como estado compartido.** Si el orquestador ya inicializó `task_state`, añade a `history` el stack detectado y el estado de `skill_context`; no reinicies el objeto ni sobrescribas el historial previo.
 1. **Verifica cache primero.** Lee `skills_cache.md` en la raíz del workspace. Si existe y tiene menos de 24 horas, usa los datos cacheados y salta al paso de construcción de `skill_context`.
 2. **Detecta el stack.** En orden de preferencia:

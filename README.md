@@ -54,21 +54,23 @@ El sistema está coordinado por `orchestrator` y usa un flujo por fases con veri
 ```mermaid
 flowchart TD
     U[Usuario] --> O[orchestrator]
-    O --> SI[skill_installer]
-    O --> R[researcher]
-    O --> A[analyst]
-    O --> DB[dbmanager]
-    O --> TDD[tdd_enforcer]
-    O --> IMP[backend / frontend / developer]
-    IMP --> AUD[auditor]
-    IMP --> QA[qa]
-    IMP --> RT[red_team]
+    O -.->|Fase -1| SI[skill_installer]
+    O -->|Fase 0a| R[researcher]
+    O -->|Fase 0| A[analyst]
+    O -->|Fase 1| DB[dbmanager]
+    O -->|Fase 2a| TDD[tdd_enforcer]
+    O -->|Fase 2| IMP[backend / frontend / developer]
+    IMP --> V{Fase 3 — Verificacion paralela}
+    V --> AUD[auditor]
+    V --> QA[qa]
+    V --> RT[red_team]
     AUD --> O
     QA --> O
     RT --> O
-    O --> D[devops]
-    D --> SL[session_logger]
-    D --> MC[memory_curator]
+    O -->|Fase 4| D[devops]
+    D -->|Fase 5| SL[session_logger]
+    D -->|Fase 5| MC[memory_curator]
+    O -.->|Proteccion .agent.md| ER[eval_runner]
 ```
 
 La especificación completa del flujo, reintentos, gates y handoffs vive en `SISTEMA_COMPLETO.md`.
