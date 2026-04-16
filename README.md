@@ -222,6 +222,7 @@ Los slash commands mantenidos en este workspace son estos:
 - `/dockerize`: dockeriza el proyecto activo y genera artefactos de setup local y despliegue.
 - `/productionize`: decide qué parte del repo debe ir a producción, reutiliza la lógica de `/dockerize`, limpia artefactos obsoletos con criterio y deja `README.md` listo para GitHub.
 - `/skill-installer`: detecta stack y skills útiles para el proyecto activo.
+- `/create-project`: inicia un nuevo proyecto desde cero; captura la idea, analiza el stack y genera un brief completo con roadmap.
 
 Estos prompts viven en `.github/prompts/` y también pueden instalarse como prompts globales con `install-copilot-layout`.
 
@@ -278,7 +279,7 @@ python ./scripts/verified_digest.py compute --workspace-root . agents/orchestrat
 
 - `SISTEMA_COMPLETO.md`: contratos, fases, reglas de verificación y evolución del sistema
 - `.github/copilot-instructions.md`: convenciones del repo cargadas por Copilot
-- `.github/prompts/`: slash commands del workspace (`/start`, `/dockerize`, `/skill-installer`)
+- `.github/prompts/`: slash commands del workspace (`/start`, `/dockerize`, `/skill-installer`, `/create-project`)
 - `.github/workflows/`: workflows canónicos de GitHub Actions (`ci.yml` y `rollback.yml`)
 - `stack.md`: stack efectivo del workspace
 - `agents/memoria_global.md`: memoria compartida del sistema

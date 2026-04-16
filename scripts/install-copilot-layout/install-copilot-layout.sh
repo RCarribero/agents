@@ -12,7 +12,7 @@ Uso:
 Descripción:
   Instala prompts globales en el perfil de VS Code y un toolkit de soporte en
   el perfil del usuario. Después de esto, /start, /dockerize,
-  /productionize y /skill-installer estarán disponibles en cualquier
+  /productionize, /skill-installer y /create-project estarán disponibles en cualquier
   carpeta/workspace.
 
 Opciones:
@@ -490,4 +490,4 @@ if [ ${#mcp_warned[@]} -gt 0 ]; then
 fi
 
 echo ""
-echo "Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize y /skill-installer como prompts globales."
+echo "Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize, /skill-installer y /create-project como prompts globales."

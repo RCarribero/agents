@@ -528,4 +528,4 @@ if ($mcpWarned.Count -gt 0) {
 }
 
 Write-Output ''
-Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize y /skill-installer como prompts globales.'
+Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize, /skill-installer y /create-project como prompts globales.'
