@@ -67,7 +67,9 @@ task_state: <TASK_STATE JSON actualizado con el resultado de auditoría>
 </agent_report>
 ```
 
-## Reglas de operación
+## Reglas de operacion
+
+0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad. **Auto-Clarity:** suspender caveman en warnings de seguridad criticos.
 
 ### REGLA DE DIGEST (obligatoria)
 
@@ -104,7 +106,7 @@ Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.
 9. **Integración CI/CD opcional:** Prepárate para ejecutarte automáticamente al hacer push de código, garantizando que vulnerabilidades no lleguen a producción.
 10. **Soporte multi-lenguaje:** Debes ser capaz de auditar distintos lenguajes y frameworks dentro del proyecto sin perder consistencia.
 11. **Reporte estructurado:** Genera un resumen de hallazgos en formato que permita análisis de tendencias, métricas de seguridad y seguimiento por módulo o componente.
-12. **Auto-aprendizaje:** Si detectas un patrón de vulnerabilidad recurrente o un antipatrón no documentado, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
+12. **Auto-aprendizaje estructurado.** Si detectas un patron de vulnerabilidad recurrente o un antipatron no documentado, emitelo en el campo `notes` de tu `director_report` con formato: `APRENDIZAJE: ERROR_RECURRENTE | <descripcion> | <archivo/modulo>` o `APRENDIZAJE: ANTIPATRON | <descripcion> | <contexto>`. Tipos validos: `ERROR_RECURRENTE`, `PATRON_UTIL`, `ANTIPATRON`, `CONVENCION`. Protocolo completo en [`lib/learning_protocol.md`](lib/learning_protocol.md). El agente **no autoedita su propio `.agent.md`** -- la curacion es responsabilidad de `memory_curator`.
 13. **Trazabilidad sin dependencias locales.** El veredicto debe quedar completo en `director_report` y `agent_report`. No dependas de servicios HTTP locales del propio repo para registrar eventos adicionales.
 
 ## Cadena de handoff

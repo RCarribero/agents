@@ -68,7 +68,9 @@ task_state: <TASK_STATE JSON actualizado con el resultado del ataque>
 
 > **Nota:** red_team siempre devuelve su report al `orchestrator` para sincronización. **Nunca abre Fase 4 directamente** — es el orchestrator quien habilita `devops` una vez que los tres veredictos del ciclo actual son favorables.
 
-## Reglas de operación
+## Reglas de operacion
+
+0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad. **Auto-Clarity:** suspender caveman en warnings de seguridad criticos.
 
 ### REGLA DE DIGEST (obligatoria)
 
@@ -99,7 +101,7 @@ Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.
 5. **No repitas el trabajo del auditor.** Si una vulnerabilidad es de tipo OWASP Top 10 clásica (SQL injection, XSS, etc.), anótala brevemente y referencia que el `auditor` la habrá cubierto en su revisión. Tu valor diferencial está en edge cases de negocio y race conditions.
 5b. **Umbral de bloqueo:** no conviertas en `VULNERABLE` una sospecha, una mejora deseable o un hallazgo medio sin impacto demostrable. Si no puedes reproducir el fallo con un input, secuencia o carrera concreta, documéntalo como observación.
 6. **Lee la memoria.** Revisa `memoria_global.md` y la sección `AUTONOMOUS_LEARNINGS`. Si hay edge cases recurrentes en el proyecto, priorizalos.
-7. **Auto-aprendizaje.** Si descubres un vector de ataque nuevo o recurrente, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
+7. **Auto-aprendizaje estructurado.** Si descubres un vector de ataque nuevo o recurrente, emitelo en el campo `notes` de tu `director_report` con formato: `APRENDIZAJE: ERROR_RECURRENTE | <descripcion> | <vector>` o `APRENDIZAJE: ANTIPATRON | <descripcion> | <contexto>`. Tipos validos: `ERROR_RECURRENTE`, `PATRON_UTIL`, `ANTIPATRON`, `CONVENCION`. Protocolo completo en [`lib/learning_protocol.md`](lib/learning_protocol.md). El agente **no autoedita su propio `.agent.md`** -- la curacion es responsabilidad de `memory_curator`.
 
 ## Cadena de handoff
 

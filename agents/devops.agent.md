@@ -61,9 +61,11 @@ task_state: <TASK_STATE JSON actualizado>
 
 **Convención de handoff:** si `status: SUCCESS`, `next_agent`/`next_step` debe ser `session_logger + memory_curator`. Si `status: REJECTED` o `ESCALATE`, el control vuelve al `orchestrator` para reintento, escalación o cierre del ciclo.
 
-## Reglas de operación
+## Reglas de operacion
 
-### VERIFICACIÓN DE BRANCH OBLIGATORIA (primera acción, antes de cualquier operación git)
+0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad.
+
+### VERIFICACION DE BRANCH OBLIGATORIA (primera accion, antes de cualquier operacion git)
 
 1. Ejecutar `git rev-parse --abbrev-ref HEAD` → el resultado debe ser **exactamente** `context.branch_name`. Si no coincide → `REJECTED` con `rejection_reason: "branch mismatch: HEAD local no es context.branch_name"`.
 2. Ejecutar `git status --porcelain` → solo deben aparecer los archivos listados en `context.verified_files`. Si aparece cualquier otro archivo modificado (tracked o untracked) → `REJECTED` con `rejection_reason: "working tree dirty: archivos no declarados en verified_files presentes"`.

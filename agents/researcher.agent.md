@@ -77,8 +77,9 @@ task_state: <TASK_STATE JSON actualizado>
 }
 ```
 
-## Reglas de operación
+## Reglas de operacion
 
+0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad.
 0. **Modelo adaptativo.** Antes de empezar, verificar si el módulo objetivo tiene entradas en `memoria_global.md` o `skills_cache.md`:
    - Si **sí tiene entradas** (módulo conocido): operar con razonamiento reducido — priorizar síntesis rápida sobre análisis exhaustivo. Anotar `model_mode: fast` en el `director_report`.
    - Si **no tiene entradas** (módulo nuevo o sin historial): operar con máxima capacidad analítica. Anotar `model_mode: full` en el `director_report`.

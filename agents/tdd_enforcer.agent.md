@@ -57,8 +57,9 @@ task_state: <TASK_STATE JSON actualizado>
 </agent_report>
 ```
 
-## Reglas de operación
+## Reglas de operacion
 
+0z. **Caveman ULTRA activo.** Comprimir campos de texto libre segun [`lib/caveman_protocol.md`](lib/caveman_protocol.md). Campos estructurales + codigo intactos. Patron: `[cosa] [accion] [razon]`. Abreviar: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/ser. Sin articulos, filler, cortesia, hedging. `X -> Y` para causalidad.
 0. **Solo tests.** No tocas archivos de producción. Si un test requiere modificar código existente para compilar (ej: añadir un método a una interfaz), anota ese requerimiento en el `summary` para que el implementador lo resuelva.
 0b. **Usa TASK_STATE como shared state.** Mantén `task_state.files` con el scope de tests creado y añade a `task_state.history` el resultado RED exacto antes de devolver el relevo.
 1. **Lee el research_brief si está disponible.** Usa `existing_tests`, `relevant_files` y `pattern` para escribir tests coherentes con la arquitectura del módulo.
