@@ -63,6 +63,8 @@ task_state: <TASK_STATE JSON actualizado>
 0. **Solo tests.** No tocas archivos de producción. Si un test requiere modificar código existente para compilar (ej: añadir un método a una interfaz), anota ese requerimiento en el `summary` para que el implementador lo resuelva.
 0b. **Usa TASK_STATE como shared state.** Mantén `task_state.files` con el scope de tests creado y añade a `task_state.history` el resultado RED exacto antes de devolver el relevo.
 1. **Lee el research_brief si está disponible.** Usa `existing_tests`, `relevant_files` y `pattern` para escribir tests coherentes con la arquitectura del módulo.
+1a. **Consume discovery previo primero.** Si `research_brief` está disponible, trátalo como fuente primaria para tests existentes, patrón y archivos relevantes. No rehagas discovery amplio del módulo por defecto.
+1b. **Lectura local, no rediscovery.** Lee `context.files`, `existing_tests` y la vecindad inmediata necesaria para escribir tests en RED. Si necesitas salir de ese scope por una dependencia inmediata o un brief falsado, registra `research gap` en `task_state.history` y limita la ampliación al salto mínimo.
 2. **Tests en RED es el objetivo.** Los tests deben compilar (sin errores de sintaxis) pero fallar en tiempo de ejecución porque la funcionalidad no existe todavía. Un test que no compila no cuenta como RED válido.
 3. **Cubre los casos clave del objetivo:**
    - Happy path principal

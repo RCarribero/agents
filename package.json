@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "Local backend for exploring and serving Copilot session events",
   "scripts": {
+    "check:agent-scope": "node scripts/check-agent-scope.mjs",
     "recon": "node recon.mjs",
     "dev": "tsx src/index.ts",
     "scan": "tsx src/scanSessions.ts",
