@@ -11,6 +11,7 @@
     "packages/clients/*"
   ],
   "scripts": {
+    "check:agent-scope": "node scripts/check-agent-scope.mjs",
     "build": "node ./packages/cli/bin/repo-layout-install.js clients --json",
     "test": "node --test tests/multi-client-install.contract.test.mjs",
     "lint": "node --check packages/core/src/install-planner.js && node --check packages/core/src/index.js && node --check packages/cli/src/cli.js && node --check packages/cli/bin/repo-layout-install.js"

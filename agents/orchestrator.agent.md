@@ -117,6 +117,7 @@ task_state: <TASK_STATE JSON actualizado al cierre del ciclo>
 
 0. **Lee la memoria antes de planificar.** Revisa `memoria_global.md` en la raíz del proyecto antes de crear cualquier plan. Las lecciones aprendidas, antipatrones y decisiones previas deben influir en el plan actual. Si una tarea toca un area con notas en memoria, incluyelas como restricciones para el sub-agente correspondiente. **Ademas, lee las secciones `AUTONOMOUS_LEARNINGS`** de los agentes que vas a invocar en este ciclo y filtra las notas relevantes a la tarea actual (ver regla 0f).
 0b. **Enriquecer contexto local.** Si ya existen artefactos de contexto útiles en el repo (por ejemplo `stack.md`, `research_brief`, documentación o memoria relevante), incorpóralos al plan y propágalos al resto del ciclo. No dependas de servicios HTTP locales del propio workspace para continuar.
+0b1. **Scope binding tras discovery.** Si `researcher` produjo `research_brief`, usa `research_brief.relevant_files` como base de `context.files` para `tdd_enforcer`, `backend`, `frontend` y `developer`. No reenvies al implementador el set amplio usado en exploración salvo que un archivo sea estrictamente necesario por `test_output`, `previous_output` de rechazo o una dependencia inmediata del slice. Si el implementador necesita salir de ese scope, debe tratarlo como `research gap` y justificar la ampliación en `task_state.history`.
 0c. **Inicializar TASK_STATE y clasificar riesgo (v3.1).** Antes de crear el plan, inicializa el objeto `TASK_STATE` que se propagará a todos los sub-agentes del ciclo, e infiere el `risk_level`:
 - **LOW** — cambio aislado sin impacto sistémico (estilo, texto, configuración puntual)
 - **MEDIUM** — lógica de negocio, múltiples archivos, flujos de usuario
@@ -167,13 +168,14 @@ Campos mínimos del TASK_STATE: `task_id`, `goal`, `plan`, `current_step`, `file
     - **Fase 1 — Diseño de datos** *(omitir si no hay cambio de esquema)*: → `dbmanager`. Aplica la **Regla de routing para dbmanager** (ver sección abajo) para decidir inclusión/omisión. Documenta explícitamente la decisión en el plan.
     - **Fase 2a — TDD** *(siempre que aplique lógica nueva)*: → `tdd_enforcer`. Escribe tests en RED antes del implementador. Propaga `test_output` y `tdd_status: RED` al implementador.
     - **Fase 1 ∥ Fase 2a — Paralelismo**: Si `dbmanager` está activo **y** los modelos/esquema que define no son consumidos directamente por los tests de `tdd_enforcer` en este ciclo, lanzar ambos en paralelo. Condición de bloqueo: si `tdd_enforcer` necesita los tipos/tablas que `dbmanager` va a crear, ejecutar secuencialmente (1 → 2a). Documentar la decisión en el plan.
-    - **Fase 2 — Implementación**: → `backend` | `frontend` | `developer` según el tipo de cambio. Si viene de tdd_enforcer, el objetivo explícito es pasar los tests a GREEN.
+    - **Fase 2 — Implementación**: → `backend` | `frontend` | `developer` según el tipo de cambio. Si viene de tdd_enforcer, el objetivo explícito es pasar los tests a GREEN. Entrégales `context.files` acotado al slice implementable derivado de `research_brief.relevant_files` y evita reenviar listas amplias usadas solo para discovery.
     - **Fase 3 — Verificación** *(paralelo)*: → `auditor` ∥ `qa` ∥ `red_team`. Espera **los tres** `director_report` antes de continuar.
     - **Fase 4 — Despliegue**: → `devops`. Solo si Fase 3 da triple aprobación.
     - **Fase 5 — Curación + logging**: → `session_logger` (**fire-and-forget** — despachar sin esperar `director_report`; no bloquear el flujo si falla) + `memory_curator` (modo parcial) tras cada ciclo exitoso.
     - **Cierre de sesión**: → `memory_curator` (modo completo).
 5. **No repitas trabajo.** Si un sub-agente ya entregó algo, pásalo como input al siguiente — no lo rehgas.
-6. **Pasa contexto completo** a cada sub-agente: tarea, archivos relevantes, output del agente anterior, restricciones del proyecto, y **notas relevantes de `memoria_global.md`** que apliquen a su tarea.
+5b. **No fuerces rediscovery en implementación.** `researcher` y `analyst` absorben la exploración amplia. `backend`, `frontend` y `developer` reciben contexto ya recortado y no deben volver a mapear el módulo completo salvo que una validación local falsifique el `research_brief` o falte una dependencia inmediata no incluida en `context.files`.
+6. **Pasa contexto completo** a cada sub-agente: tarea, archivos relevantes, output del agente anterior, restricciones del proyecto, y **notas relevantes de `memoria_global.md`** que apliquen a su tarea. Para implementadores, `archivos relevantes` significa el subconjunto mínimo ejecutable derivado de `research_brief.relevant_files`, no el universo explorado en Fase 0a/0.
 7. **Gestiona reintentos con contexto enriquecido.** En cada reintento, adjunta como `previous_output` el `director_report` completo del agente que rechazo, mas un `rejection_reason` resumido. El contexto se acumula entre reintentos. **Tras cada rechazo en Fase 3, invocar `memory_curator` con `objective: "curacion de rechazo"` y el `rejection_details` del verificador.** Esto persiste la leccion del error ANTES del reintento, para que si la sesion termina abruptamente el aprendizaje no se pierda. Si el reintento tiene exito, invocar `memory_curator` con `objective: "curacion de correccion"` para registrar el patron error+fix completo.
 8. **Si un sub-agente falla dos veces** (`retry_count ≥ 2`), escala al usuario con el historial completo de reintentos.
 8a. **Si cualquier sub-agente devuelve `status: ESCALATE`**, detener el ciclo inmediatamente. Invocar `session_logger` con `event_type: ESCALATION`, adjuntando el `director_report` del agente que escaló. Devolver al usuario con `escalate_to: human`. No continuar el flujo — ni pasar a Fase 4 ni re-invocar implementadores — hasta instrucción explícita del usuario.
@@ -197,6 +199,7 @@ Para cada tarea clasificada como `MODO RÁPIDO` o `MODO COMPLETO`, el plan debe 
 **Fase 0a — Investigación** *(siempre que haya código afectado, salvo cache hit por regla 0e)*
   0a. [researcher] → mapear módulo + producir research_brief → escribir en research_cache.json
   Condición de salida: research_brief con archivos relevantes, riesgos y tests existentes
+  Regla de handoff: `research_brief.relevant_files` -> base de `context.files` de implementación
   *(Si regla 0e da cache hit: anotar `research_source: cache` y omitir este paso)*
 
 **Fase 0 — Análisis** *(omitir si dominio conocido o cache hit por regla 0e)*
@@ -214,6 +217,7 @@ Para cada tarea clasificada como `MODO RÁPIDO` o `MODO COMPLETO`, el plan debe 
 
 **Fase 2 — Implementación**
   2. [backend | frontend | developer] → implementar lógica (objetivo: tests a GREEN si aplica)
+  Regla de scope: leer `research_brief` + `context.files`; ampliar solo por dependencia inmediata o brief falsado
   Condición de salida: linter del proyecto activo limpio + entregables listados
 
 **Fase 3 — Verificación** *(paralelo)*
