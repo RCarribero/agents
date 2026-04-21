@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-011",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "escalacion tras 2 rechazos",
+      "cumplido": true,
+      "detalle": "Regla 8 fuerza ESCALATE a human cuando retry_count >= 2."
+    },
+    {
+      "criterio": "historial de intentos",
+      "cumplido": true,
+      "detalle": "TASK_STATE.history preserva los intentos y razones previas."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

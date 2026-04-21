@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-014",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "curacion completa al cierre",
+      "cumplido": true,
+      "detalle": "memory_curator define objective curacion completa y promocion a memoria_global."
+    },
+    {
+      "criterio": "formato y orden de memoria_global",
+      "cumplido": true,
+      "detalle": "El agente exige entrada con fecha/task_id al inicio y orden cronologico inverso."
+    },
+    {
+      "criterio": "deduplicacion y limite de notas",
+      "cumplido": true,
+      "detalle": "Curacion completa elimina redundancias y mantiene limites por agente."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

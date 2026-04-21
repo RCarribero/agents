@@ -1,0 +1,31 @@
+{
+  "current_run": {
+    "date": "20260421",
+    "version": "main-20260421"
+  },
+  "baseline_run": {
+    "date": "20260416",
+    "version": "full"
+  },
+  "threshold_pts": 10.0,
+  "current": {
+    "total": 23,
+    "pass": 19,
+    "fail": 0,
+    "partial": 4,
+    "score": 91.3,
+    "critical_failures": []
+  },
+  "baseline": {
+    "total": 20,
+    "pass": 20,
+    "fail": 0,
+    "partial": 0,
+    "score": 100.0,
+    "critical_failures": []
+  },
+  "delta_score": -8.7,
+  "new_criticals": [],
+  "regression": false,
+  "warnings": []
+}

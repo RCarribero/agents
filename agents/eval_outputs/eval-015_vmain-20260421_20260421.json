@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-015",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "lectura de memoria antes de actuar",
+      "cumplido": true,
+      "detalle": "learning_protocol y orchestrator obligan a leer memoria_global y AUTONOMOUS_LEARNINGS antes de delegar."
+    },
+    {
+      "criterio": "trazabilidad de uso",
+      "cumplido": true,
+      "detalle": "learning_protocol exige mencionar explicitamente en summary cuando un learning se aplica."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

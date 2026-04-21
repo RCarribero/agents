@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-012",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "devops rechaza bundle incompleto",
+      "cumplido": true,
+      "detalle": "devops exige auditor + qa + red_team + test_status antes de actuar."
+    },
+    {
+      "criterio": "control vuelve a orchestrator",
+      "cumplido": true,
+      "detalle": "next_agent de rechazo vuelve al orchestrator y bloquea commit."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

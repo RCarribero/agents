@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-006",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "director_report con campos obligatorios",
+      "cumplido": true,
+      "detalle": "backend define task_id, status, next_agent y summary en template estructurado."
+    },
+    {
+      "criterio": "status valido",
+      "cumplido": true,
+      "detalle": "backend restringe status a SUCCESS o ESCALATE, ambos dentro del conjunto permitido."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

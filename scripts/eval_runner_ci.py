@@ -138,11 +138,20 @@ def check_frontmatter(filepath: Path) -> list:
     return issues
 
 
+CAVEMAN_POINTER_RE = re.compile(
+    r"(CAVEMAN\s+ULTRA|caveman_protocol\.md|lib/caveman_protocol\.md|\*\*Caveman:\*\*)",
+    re.IGNORECASE,
+)
+
+
 def check_caveman_rule(filepath: Path) -> list:
-    """Check that CAVEMAN ULTRA rule 0z exists (required for all agents)."""
+    """Check that caveman rule exists (literal CAVEMAN ULTRA or pointer to lib/caveman_protocol.md)."""
     content = filepath.read_text(encoding="utf-8", errors="replace")
-    if "CAVEMAN ULTRA" not in content:
-        return ["Missing rule 0z (CAVEMAN ULTRA)"]
+    if not CAVEMAN_POINTER_RE.search(content):
+        return ["Missing caveman rule (literal 'CAVEMAN ULTRA' or pointer to lib/caveman_protocol.md)"]
+    # If pointer used, validate target exists
+    if "caveman_protocol.md" in content and not (LIB_DIR / "caveman_protocol.md").exists():
+        return ["Caveman pointer references missing lib/caveman_protocol.md"]
     return []
 
 

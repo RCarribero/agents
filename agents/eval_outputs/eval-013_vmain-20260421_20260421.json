@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-013",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "memory_curator parcial post-devops",
+      "cumplido": true,
+      "detalle": "orchestrator Fase 5 y memory_curator documentan curacion parcial tras ciclo exitoso."
+    },
+    {
+      "criterio": "sin tocar memoria_global en parcial",
+      "cumplido": true,
+      "detalle": "memory_curator modo parcial limita cambios a AUTONOMOUS_LEARNINGS de agentes participantes."
+    },
+    {
+      "criterio": "cap de 10 notas por agente",
+      "cumplido": true,
+      "detalle": "memory_curator archiva notas antiguas al superar 10."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

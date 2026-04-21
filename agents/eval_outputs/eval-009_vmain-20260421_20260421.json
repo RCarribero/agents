@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-009",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "status REJECTED para gap funcional",
+      "cumplido": true,
+      "detalle": "qa devuelve REJECTED o NO CUMPLE cuando falta manejo de error."
+    },
+    {
+      "criterio": "missing_cases estructurado",
+      "cumplido": true,
+      "detalle": "Contrato de qa exige lista con caso, esperado y encontrado."
+    },
+    {
+      "criterio": "summary describe categoria",
+      "cumplido": true,
+      "detalle": "qa documenta cobertura incompleta o gap de error."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

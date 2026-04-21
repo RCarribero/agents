@@ -1,0 +1,15 @@
+{
+  "eval_id": "eval-023",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PARTIAL",
+  "criterios": [
+    {
+      "criterio": "tasa de escalacion evaluable",
+      "cumplido": false,
+      "detalle": "El catalogo depende de session_spans.jsonl y ese artefacto no existe en el repo actual."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

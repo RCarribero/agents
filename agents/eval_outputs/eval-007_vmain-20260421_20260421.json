@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-007",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "sufijos .audit .qa .redteam",
+      "cumplido": true,
+      "detalle": "orchestrator y qa documentan sufijos exactos para el triple paralelo."
+    },
+    {
+      "criterio": "espera de tres reports",
+      "cumplido": true,
+      "detalle": "Fase 3 y verification_bundle_protocol bloquean Fase 4 hasta reunir los tres veredictos."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

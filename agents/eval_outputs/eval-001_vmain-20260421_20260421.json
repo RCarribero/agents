@@ -1,0 +1,30 @@
+{
+  "eval_id": "eval-001",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PARTIAL",
+  "criterios": [
+    {
+      "criterio": "dbmanager omitido",
+      "cumplido": true,
+      "detalle": "Routing rapido de UI mantiene dbmanager fuera del plan."
+    },
+    {
+      "criterio": "frontend en implementacion",
+      "cumplido": true,
+      "detalle": "Regla de UI localizada enruta a frontend."
+    },
+    {
+      "criterio": "sin Fase 3 formal completa",
+      "cumplido": false,
+      "detalle": "El sistema nuevo introduce qa-light en Fase 3b; el catalogo esperaba omitir qa por completo en rapido."
+    },
+    {
+      "criterio": "devops en despliegue",
+      "cumplido": true,
+      "detalle": "MODO RAPIDO sigue cerrando en Fase 4."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

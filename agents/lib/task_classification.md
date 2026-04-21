@@ -199,6 +199,31 @@ El orchestrator indica el modo al inicio de cada plan:
 
 ## Regla de routing para developer vs backend
 
+**Invocar `backend` cuando:**
+- La tarea toca un servicio/endpoint HTTP, GraphQL o RPC.
+- Hay lógica de dominio + persistencia (DB, cola, cache) en el mismo cambio.
+- El cambio afecta autenticación, autorización, RLS o middleware.
+- La tarea define o modifica modelos de datos consumidos por API.
+- El stack del proyecto activo declara un backend dedicado (Django, NestJS, FastAPI, etc.).
+
+**Invocar `developer` cuando:**
+- Tarea de scripting, CLI, herramientas internas o utilidades sin endpoint expuesto.
+- Cambios en infra-as-code, generadores, pipelines o orquestación local.
+- Bugfix transversal que toca varios módulos sin enfoque API/UI claro.
+- El stack es monolito sin separación BE/FE clara y la tarea no es UI.
+
+**Regla de desempate:**
+- Si la tarea tiene endpoint HTTP o toca DB de producción → `backend`.
+- Si la tarea es una utilidad o script aislado → `developer`.
+- Si ambos podrían aplicar y el ámbito es ambiguo → preferir `backend` (mayor cobertura de verificación).
+
+**Documentar en el plan:**
+```markdown
+**Implementador:** backend — endpoint nuevo + persistencia
+**Implementador:** developer — script de migración one-shot
+```
+
+**Árbol de decisión rápido:**
 ```
 ¿La tarea tiene tdd_status: RED y el único objetivo es pasar tests a GREEN?
   → developer

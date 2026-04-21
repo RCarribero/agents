@@ -1,0 +1,213 @@
+{
+  "threshold": 3,
+  "promotions": [],
+  "evals": [
+    {
+      "eval_id": "eval-001",
+      "runs": 2,
+      "latest_result": "PARTIAL",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PARTIAL",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-002",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-003",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-004",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-005",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-006",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-007",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-008",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-009",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-010",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-011",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-012",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-013",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-014",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-015",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-016",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-017",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-018",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-019",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-020",
+      "runs": 2,
+      "latest_result": "PASS",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PASS",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-021",
+      "runs": 1,
+      "latest_result": "PARTIAL",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PARTIAL",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-022",
+      "runs": 1,
+      "latest_result": "PARTIAL",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PARTIAL",
+      "promoted": false
+    },
+    {
+      "eval_id": "eval-023",
+      "runs": 1,
+      "latest_result": "PARTIAL",
+      "latest_date": "20260421",
+      "latest_version": "main-20260421",
+      "effective_result": "PARTIAL",
+      "promoted": false
+    }
+  ]
+}

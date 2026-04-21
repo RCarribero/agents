@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-005",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "bugfix enruta a developer o backend",
+      "cumplido": true,
+      "detalle": "task_classification clasifica bugfix y omite dbmanager salvo rollback estructural."
+    },
+    {
+      "criterio": "dbmanager omitido",
+      "cumplido": true,
+      "detalle": "Login con mayusculas es fix de logica, no de esquema."
+    },
+    {
+      "criterio": "clasificacion explicita de bugfix",
+      "cumplido": true,
+      "detalle": "La matriz de tipo de tarea mantiene BUGFIX como categoria."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

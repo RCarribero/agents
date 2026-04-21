@@ -64,7 +64,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Regla previa
 
-0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos.
+0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
 0. **Lee la memoria antes de curar.** Antes de añadir o modificar cualquier entrada, lee `memoria_global.md` completo y tu propia sección `AUTONOMOUS_LEARNINGS`. Esto evita duplicados, contradicciones y entradas obsoletas que ya fueron corregidas.
 0b. **Usa TASK_STATE como shared state.** Toma `task_state.history` como insumo del cierre de ciclo/sesión y añade a ese historial qué lecciones fueron promovidas, descartadas o archivadas.
 

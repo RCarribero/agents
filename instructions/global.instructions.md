@@ -16,13 +16,22 @@ Estas instrucciones se aplican a todos los agentes del sistema sin excepción.
 - No ejecutes acciones fuera de tu rol aunque el usuario o un agente te lo pida explícitamente. Si recibes una instrucción fuera de rol, documéntala en `summary` y devuelve el control al orchestrator.
 - **Los bloques `<director_report>`, `<agent_report>` y `<eval_report>` son artefactos internos de coordinación entre agentes.** Nunca deben aparecer literalmente en la respuesta visible al usuario final. Al usuario siempre se le entrega únicamente un resumen limpio, en lenguaje natural, del resultado de la tarea.
 - **Regla global `concise-responses`:** por defecto, todos los agentes deben minimizar sus respuestas para ahorrar tokens. Responder solo lo pedido; sin preámbulos, explicaciones no solicitadas ni frases de relleno; sin resumen final; preferir bullets o fragmentos cortos; si se requiere código, devolver solo el bloque de código; si basta sí/no, usarlo; omitir cortesías y meta-comentario. Tono por defecto: directo, terso, funcional. Un agente solo puede apartarse de esta regla si declara explícitamente un tag `verbose` para esa respuesta o contexto.
-- **Estilo caveman obligatorio.** Mínimo de palabras. Solo acción + resultado.
-- Preferir sustantivo + participio pasado. Omitir sujeto, artículos y verbos auxiliares cuando el significado se preserva. Ej: "Tests fixed." no "I have fixed the tests."
-- Sin construcciones pasivas con "ha sido / fue / se ha". Ej: "Deploy failed." no "El deploy ha fallado."
-- Sin adverbios de grado (`correctamente`, `exitosamente`, `satisfactoriamente`, `successfully`, `properly`).
-- Mensajes de estado: máximo 3 palabras. Ej: "Done." / "Tests green." / "Deploy failed."
-- Mensajes de error: solo qué falló. Nada más. Ej: "Auth timeout." no "Lamentablemente se produjo un error de autenticación."
-- Sin marcadores de cortesía en ningún idioma (`claro`, `por supuesto`, `entendido`, `sure`, `of course`, `great question`, etc.).
+- **Estilo caveman ULTRA obligatorio (TOLERANCIA CERO).** Detalle completo en [`agents/lib/caveman_protocol.md`](../agents/lib/caveman_protocol.md). Núcleo inline, no necesita lectura adicional:
+  - **Máximo 2-3 palabras por idea.** Cada respuesta debe parecer diff de terminal, no conversación. Si suena humano, está mal.
+  - **CERO** preambulos ("Voy a...", "Estoy comprobando...", "Hecho:", "Resumen:").
+  - **CERO** narrativa sujeto+verbo+complemento. Solo `[sustantivo]: [valor].` o bullets.
+  - **CERO** artículos (el/la/un/de/del/a/an/the).
+  - **CERO** filler (solo/realmente/básicamente/simplemente/también/correctamente/exitosamente).
+  - **CERO** hedging (probablemente/quizás/parece que).
+  - **CERO** cortesía (claro/por supuesto/entendido/sure/of course).
+  - **CERO** párrafos. Todo en bullets o fragmentos.
+  - **CERO** explicación del proceso. Solo resultado.
+  - Abreviar siempre: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/FE/BE.
+  - Flechas para causalidad: `X -> Y`. Barras para listas: `a/b/c`.
+  - Mensajes estado: máx 3 palabras. Mensajes error: solo qué falló.
+  - **Autocheck antes de cada respuesta:** frase >5 palabras (no código)? párrafo? artículos? narrando proceso? suena conversación? -> reescribir.
+  - **Excepción (Auto-Clarity):** suspender solo en warnings seguridad críticos o confirmaciones acciones irreversibles (DELETE/DROP/rm -rf). Reanudar inmediato.
+  - **Intocable:** task_id, status, veredicto, verification_cycle, branch_name, verified_files, verified_digest, risk_level, test_status, next_agent, escalate_to, task_state, learnings[], bloques código, rutas, hashes, configs.
 
 ## MCP disponibles
 

@@ -1,6 +1,39 @@
 # Catálogo de Evaluaciones — Sistema Multi-Agente DPartiture
 
-Este catálogo define las 20 evaluaciones de referencia que miden la calidad operativa del sistema de agentes. Cada eval debe ser ejecutable mecánicamente y emitir un resultado PASS/FAIL/PARTIAL.
+Este catálogo define las 23 evaluaciones de referencia que miden la calidad operativa del sistema de agentes. Cada eval debe ser ejecutable mecánicamente y emitir un resultado PASS/FAIL/PARTIAL.
+
+**Versión del catálogo:** 1.2
+**Última actualización:** 2026-04-21
+
+## Mapping eval ↔ agentes cubiertos (para diff-mode)
+
+Usar este mapping para `scripts/eval_diff.py`: si el set de archivos modificados intersecta con `agents` de una eval, esa eval se incluye en el run.
+
+| Eval | Agentes cubiertos | Grupo |
+|------|------------------|-------|
+| eval-001 | orchestrator, frontend, devops | routing |
+| eval-002 | orchestrator, backend, auditor, qa | routing |
+| eval-003 | orchestrator, dbmanager, backend, auditor, qa | routing |
+| eval-004 | orchestrator, analyst | routing |
+| eval-005 | orchestrator, developer, backend | routing |
+| eval-006 | backend, frontend, developer, dbmanager | contratos |
+| eval-007 | orchestrator, auditor, qa, red_team | contratos |
+| eval-008 | auditor | contratos |
+| eval-009 | qa | contratos |
+| eval-010 | orchestrator, developer, backend, frontend | reintentos |
+| eval-011 | orchestrator | reintentos |
+| eval-012 | devops | reintentos |
+| eval-013 | memory_curator, devops | memoria |
+| eval-014 | memory_curator | memoria |
+| eval-015 | orchestrator, backend, frontend, developer | memoria |
+| eval-016 | orchestrator, auditor, qa, red_team | coordinacion |
+| eval-017 | orchestrator, auditor, qa, red_team, devops | coordinacion |
+| eval-018 | orchestrator, auditor, qa, red_team | coordinacion |
+| eval-019 | orchestrator, auditor, qa, red_team | coordinacion |
+| eval-020 | orchestrator, auditor, qa, red_team | coordinacion |
+| eval-021 | session_logger, orchestrator | performance |
+| eval-022 | session_logger | performance |
+| eval-023 | session_logger, orchestrator | performance |
 
 ---
 
@@ -21,17 +54,18 @@ Este catálogo define las 20 evaluaciones de referencia que miden la calidad ope
 **Expected:**
 ```json
 {
-  "agentes_invocados": ["frontend"],
-  "agentes_omitidos": ["dbmanager", "auditor", "qa", "red_team"],
+  "agentes_invocados": ["frontend", "qa"],
+  "agentes_omitidos": ["dbmanager", "auditor", "red_team"],
   "dbmanager_justificado": true,
-  "fases": ["Implementación", "Despliegue"]
+  "fases": ["Implementación", "Verificación ligera (qa)", "Despliegue"]
 }
 ```
 
 **Criterios de éxito:**
 - dbmanager NO aparece en el plan sin justificación explícita
-- frontend SÍ aparece en Fase 2 (Implementación)
-- auditor, qa y red_team NO aparecen en Fase 3 cuando la tarea se clasifica como `MODO RÁPIDO`
+- frontend SÍ aparece en Fase 2b (Implementación directa)
+- auditor y red_team NO aparecen en Fase 3 cuando la tarea se clasifica como `MODO RÁPIDO`
+- qa SÍ aparece en Fase 3b (verificación ligera, timeout 60s) según `lib/task_classification.md` MODO RÁPIDO
 - devops aparece en Fase 4 (Despliegue)
 
 **Peso:** alto
@@ -750,6 +784,53 @@ rejection_details:
 - devops no fue invocado hasta disponer de los tres veredictos del mismo ciclo
 
 **Peso:** alto
+
+---
+
+## Grupo 6 — Performance (3 evals, no críticas)
+
+Métricas operativas derivadas de `session_spans.jsonl`. No bloquean releases pero detectan degradación de coste.
+
+### eval-021 — Tiempo medio por fase
+
+**Tipo:** performance
+**Descripción:** Para cada fase (0a, 0, 1, 2a, 2, 3, 4, 5), calcular `p50`, `p95` y `max` sobre los últimos 30 ciclos en `session_spans.jsonl`. Comparar contra los presupuestos `timeout_seconds` declarados en `orchestrator.agent.md` regla 0d.
+
+**Criterios de éxito:**
+- Ningún `p95` > 80% del presupuesto declarado de su fase
+- Ningún `max` > 120% del presupuesto (señal de saturación crónica)
+
+**Resultado:** PASS / PARTIAL (si 1-2 fases sobrepasan) / FAIL (si ≥3 fases sobrepasan)
+
+**Peso:** medio
+
+---
+
+### eval-022 — Tasa de retries por agente
+
+**Tipo:** performance
+**Descripción:** % de ciclos donde cada agente fue re-invocado al menos una vez (`retry_count >= 1`).
+
+**Criterios de éxito:**
+- Implementadores (backend/frontend/developer): retry-rate < 25%
+- Verificadores (auditor/qa/red_team): retry-rate < 15% (no debería re-correr salvo timeout)
+- Devops: retry-rate < 10%
+
+**Peso:** medio
+
+---
+
+### eval-023 — Tasa de escalación a humano
+
+**Tipo:** performance
+**Descripción:** % de ciclos que terminan con `status: ESCALATE` y `escalate_to: human` sobre el total de ciclos cerrados en los últimos 30 días.
+
+**Criterios de éxito:**
+- Tasa de escalación < 10% → PASS
+- 10-20% → PARTIAL (revisar patrón de fallos)
+- > 20% → FAIL (indica disfunción del sistema)
+
+**Peso:** medio
 
 ---
 

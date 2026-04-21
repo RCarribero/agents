@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-020",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "reinvocacion tras timeout",
+      "cumplido": true,
+      "detalle": "orchestrator regla 0d fuerza PHASE_TIMEOUT y reintento del mismo rol."
+    },
+    {
+      "criterio": "task_id de qa estable",
+      "cumplido": true,
+      "detalle": "La convencion del sufijo .qa se conserva entre reintentos del mismo ciclo."
+    },
+    {
+      "criterio": "Fase 4 bloqueada",
+      "cumplido": true,
+      "detalle": "Sin triple bundle completo no hay devops durante timeout."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

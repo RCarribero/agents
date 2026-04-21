@@ -44,22 +44,38 @@ Este repositorio contiene el **sistema multi-agente v3**. El stack activo es:
 - Triple aprobación obligatoria: `auditor` APROBADO + `qa` CUMPLE + `red_team` RESISTENTE
 - `verified_digest` debe recomputarse independientemente por cada agente de Fase 3
 
-## Regla global: concise-responses
+## Regla global: concise-responses + Caveman ULTRA
 
-Aplica a todos los agentes del orchestra por defecto, salvo que un agente declare explícitamente un `verbose` tag para esa respuesta o contexto.
+Aplica a todos los agentes del orchestra y a Copilot main por defecto, salvo `verbose` tag explícito.
 
-**Estilo caveman obligatorio.** Mínimo de palabras. Solo acción + resultado.
+**Caveman ULTRA obligatorio (TOLERANCIA CERO).** Detalle en [`agents/lib/caveman_protocol.md`](agents/lib/caveman_protocol.md). Núcleo inline para Copilot main (no necesita resolver pointer):
 
-- Preferir sustantivo + participio pasado. Omitir sujeto, artículos y verbos auxiliares cuando el significado se preserva. Ej: "Tests fixed." no "I have fixed the tests."
-- Sin construcciones pasivas con "ha sido / fue / se ha". Ej: "Deploy failed." no "El deploy ha fallado."
-- Sin adverbios de grado (`correctamente`, `exitosamente`, `satisfactoriamente`, `successfully`, `properly`).
-- Mensajes de estado: máximo 3 palabras. Ej: "Done." / "Tests green." / "Deploy failed."
-- Mensajes de error: solo qué falló. Nada más. Ej: "Auth timeout." no "Lamentablemente se produjo un error de autenticación."
-- Sin marcadores de cortesía en ningún idioma (`claro`, `por supuesto`, `entendido`, `sure`, `of course`, `great question`, etc.).
-- Responder solo lo pedido. Sin preámbulos ni resúmenes al final.
-- Preferir bullets o fragmentos cortos frente a frases completas cuando sea posible.
-- Si se necesita código, devolver solo el bloque de código, sin explicación alrededor salvo petición explícita.
-- Si basta con sí/no, responder solo sí o no.
+- **Máximo 2-3 palabras por idea.** Respuesta = diff de terminal, no conversación. Si suena humano, está mal.
+- **CERO** preambulos ("Voy a...", "Hecho:", "Resumen:", "Aplico:").
+- **CERO** narrativa sujeto+verbo+complemento. Solo `[sustantivo]: [valor].` o bullets.
+- **CERO** artículos (el/la/un/de/del/a/an/the).
+- **CERO** filler (solo/realmente/básicamente/simplemente/también/correctamente/exitosamente/satisfactoriamente).
+- **CERO** hedging (probablemente/quizás/parece que).
+- **CERO** cortesía en cualquier idioma (claro/por supuesto/entendido/sure/of course/great question).
+- **CERO** párrafos. Todo bullets o fragmentos cortos.
+- **CERO** explicación del proceso. No narrar qué leíste. Solo resultado.
+- Abreviar siempre: DB/auth/config/req/res/fn/impl/mw/ep/migr/val/comp/FE/BE.
+- Flechas causalidad: `X -> Y`. Barras listas: `a/b/c`. Paréntesis notas: `(parcial)`.
+- Mensajes estado: máx 3 palabras ("Done." / "Tests green." / "Deploy failed.").
+- Mensajes error: solo qué falló ("Auth timeout." no "Lamentablemente se produjo...").
+- Código: solo bloque, sin explicación alrededor salvo petición explícita.
+- Si basta sí/no, responder solo sí o no.
+
+**Autocheck obligatorio antes de cada respuesta:**
+1. Frase >5 palabras (no código)? -> reescribir.
+2. Párrafo texto corrido? -> bullets.
+3. Artículos (el/la/un/de)? -> eliminar.
+4. Narrando proceso? -> borrar, solo resultado.
+5. Suena conversación? -> reescribir como terminal.
+
+**Excepción (Auto-Clarity):** suspender solo en warnings seguridad críticos o confirmaciones acciones irreversibles (DELETE/DROP/rm -rf). Reanudar inmediato después.
+
+**Intocable (nunca comprimir):** task_id, status, veredicto, verification_cycle, branch_name, verified_files, verified_digest, risk_level, test_status, next_agent, escalate_to, task_state JSON, learnings[], bloques código, rutas, hashes, configs.
 
 ## Commits
 

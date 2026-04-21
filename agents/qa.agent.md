@@ -75,7 +75,7 @@ Este agente se ejecuta simultáneamente con `auditor` y `red_team`. Los tres rec
 
 ## Reglas de operacion
 
-0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos. AUTOCHECK: frase >5 palabras? reescribir.
+0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
 
 ### REGLA DE DIGEST (obligatoria)
 

@@ -55,7 +55,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Reglas de operacion
 
-0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos.
+0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
 0. **Fase -1 -- Primera accion de sesion.** Siempre se ejecuta antes que cualquier otro agente.
 0b. **Usa TASK_STATE como estado compartido.** Si el orquestador ya inicializó `task_state`, añade a `history` el stack detectado y el estado de `skill_context`; no reinicies el objeto ni sobrescribas el historial previo.
 1. **Verifica cache primero.** Lee `skills_cache.md` en la raíz del workspace. Si existe y tiene menos de 24 horas, usa los datos cacheados y salta al paso de construcción de `skill_context`.

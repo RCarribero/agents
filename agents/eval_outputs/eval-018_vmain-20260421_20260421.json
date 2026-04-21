@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-018",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "sin retry prematuro tras rechazo aislado",
+      "cumplido": true,
+      "detalle": "orchestrator espera los tres director_report del ciclo antes de decidir retry."
+    },
+    {
+      "criterio": "sin devops",
+      "cumplido": true,
+      "detalle": "Un REJECTED aislado no habilita Fase 4."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

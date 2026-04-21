@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-021",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PARTIAL",
+  "criterios": [
+    {
+      "criterio": "p95 por fase evaluable",
+      "cumplido": false,
+      "detalle": "No existe session_spans.jsonl en el workspace; no hay muestra mecanica para calcular p50/p95/max."
+    },
+    {
+      "criterio": "comparacion contra budgets",
+      "cumplido": false,
+      "detalle": "Los budgets existen en orchestrator, pero falta telemetria persistida para contrastarlos."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

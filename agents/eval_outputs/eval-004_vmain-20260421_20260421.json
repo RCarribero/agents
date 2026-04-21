@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-004",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "analyst precede a agentes tecnicos en tarea ambigua",
+      "cumplido": true,
+      "detalle": "orchestrator conserva Fase 0 y regla de precedencia explicita para dominio desconocido."
+    },
+    {
+      "criterio": "output de analyst se adjunta",
+      "cumplido": true,
+      "detalle": "Contexto enriquecido y cache de analyst se propagan al plan."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

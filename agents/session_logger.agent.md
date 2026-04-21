@@ -57,7 +57,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Reglas de operacion
 
-0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos.
+0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
 0. **Append-only.** Nunca sobreescribas `session_log.md`. Solo anades lineas al final.
 0b. **Usa TASK_STATE como shared state.** Si se adjunta `task_state`, úsalo para registrar `current_step`, `attempts` y el resumen del evento; añade a `history` la confirmación del log cuando corresponda, sin sobrescribir entradas previas.
 1. **Formato de entrada:**

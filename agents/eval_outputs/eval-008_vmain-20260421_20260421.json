@@ -1,0 +1,25 @@
+{
+  "eval_id": "eval-008",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "status REJECTED ante secreto hardcodeado",
+      "cumplido": true,
+      "detalle": "auditor obliga rechazo estructurado para hallazgos de seguridad."
+    },
+    {
+      "criterio": "rejection_details completo",
+      "cumplido": true,
+      "detalle": "template del auditor exige severity, file, line, issue y fix."
+    },
+    {
+      "criterio": "severity alta",
+      "cumplido": true,
+      "detalle": "Secreto hardcodeado se mapea a severidad critica o alta."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

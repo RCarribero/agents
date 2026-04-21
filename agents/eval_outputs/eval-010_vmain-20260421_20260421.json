@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-010",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry_count incrementa a 1",
+      "cumplido": true,
+      "detalle": "orchestrator registra retry_count y sincroniza TASK_STATE.attempts en reintentos."
+    },
+    {
+      "criterio": "previous_output y rejection_reason presentes",
+      "cumplido": true,
+      "detalle": "Regla 7 exige adjuntar director_report completo y resumen del fallo."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

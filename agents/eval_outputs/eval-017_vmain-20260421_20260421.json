@@ -1,0 +1,20 @@
+{
+  "eval_id": "eval-017",
+  "version": "main-20260421",
+  "fecha": "2026-04-21T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "devops con triple aprobacion",
+      "cumplido": true,
+      "detalle": "verification_bundle_protocol y regla 85 de devops exigen triple bundle valido antes de Fase 4."
+    },
+    {
+      "criterio": "sin retry innecesario",
+      "cumplido": true,
+      "detalle": "Con bundle valido la salida es directa a devops."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}
