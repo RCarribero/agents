@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-004",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "analyst primero",
+      "cumplido": true,
+      "detalle": "Tarea ambigua -> analyst Fase 0; conclusiones estructuradas propagadas al plan."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-004",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Rendimiento pantalla listado = dominio ambiguo.",
+      "criterio": "analyst primero",
+      "cumplido": true
+    },
+    {
+      "detalle": "Analysis/research cache inyectado al plan.",
+      "criterio": "output adjunto",
+      "cumplido": true
+    },
+    {
+      "detalle": "context.learnings estructurado.",
+      "criterio": "conclusiones estructuradas",
+      "cumplido": true
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

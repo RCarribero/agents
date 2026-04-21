@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-010",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "retry enriquecido",
+      "cumplido": true,
+      "detalle": "retry_count=1 con previous_output, rejection_reason y rejection_details propagados."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-010",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Segundo intento incrementa a 1.",
+      "criterio": "retry_count 1",
+      "cumplido": true
+    },
+    {
+      "detalle": "Director_report previo propagado.",
+      "criterio": "previous_output presente",
+      "cumplido": true
+    },
+    {
+      "detalle": "Fallo original descrito.",
+      "criterio": "rejection_reason presente",
+      "cumplido": true
+    },
+    {
+      "detalle": "Checklist reusado en retry.",
+      "criterio": "rejection_details propagado",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

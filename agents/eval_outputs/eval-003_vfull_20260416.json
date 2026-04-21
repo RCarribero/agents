@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-003",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "schema routing correcto",
+      "cumplido": true,
+      "detalle": "ADD COLUMN -> dbmanager Fase 1, backend Fase 2, verificacion paralela completa."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-003",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "ADD COLUMN -> dbmanager.",
+      "criterio": "dbmanager fase 1",
+      "cumplido": true
+    },
+    {
+      "detalle": "Implementacion posterior a DB.",
+      "criterio": "backend fase 2",
+      "cumplido": true
+    },
+    {
+      "detalle": "HIGH risk -> auditor + qa + red_team.",
+      "criterio": "verificacion paralela",
+      "cumplido": true
+    },
+    {
+      "detalle": "Artifacts previos propagados en TASK_STATE.",
+      "criterio": "contexto dbmanager propagado",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

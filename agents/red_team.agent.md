@@ -120,5 +120,6 @@ vulnerabilities:
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- **[ERROR]** Cleanup de installers debe operar por ownership explicito; borrar config/state compartida rompe comandos sanos y es vector Alto de destruccion local.
+- **[ERROR]** Validacion fail-closed de flags CLI debe cubrir valores invalidos, flags desconocidos y typos; cualquier opcion no reconocida que caiga a defaults amplifica scope y es vector Alto. **Fix:** parser abort temprano en `invalid mode`/`unknown flag`/`typo flag`; reataque debe probar trio completo.
 <!-- AUTONOMOUS_LEARNINGS_END -->

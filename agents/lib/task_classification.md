@@ -37,19 +37,25 @@ Tiempo esperado: segundos
 **Ejemplos:** cambiar un color, corregir un typo, ajustar un texto, fix de una línea,
 añadir un campo simple a un formulario, cambiar un mensaje de error.
 
-**Señales de modo rápido:**
+**Señales de modo rápido (basta con que se cumplan TODAS):**
 - Menos de 5 archivos afectados
 - Sin cambio de esquema ni migraciones
 - Sin nuevos providers, servicios o dependencias
 - El cambio es reversible en menos de 1 minuto
 
-```
+**Señales adicionales que refuerzan RÁPIDO (si alguna aplica junto con las anteriores):**
+- Cambio en un solo módulo/feature existente
+- Añadir widget/componente a una pantalla existente sin nueva lógica de negocio
+- Corregir bug localizado con fix obvio (< 3 archivos)
+- Cambio de comportamiento UI sin nuevos providers ni estado compartido
+- Extender un widget existente (añadir sección, toggle, lista inline)
+- Fix de validación, formato o texto en formularios existentes
+
 Fases activas:
   ├── Fase 2b: Implementador directo (sin tdd_enforcer, sin researcher)
-  ├── Fase 3b: QA ligero (solo qa, sin auditor ni red_team)
-  └── Fase 4: devops
+  └── Fase 4: devops (omite Fase 3 de verificación por ser riesgo LOW)
 
-Agentes omitidos: researcher, tdd_enforcer,
+Agentes omitidos: researcher, tdd_enforcer, auditor, qa, red_team
                   analyst, dbmanager, auditor, red_team,
                   memory_curator, session_logger
 

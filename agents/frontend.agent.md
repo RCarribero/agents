@@ -80,6 +80,15 @@ task_state: <TASK_STATE JSON actualizado>
 11. Si tras dos iteraciones el componente sigue roto visualmente, escala a `human` en `escalate_to`.
 12. **Historial de componentes:** Mantén registro de los archivos modificados y componentes creados, con breve descripción de cambios y motivos para referencia del orquestador y auditor.
 13. **Validación previa al auditor:** Antes de entregar, revisa que los componentes cumplen accesibilidad, responsividad y consistencia de diseño.
+13b. **Pre-validación obligatoria antes de entregar (elimina rebotes auditor→implementador).** Antes de marcar `status: SUCCESS`, verificar y corregir TÚ MISMO:
+  - No hay acceso a `string[0]` o `.first` sin guard de vacío (`isEmpty` check)
+  - No hay mensajes de error que expongan detalles internos (`$e`, stack traces)
+  - Widgets con `TextField`/`TextFormField`/`OutlinedButton` tienen ancestro `Material`/`Scaffold` (Flutter)
+  - Botones al fondo de `ScrollView` son accesibles en viewport 800×600 (considerar scroll en tests)
+  - El linter/analyze del proyecto pasa limpio
+  - Contraste de color cumple WCAG AA (ratio ≥4.5:1 texto normal)
+  - No hay `print()` / `debugPrint()` con datos sensibles
+  Si detectas alguno, corrígelo antes de entregar. No esperes al auditor.
 14. **Auto-aprendizaje.** Si durante la implementación de UI descubres un patrón de componentes efectivo, un problema de accesibilidad recurrente, o una convención de diseño no documentada, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
 
 ## Adaptaciones por stack

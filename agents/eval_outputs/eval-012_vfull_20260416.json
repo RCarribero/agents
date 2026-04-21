@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-012",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "devops rechaza aprobacion incompleta",
+      "cumplido": true,
+      "detalle": "Sin qa -> REJECTED, sin commit/push, control devuelto a orchestrator."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-012",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Falta qa -> rechazo.",
+      "criterio": "devops REJECTED",
+      "cumplido": true
+    },
+    {
+      "detalle": "Faltan veredictos requeridos.",
+      "criterio": "motivo explicito",
+      "cumplido": true
+    },
+    {
+      "detalle": "Precondicion falla antes de git.",
+      "criterio": "sin commit",
+      "cumplido": true
+    },
+    {
+      "detalle": "next_agent orchestrator.",
+      "criterio": "control vuelve orchestrator",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

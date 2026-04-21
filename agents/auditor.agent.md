@@ -160,4 +160,5 @@ Este formato permite al orchestrator adjuntar los detalles al agente implementad
 - Si backend valida membresía en asignaciones pero UI permite seleccionar no-miembros, exigir guardia de frontend por proyecto como condición para cerrar incidentes de 400 recurrentes.
 - Reapertura de tareas completas (`terminado` -> no `terminado`) sin rol `editor|owner` es fallo de autorización y debe marcarse al menos como severidad Alta.
 - En endpoints de move/transition, auditar permiso por transición y no solo por estado final para bloquear bypass de viewers en reapertura.
+- **[ERROR]** Wrapper/CLI publishable que importa siblings fuera del paquete o excluye deps runtime del tarball = hallazgo Alto; verificar install standalone desde artefacto publicado.
 <!-- AUTONOMOUS_LEARNINGS_END -->

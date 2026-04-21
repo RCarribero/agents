@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-016",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "espera triple veredicto",
+      "cumplido": true,
+      "detalle": "Solo .audit no dispara devops ni artefactos Fase 4."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-016",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Solo .audit no desbloquea Fase 4.",
+      "criterio": "sin devops con un veredicto",
+      "cumplido": true
+    },
+    {
+      "detalle": "qa/red_team pendientes.",
+      "criterio": "estado espera",
+      "cumplido": true
+    },
+    {
+      "detalle": "Sin commit/push.",
+      "criterio": "sin artefactos fase 4",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

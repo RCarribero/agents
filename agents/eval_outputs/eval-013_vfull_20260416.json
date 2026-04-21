@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-013",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "curacion parcial correcta",
+      "cumplido": true,
+      "detalle": "memory_curator post-devops; solo AUTONOMOUS_LEARNINGS; memoria_global intacta; max 10 notas."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-013",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Post-devops -> modo parcial.",
+      "criterio": "memory_curator post SUCCESS",
+      "cumplido": true
+    },
+    {
+      "detalle": "Solo agentes del ciclo.",
+      "criterio": "solo AUTONOMOUS_LEARNINGS",
+      "cumplido": true
+    },
+    {
+      "detalle": "Modo parcial no toca memoria_global.",
+      "criterio": "memoria_global intacta",
+      "cumplido": true
+    },
+    {
+      "detalle": "Archivado si excede 10.",
+      "criterio": "max 10 notas",
+      "cumplido": true
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

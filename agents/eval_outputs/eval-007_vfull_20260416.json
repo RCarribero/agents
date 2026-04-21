@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-007",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "sufijos paralelos correctos",
+      "cumplido": true,
+      "detalle": ".audit/.qa/.redteam definidos y Fase 4 bloqueada hasta triple recepcion."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-007",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Contrato auditor.",
+      "criterio": "auditor .audit",
+      "cumplido": true
+    },
+    {
+      "detalle": "Contrato qa.",
+      "criterio": "qa .qa",
+      "cumplido": true
+    },
+    {
+      "detalle": "Contrato orchestrator.",
+      "criterio": "red_team .redteam",
+      "cumplido": true
+    },
+    {
+      "detalle": "Fase 4 bloqueada hasta tres reports.",
+      "criterio": "espera triple",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

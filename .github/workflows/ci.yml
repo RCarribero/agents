@@ -1,24 +1,21 @@
-name: CI — Validate Agents + Optional Project Checks
+name: CI - Multi Client Toolkit
 
 on:
   push:
-    branches: [main, "feature/**", "fix/**"]
+    branches: [main, 'feature/**', 'fix/**']
   pull_request:
     branches: [main]
 
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
 
 jobs:
-  detect-stack:
-    name: Detect changed stacks
+  detect-changes:
+    name: Detect relevant changes
     runs-on: ubuntu-latest
     outputs:
-      flutter: ${{ steps.changes.outputs.flutter }}
       node: ${{ steps.changes.outputs.node }}
-      frontend: ${{ steps.changes.outputs.frontend }}
+      agents: ${{ steps.changes.outputs.agents }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,116 +23,53 @@ jobs:
         id: changes
         with:
           filters: |
-            flutter:
-              - '**/*.dart'
-              - '**/pubspec.yaml'
             node:
-              - 'src/**'
               - 'package.json'
-              - 'tsconfig.json'
-              - 'pnpm-lock.yaml'
-            frontend:
-              - 'frontend/src/**'
-              - 'frontend/package.json'
-              - 'frontend/tsconfig.json'
-              - 'frontend/pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'packages/**'
+              - 'tests/multi-client-install.contract.test.mjs'
+              - '.github/workflows/ci.yml'
+            agents:
+              - 'agents/**'
+              - 'scripts/eval_runner_ci.py'
 
-  flutter-ci:
-    name: Flutter — Tests & Analyze
+  node-contracts:
+    name: Node contracts
     runs-on: ubuntu-latest
-    needs: detect-stack
-    if: needs.detect-stack.outputs.flutter == 'true'
+    needs: detect-changes
+    if: needs.detect-changes.outputs.node == 'true'
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - uses: actions/setup-node@v4
         with:
-          flutter-version: "3.19.6"
-          channel: stable
-          cache: true
+          node-version: '22'
 
-      - name: Get dependencies
-        run: flutter pub get
+      - name: Enable corepack
+        run: corepack enable
 
-      - name: Analyze (no fatal infos)
-        run: flutter analyze --no-fatal-infos
+      - name: Run contract tests
+        run: pnpm test
 
-      - name: Run tests
-        run: flutter test --reporter=json > flutter-test-results.json || true
+  agent-evals:
+    name: Agent contract evals
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.agents == 'true'
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Upload test results
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run structural agent evals
+        run: python scripts/eval_runner_ci.py --output eval-results.json
+
+      - name: Upload eval results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: flutter-test-results
-          path: flutter-test-results.json
+          name: agent-eval-results
+          path: eval-results.json
           retention-days: 7
-
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-      - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL,HIGH
-          format: sarif
-          output: trivy-results.sarif
-          exit-code: "0"
-
-      - name: Upload Trivy SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: trivy-results.sarif
-          category: trivy
-
-      - name: Semgrep SAST
-        uses: semgrep/semgrep-action@v1
-        if: github.actor != 'dependabot[bot]'
-        with:
-          config: >-
-            p/python
-            p/owasp-top-ten
-          generateSarif: "1"
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-        continue-on-error: true
-
-  # ─────────────────────────────────────────────
-  # PR auto-comment with CI summary
-  # ─────────────────────────────────────────────
-  pr-summary:
-    name: PR Summary Comment
-    runs-on: ubuntu-latest
-    needs: [flutter-ci, security]
-    if: always() && github.event_name == 'pull_request'
-    steps:
-      - name: Comment CI summary on PR
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const jobs = {
-              flutter: '${{ needs.flutter-ci.result }}',
-              security: '${{ needs.security.result }}'
-            };
-            const icon = r => r === 'success' ? '✅' : r === 'skipped' ? '⏭️' : '❌';
-            const body = [
-              '## CI Summary',
-              '',
-              `| Job | Status |`,
-              `|-----|--------|`,
-              `| Flutter Tests + Analyze | ${icon(jobs.flutter)} ${jobs.flutter} |`,
-              `| Security Scan | ${icon(jobs.security)} ${jobs.security} |`,
-              '',
-              '*Generated by CI workflow. Triple approval (auditor + qa + red_team) required before merge.*'
-            ].join('\n');
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body
-            });

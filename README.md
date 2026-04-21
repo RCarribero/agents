@@ -6,6 +6,13 @@
 
 Swarm de agentes con estado compartido, verificación por fases, trazabilidad operativa y toolkit local para bootstrap, instalación de layout y soporte del flujo de trabajo.
 
+Incluye planner e instaladores multi-cliente para Claude, Codex, Copilot, Cursor, Antigravity y Windsurf, expuestos como paquetes npm/pnpm sin dependencias externas.
+
+Requisitos para usar paquetes publicados:
+
+- Node.js 20+
+- `pnpm` via `corepack pnpm` si Corepack está disponible; si no, usa `npm exec`
+
 ## Índice
 
 - [Qué es](#qué-es)
@@ -15,6 +22,7 @@ Swarm de agentes con estado compartido, verificación por fases, trazabilidad op
 - [Agentes](#agentes)
 - [Estructura](#estructura)
 - [Manual de uso](#manual-de-uso)
+- [Instalación Multi-Cliente](#instalación-multi-cliente)
 - [Prompts disponibles](#prompts-disponibles)
 - [Archivos ejecutables](#archivos-ejecutables)
 - [Comandos útiles](#comandos-útiles)
@@ -196,6 +204,63 @@ Bootstrap manual del repo actual:
 
 `install-copilot-layout` instala prompts globales en la carpeta de usuario de VS Code y deja un toolkit en el perfil del usuario. Después, `/start` usa ese toolkit para hacer un bootstrap mínimo del repo actual: copiar `.github/copilot-instructions.md` si falta, crear `stack.md` si falta e intentar descargar skills con `autoskills` si está disponible. `/start` no materializa `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` dentro del repo destino.
 
+## Instalación Multi-Cliente
+
+El planner central vive en `packages/core/src/install-planner.js` y el CLI en `packages/cli/`. Los wrappers legacy de `scripts/` se mantienen para Copilot, pero la superficie nueva recomendada para automatización es npm/pnpm.
+
+Clientes soportados:
+
+- `claude`
+- `codex`
+- `copilot`
+- `cursor`
+- `antigravity`
+- `windsurf`
+
+Comandos base:
+
+```bash
+# listar clientes
+pnpm exec repo-layout-install clients
+
+# ver plan completo para un cliente
+pnpm exec repo-layout-install plan --client copilot --json
+
+# wrapper dedicado por cliente
+pnpm exec install-cursor-layout --mode repo --json
+```
+
+Uso real fuera del monorepo:
+
+```bash
+# CLI publicado con pnpm
+corepack pnpm dlx @rbx/repo-layout-cli plan --client copilot --mode repo --json
+
+# CLI publicado con npm
+npm exec @rbx/repo-layout-cli@latest -- plan --client copilot --mode repo --json
+
+# Wrapper publicado con pnpm
+corepack pnpm dlx @rbx/install-copilot-layout --mode repo --json
+
+# Wrapper publicado con npm
+npm exec @rbx/install-copilot-layout@latest -- --mode repo --json
+```
+
+Smoke de empaquetado antes de publicar:
+
+```bash
+npm pack --dry-run ./packages/cli
+npm pack --dry-run ./packages/clients/install-copilot
+```
+
+Notas operativas:
+
+- `copilot` conserva wrappers legacy en `scripts/install-copilot-layout/**`, `scripts/install-repo-layout/**` y `scripts/start/**`.
+- `antigravity` queda soportado mediante rutas configurables por `ANTIGRAVITY_CONFIG_DIR` y `ANTIGRAVITY_REPO_DIR`; no se asumen rutas falsas.
+- Política de cleanup centralizada: `repo-layout-install cleanup-policy --json`.
+- `config.json` no es cache descartable: `skill_installer` y prompts lo usan para `skills_dir` y settings locales.
+- `--mode` acepta solo `global`, `repo` o `both`; cualquier otro valor falla con exit non-zero.
+
 ### 2. Dockerizar un proyecto activo
 
 Puedes invocarlo desde el chat con `/dockerize` o trabajar directamente con la carpeta `scripts/docker-launcher/` cuando el repo ya tenga artefactos Docker.
@@ -264,6 +329,9 @@ python ./scripts/verified_digest.py compute --workspace-root . agents/orchestrat
 
 | Objetivo | Comando |
 |---|---|
+| Listar clientes soportados | `pnpm exec repo-layout-install clients` |
+| Ver plan multi-cliente | `pnpm exec repo-layout-install plan --client <cliente> --json` |
+| Wrapper npm/pnpm de cliente | `pnpm exec install-<cliente>-layout --mode repo --json` |
 | Bootstrap del proyecto por chat | `/start` |
 | Dockerizar el proyecto por chat | `/dockerize` |
 | Detectar skills por chat | `/skill-installer` |
@@ -292,8 +360,26 @@ Este repositorio se distribuye bajo una licencia de uso interno y evaluación. C
 
 El workspace está preparado para:
 
+- planificar instalación multi-cliente desde `packages/core` y `packages/cli`
+- exponer wrappers npm/pnpm por cliente (`packages/clients/*`)
 - bootstrap mínimo de repositorios con `/start`
 - operar con `TASK_STATE` compartido y salida dual por agente
 - materializar layout canónico con `install-repo-layout`
 - generar entornos Docker con `/dockerize` y `docker-launcher/`
 - documentar decisiones y trazabilidad del swarm de forma consistente
+
+## Walkthrough
+
+### v3.2.0 — Optimización de velocidad de la orquesta
+
+- **P1 — Fast-path MODO RÁPIDO** (`orchestrator.agent.md`): nueva regla 1b que elimina lectura de memoria, learnings y cache para tareas clasificadas como RÁPIDO. Límite de planificación: 15s.
+- **P2 — Clasificación agresiva** (`lib/task_classification.md`): señales adicionales para que más tareas califiquen como RÁPIDO (cambios en un solo módulo, widgets inline, bugfixes localizados).
+- **P3 — Pre-validación implementadores** (`developer.agent.md`, `backend.agent.md`, `frontend.agent.md`): checklist obligatorio antes de entregar que elimina el ciclo auditor→implementador→auditor.
+- **P4 — Contexto completo devops** (`orchestrator.agent.md`): el orchestrator incluye `test_status`, `known_failures`, `orchestrator_authorization` y `commit_message` desde la primera invocación de devops.
+
+### v3.3.0 — Observabilidad, Resiliencia y Evals
+
+- **Observabilidad Exportable**: `session_logger` ahora emite en dual (MD legacy y `session_spans.jsonl` con estructura de trazas OpenTelemetry-like). Se añadió el bridge script `scripts/spans-to-observer.mjs` para ingestar la data en SQLite.
+- **Circuit Breakers para MCPs**: Se incorporó un marco de recuperación (`mcp_circuit_breaker.md`) con fallbacks nativos. `devops` usará su API git local y el CLI `gh` ante caídas de GitHub MCP sin bloquear el ciclo ni emitir REJECTED.
+- **Memoria con TTL (Auto-decay)**: Se rediseñó la relevancia temporal en `memory_curator` (`<!-- meta: last_activated=... | activations=... | relevance=... -->`). Las entradas ahora priorizan según frescura y utilidad real y se auto-archivan hacia `memoria_global_archive.md` pasado un tiempo inerte (STALE).
+- **Evals Automáticas en CI**: Validaciones estructurales y de integridad pasaron a `scripts/eval_runner_ci.py`. El CI en `.github/workflows/ci.yml` asegura un parser robusto en cada cambio sobre agentes que no rompa las expectativas del catalog.

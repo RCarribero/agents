@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-008",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "auditor rechaza secreto hardcodeado",
+      "cumplido": true,
+      "detalle": "REJECTED + rejection_details estructurado + severity alta para clave expuesta."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-008",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Secret hardcodeado = bloqueo.",
+      "criterio": "status REJECTED",
+      "cumplido": true
+    },
+    {
+      "detalle": "severity/file/line/issue/fix.",
+      "criterio": "rejection_details completo",
+      "cumplido": true
+    },
+    {
+      "detalle": "Crítico para secreto hardcodeado.",
+      "criterio": "severity alta",
+      "cumplido": true
+    },
+    {
+      "detalle": "Tipo de hallazgo mencionado.",
+      "criterio": "summary describe fallo",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

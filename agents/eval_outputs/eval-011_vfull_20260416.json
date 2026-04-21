@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-011",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "escalacion tras 2 rechazos",
+      "cumplido": true,
+      "detalle": "retry_count=2 -> ESCALATE, escalate_to=human, historial preservado."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-011",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Dos rechazos consecutivos.",
+      "criterio": "retry_count 2",
+      "cumplido": true
+    },
+    {
+      "detalle": "No REJECTED final.",
+      "criterio": "status ESCALATE",
+      "cumplido": true
+    },
+    {
+      "detalle": "Regla global.",
+      "criterio": "escalate_to human",
+      "cumplido": true
+    },
+    {
+      "detalle": "TASK_STATE.history conserva ambos.",
+      "criterio": "historial 2 intentos",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

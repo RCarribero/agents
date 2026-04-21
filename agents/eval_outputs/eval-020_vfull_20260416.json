@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-020",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "timeout reinvoca agente",
+      "cumplido": true,
+      "detalle": "qa timeout >300000ms -> mismo task_id reinvocado; Fase 4 sigue bloqueada."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-020",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Timeout >300000ms -> retry mismo rol.",
+      "criterio": "qa reinvocado",
+      "cumplido": true
+    },
+    {
+      "detalle": "Se conserva test-020.qa.",
+      "criterio": "mismo task_id",
+      "cumplido": true
+    },
+    {
+      "detalle": "Sin tres veredictos.",
+      "criterio": "Fase 4 bloqueada",
+      "cumplido": true
+    },
+    {
+      "detalle": "qa pendiente/timeout.",
+      "criterio": "sin devops",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

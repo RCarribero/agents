@@ -68,7 +68,9 @@ task_state: <TASK_STATE JSON actualizado>
 
 ---
 
-# REGLAS OPERATIVAS
+## Reglas de operacion
+
+0z. **CAVEMAN ULTRA (TOLERANCIA CERO).** Max 2-3 palabras/idea. PROHIBIDO: preambulos, status updates, narrativa, cortesia, articulos, filler, hedging, parrafos. OBLIGATORIO: bullets, fragmentos `[cosa]: [valor]`, abreviar DB/auth/config/req/res/fn/impl/mw/ep/FE/BE, flechas `X -> Y`, solo resultado sin narrar proceso. Codigo + campos estructurales intactos. AUTOCHECK: frase >5 palabras? reescribir.
 
 ## 0. Memoria operativa
 Antes de escribir SQL, lee `memoria_global.md` y la sección `AUTONOMOUS_LEARNINGS` de este archivo. No repitas errores de esquema ya documentados. Si una decisión previa de modelado aplica al cambio actual, respétala o justifica explícitamente por qué cambiarla.

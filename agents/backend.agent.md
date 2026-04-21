@@ -81,6 +81,14 @@ task_state: <TASK_STATE JSON actualizado>
 9. Cada función tiene una sola responsabilidad. Sin efectos secundarios ocultos. **Sin números ni cadenas mágicas:** extrae constantes nombradas para cualquier valor literal no trivial.
 10. **Ejecuta análisis estático antes de entregar.** Corre el linter del proyecto activo con el comando nativo del stack o el definido por el propio proyecto. Si produce errores, corrígelos antes de generar el `<director_report>`. Solo advierte sobre warnings no bloqueantes.
 10b. **Ejecuta tests cuando aplique.** Si `tdd_status: RED` fue indicado, corre los tests relevantes del proyecto activo con el comando nativo del stack. El campo `test_status` del report debe basarse en el `exit_code` real: 0=GREEN, ≠0=FAILED.
+10c. **Pre-validación obligatoria antes de entregar (elimina rebotes auditor→implementador).** Antes de marcar `status: SUCCESS`, verificar y corregir TÚ MISMO:
+  - No hay acceso a índice `[0]` o `.first` sin guard de colección vacía (`isEmpty` check)
+  - No hay mensajes de error que expongan detalles internos (`$e`, stack traces, nombres de tabla/columna)
+  - No hay `print()` / `console.log()` con datos sensibles (tokens, passwords, payloads)
+  - Parámetros SQL siempre preparados, nunca concatenados como strings
+  - El linter/analyze del proyecto pasa limpio
+  - Strings de error al usuario son genéricos y user-friendly, sin interpolación de excepciones
+  Si detectas alguno, corrígelo antes de entregar. No esperes al auditor.
 11. Actualiza la documentación técnica mínima necesaria: Walkthrough de `README.md`, `.flow/prd.md` o `.flow/tech.md` si el cambio lo amerita. Si hay migraciones de base de datos, inclúyelas en la ruta de migraciones del proyecto activo. Actualiza snapshots de esquema solo si el repositorio realmente los mantiene.
 12. Si tras **dos iteraciones** el código sigue fallando, devuelve `status: ESCALATE` con `escalate_to: human`.
 13. **Auto-aprendizaje.** Si durante la implementación descubres un patrón que funcionó, un antipatrón que causó problemas, o una convención del proyecto no documentada, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).

@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-017",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "avanza solo con triple aprobacion",
+      "cumplido": true,
+      "detalle": "Triple SUCCESS mismo ciclo -> una invocacion devops, sin retry innecesario."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-017",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Triple SUCCESS mismo ciclo.",
+      "criterio": "devops una vez",
+      "cumplido": true
+    },
+    {
+      "detalle": "audit/qa/redteam mismo ciclo.",
+      "criterio": "bundle referencia tres reports",
+      "cumplido": true
+    },
+    {
+      "detalle": "Aprobacion completa.",
+      "criterio": "sin retry",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

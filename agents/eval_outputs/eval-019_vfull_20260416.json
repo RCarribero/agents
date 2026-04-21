@@ -1,0 +1,15 @@
+{
+  "eval_id": "eval-019",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "task_id end-to-end correcto",
+      "cumplido": true,
+      "detalle": ".audit/.qa/.redteam usados y correlacionados correctamente por orchestrator."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

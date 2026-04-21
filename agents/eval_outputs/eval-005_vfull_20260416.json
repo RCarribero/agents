@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-005",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "bugfix routing correcto",
+      "cumplido": true,
+      "detalle": "Bugfix login -> developer/backend Fase 2; dbmanager omitido; clasificacion fix explicita."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-005",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Bugfix login -> implementador app.",
+      "criterio": "developer o backend fase 2",
+      "cumplido": true
+    },
+    {
+      "detalle": "Bugfix no requiere schema.",
+      "criterio": "dbmanager omitido",
+      "cumplido": true
+    },
+    {
+      "detalle": "Keyword falla -> BUGFIX.",
+      "criterio": "clasificacion bugfix",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

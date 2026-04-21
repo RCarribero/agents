@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-009",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "qa rechaza gap funcional",
+      "cumplido": true,
+      "detalle": "REJECTED + missing_cases con caso/esperado/encontrado para error de red omitido."
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-009",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Falta manejo de error.",
+      "criterio": "status REJECTED",
+      "cumplido": true
+    },
+    {
+      "detalle": "Lista obligatoria en rechazo.",
+      "criterio": "missing_cases presente",
+      "cumplido": true
+    },
+    {
+      "detalle": "caso/esperado/encontrado.",
+      "criterio": "missing_cases estructurado",
+      "cumplido": true
+    },
+    {
+      "detalle": "Gap funcional descrito.",
+      "criterio": "summary categoria",
+      "cumplido": true
+    }
+  ],
+  "peso": "crítico",
+  "tiempo_ejecucion_ms": 0
+}

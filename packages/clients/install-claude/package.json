@@ -1,0 +1,14 @@
+{
+  "name": "@rbx/install-claude-layout",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "@rbx/repo-layout-cli": "0.1.0"
+  },
+  "bin": {
+    "install-claude-layout": "./bin/install-claude-layout.js"
+  }
+}

@@ -78,6 +78,15 @@ task_state: <TASK_STATE JSON actualizado>
 8. Cada función debe tener una sola responsabilidad. Sin efectos secundarios ocultos.
 9. Si tras dos iteraciones los tests siguen fallando, escala a `human` en `escalate_to`.
 10. **Integración con auditoría automática:** Todo código entregado se someterá a revisión por el agente `auditor` antes de pasar al siguiente paso.
+10b. **Pre-validación obligatoria antes de entregar (elimina rebotes auditor→implementador).** Antes de marcar `status: SUCCESS`, verificar y corregir TÚ MISMO:
+  - No hay acceso a índice `[0]` o `.first` sin guard de colección vacía (`isEmpty` check)
+  - No hay mensajes de error que expongan detalles internos (`$e`, stack traces, nombres de tabla)
+  - No hay `print()` / `debugPrint()` / `console.log()` con datos sensibles
+  - El linter/analyze del proyecto pasa limpio
+  - Strings de usuario no contienen interpolaciones de excepciones internas
+  - Widgets con `TextField`/`TextFormField` tienen ancestro `Material` (Flutter)
+  Si detectas alguno, corrígelo antes de entregar. No esperes al auditor.
+10c. **Validación de seguridad de datos:** Asegurar que no se loguean tokens, contraseñas o PII en logs o reportes.
 11. **Historial de cambios y trazabilidad:** Mantén registro de modificaciones hechas por archivo y feature para referencia del orquestador y auditor.
 12. **Auto-aprendizaje.** Si durante la implementación descubres un patrón que funcionó, un antipatrón que causó problemas, o una convención del proyecto no documentada, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
 
@@ -108,5 +117,9 @@ Devuelve únicamente los archivos modificados o creados con su ruta relativa. Ci
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
-- Sin notas curadas todavía.
+- **[ERROR]** Wrappers npm publicados deben ser autocontenidos: no importar siblings fuera del tarball ni depender de rutas del monorepo en runtime.
+- **[ERROR]** Paquetes CLI/wrapper publicados deben incluir deps runtime reales en `files`/bundle/tarball; validar install standalone para evitar `MODULE_NOT_FOUND`.
+- **[ERROR]** Flujos documentados de install deben probarse en entorno limpio con artefactos publicados o tarballs, no solo desde workspace.
+- **[ERROR]** Cleanup destructivo debe limitarse a artefactos propios; no borrar config/state viva compartida por otros comandos.
+- **[ERROR]** Flags CLI deben validar fail-closed para valores invalidos, flags desconocidos y typos; cualquier arg no reconocido debe abortar temprano, nunca caer a defaults. **Fix:** parser abort temprano en valor invalido/flag desconocido/typo y tests cubren `invalid mode` + `unknown flag` + `typo flag`.
 <!-- AUTONOMOUS_LEARNINGS_END -->

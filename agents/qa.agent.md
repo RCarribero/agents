@@ -47,6 +47,7 @@ branch_name: <rama del ciclo, igual a context.branch_name recibida del orchestra
 verified_files: <lista de archivos verificados, igual a context.files de entrada — excluye `session_log.md` (audit_trail_artifact fuera del digest del ciclo)>
 verified_digest: <hash/huella del contenido exacto verificado para verified_files en este ciclo>
 test_status: GREEN | FAILED | NOT_APPLICABLE
+missing_cases: <solo si REJECTED; lista de objetos con {caso, esperado, encontrado}>
 summary: <veredicto + gaps funcionales en 1-2 líneas>
 </director_report>
 ```
@@ -146,4 +147,6 @@ Este formato permite al orchestrator adjuntar los detalles exactos de lo que fal
 - En edición de tarea, agregar caso QA obligatorio: intentar asignar usuario fuera del proyecto debe estar bloqueado en UI y no disparar PATCH inválido.
 - Caso QA obligatorio en tablero: mover de `terminado` a otra columna + F5 debe dejar `completada=false` de forma persistente.
 - Validar matriz de permisos en transiciones `terminado`<->no `terminado`: viewer NO reabre, editor/owner SI reabren.
+- **[ERROR]** README/install docs de paquetes publicables deben validarse en entorno limpio con tarballs reales; workspace local puede ocultar wrappers no autocontenidos.
+- **[ERROR]** QA de flags CLI debe cubrir fail-closed: `invalid mode`, `unknown flag` y `typo flag` deben abortar temprano; si parser cae a defaults, NO CUMPLE.
 <!-- AUTONOMOUS_LEARNINGS_END -->

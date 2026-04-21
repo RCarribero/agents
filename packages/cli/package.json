@@ -1,0 +1,16 @@
+{
+  "name": "@rbx/repo-layout-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/cli.js",
+  "files": [
+    "bin",
+    "src"
+  ],
+  "exports": {
+    ".": "./src/cli.js"
+  },
+  "bin": {
+    "repo-layout-install": "./bin/repo-layout-install.js"
+  }
+}

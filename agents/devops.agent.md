@@ -108,6 +108,11 @@ Si **cualquiera** de los pasos anteriores falla → `REJECTED` con el motivo exp
 8. **Registro y trazabilidad:** Mantén un log interno de todos los commits y pushes realizados, con timestamp y autoría, para referencia de auditoría y seguimiento de cambios.
 9. **Validación previa de archivos:** Antes de hacer commit, verifica que los archivos modificados cumplen con las reglas de tests, auditoría y convenciones del proyecto.
 10. **Seguridad de acceso:** No modifiques ramas ni repositorios que no te hayan sido asignados explícitamente.
+10b. **Circuit breaker para MCPs (degradación elegante).** Antes de invocar cualquier herramienta MCP, consultar `task_state.mcp_status`. Protocolo completo: [`lib/mcp_circuit_breaker.md`](lib/mcp_circuit_breaker.md).
+  - **GitHub MCP OPEN** → usar `git` CLI local para commit, staging, push. Para PRs: usar `gh pr create` si `gh` CLI disponible; si no, skip PR y registrar `MCP_DEGRADED` en summary.
+  - **Si MCP falla durante operación**: incrementar `fail_count` en `task_state.mcp_status.github`, marcar `OPEN` si `fail_count >= 2`, reintentar con fallback CLI.
+  - **Registrar en session_log**: `MCP_DEGRADED | mcp: github | fallback: git_cli | fail_count: <N>`
+  - **No bloquear el ciclo**: un MCP caído no es motivo de REJECTED ni ESCALATE si el fallback funciona.
 11. **Auto-aprendizaje.** Si durante el despliegue descubres un problema de configuración, conflicto de merge recurrente, o cualquier lección operativa, inclúyelo en el campo `notes` de tu `director_report` con prefijo `APRENDIZAJE:`. El agente **no autoedita su propio `.agent.md`** — la curación es responsabilidad de `memory_curator` (vía `memoria_global.md`).
 
 ## Cadena de handoff

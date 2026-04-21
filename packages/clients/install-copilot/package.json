@@ -1,0 +1,14 @@
+{
+  "name": "@rbx/install-copilot-layout",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "bin"
+  ],
+  "dependencies": {
+    "@rbx/repo-layout-cli": "0.1.0"
+  },
+  "bin": {
+    "install-copilot-layout": "./bin/install-copilot-layout.js"
+  }
+}

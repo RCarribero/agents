@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-002",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "routing backend correcto",
+      "cumplido": true,
+      "detalle": "Busqueda API -> backend Fase 2; dbmanager/frontend omitidos; auditor+qa presentes."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-002",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Endpoint busqueda -> backend/developer Fase 2.",
+      "criterio": "backend fase 2",
+      "cumplido": true
+    },
+    {
+      "detalle": "Consulta sin schema/UI.",
+      "criterio": "dbmanager y frontend omitidos",
+      "cumplido": true
+    },
+    {
+      "detalle": "MEDIUM risk -> auditor + qa.",
+      "criterio": "auditor y qa presentes",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

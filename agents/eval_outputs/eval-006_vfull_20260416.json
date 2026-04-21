@@ -1,0 +1,49 @@
+{
+  "eval_id": "eval-006",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "director_report completo",
+      "cumplido": true,
+      "detalle": "task_id/status/next_agent/summary definidos por contrato y status restringido a valores validos."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-006",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "task_id/status/next_agent/summary definidos.",
+      "criterio": "campos obligatorios",
+      "cumplido": true
+    },
+    {
+      "detalle": "SUCCESS|REJECTED|ESCALATE.",
+      "criterio": "status valido",
+      "cumplido": true
+    },
+    {
+      "detalle": "Formato no vacio, sin espacios.",
+      "criterio": "task_id valido",
+      "cumplido": true
+    },
+    {
+      "detalle": "1-2 lineas por contrato.",
+      "criterio": "summary breve",
+      "cumplido": true
+    },
+    {
+      "detalle": "Agente valido o none.",
+      "criterio": "next_agent valido",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

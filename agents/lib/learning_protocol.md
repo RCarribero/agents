@@ -138,6 +138,9 @@ Solo inyectar un learning si cumple AL MENOS UNO:
 
 **Maximo 5 learnings por agente** para no saturar el contexto.
 
+### Obligación de mención (evidencia contractual)
+Si un agente recibe `context.learnings` y aplica uno o más para tomar una decisión de diseño, código o evaluación, **ESTÁ OBLIGADO** a mencionar explícitamente el uso de dicho aprendizaje en el campo `summary` de su `agent_report` (o `director_report`) y, cuando aplique, en los comentarios del código modificado. Esto garantiza la trazabilidad end-to-end de que la memoria inyectada fue efectivamente leída y aplicada.
+
 ## 5. Formato de AUTONOMOUS_LEARNINGS
 
 Cada nota en la seccion AUTONOMOUS_LEARNINGS debe seguir este formato:
@@ -179,10 +182,22 @@ Antes de escribir cualquier nota, verificar:
 - Si existe pero es mas vaga, reemplazar con la version mas precisa
 - Si existe y es identica, descartar
 
-### Regla de relevancia temporal
+### Regla de relevancia temporal (con metadata)
 
-- Notas que no se han activado (no han prevenido un error) en 20 ciclos: mover a archivo
-- Notas que han prevenido un error al menos 1 vez: mantener indefinidamente
+Cada entrada en `memoria_global.md` incluye metadata en comentario HTML:
+```markdown
+## [2026-04-07] task-id — Título
+<!-- meta: last_activated=2026-04-09 | activations=3 | relevance=HIGH -->
+```
+
+- `last_activated` se actualiza cuando la lección previene un error o se referencia en un ciclo exitoso
+- `activations` se incrementa cada vez que la lección es útil
+- `relevance` se recalcula en cada curación completa:
+  - ≤7 días: `HIGH` | 8-30 días: `MEDIUM` | 31-60 días: `LOW` | >60 días: `STALE`
+  - Excepción: `activations >= 5` → mínimo `MEDIUM`
+- Entradas `STALE` → archivadas automáticamente a `memoria_global_archive.md`
+- Entradas con `activations >= 1` que previenen errores activamente → mantener indefinidamente
+- El orchestrator prioriza `HIGH > MEDIUM > LOW` al inyectar learnings; nunca inyecta `STALE`
 
 ## 7. Verificacion de que el sistema funciona
 

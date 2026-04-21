@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-014",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "curacion completa correcta",
+      "cumplido": true,
+      "detalle": "Entradas fechadas al inicio, deduplicacion activa, limite de 10 notas por agente."
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-014",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "[YYYY-MM-DD] task_id — Titulo.",
+      "criterio": "formato entradas",
+      "cumplido": true
+    },
+    {
+      "detalle": "Redundantes eliminadas.",
+      "criterio": "dedup notas",
+      "cumplido": true
+    },
+    {
+      "detalle": "Límite preservado.",
+      "criterio": "max 10 notas",
+      "cumplido": true
+    },
+    {
+      "detalle": "Nueva entrada al inicio.",
+      "criterio": "orden cronologico inverso",
+      "cumplido": true
+    }
+  ],
+  "peso": "medio",
+  "tiempo_ejecucion_ms": 0
+}

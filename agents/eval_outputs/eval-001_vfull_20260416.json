@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-001",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "routing UI correcto",
+      "cumplido": true,
+      "detalle": "MODO RAPIDO LOW -> frontend Fase 2, devops Fase 4, sin dbmanager ni verificacion formal."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-001",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "UI color change -> MODO RAPIDO LOW; dbmanager omitido.",
+      "criterio": "dbmanager omitido",
+      "cumplido": true
+    },
+    {
+      "detalle": "UI/components -> frontend Fase 2.",
+      "criterio": "frontend fase 2",
+      "cumplido": true
+    },
+    {
+      "detalle": "LOW risk -> sin auditor/qa/red_team.",
+      "criterio": "sin Fase 3 formal",
+      "cumplido": true
+    },
+    {
+      "detalle": "MODO RAPIDO termina en devops.",
+      "criterio": "devops fase 4",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

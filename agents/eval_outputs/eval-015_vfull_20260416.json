@@ -1,0 +1,44 @@
+{
+  "eval_id": "eval-015",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "memoria leida antes de actuar",
+      "cumplido": true,
+      "detalle": "Lecciones relevantes inyectadas via context.learnings; antipatrones evitados."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-015",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "context.learnings inyectado.",
+      "criterio": "patron memoria aplicado",
+      "cumplido": true
+    },
+    {
+      "detalle": "Errores evitados por memoria.",
+      "criterio": "sin antipatron documentado",
+      "cumplido": true
+    },
+    {
+      "detalle": "Patrones relevantes priorizados.",
+      "criterio": "buena practica seguida",
+      "cumplido": true
+    },
+    {
+      "detalle": "Lecciones forman parte del contexto activo.",
+      "criterio": "convencion referenciada",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}

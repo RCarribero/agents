@@ -1,6 +1,7 @@
 # Local VS Code / Copilot state
 /config.json
 /command-history-state.json
+/eval-results.json
 /ide/
 /logs/
 /restart/
@@ -23,6 +24,8 @@ __pycache__/
 # Node observer backend
 node_modules/
 dist/
+package-lock.json
+pnpm-debug.log*
 observer.db
 observer.db-shm
 observer.db-wal

@@ -1,0 +1,39 @@
+{
+  "eval_id": "eval-018",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "criterio": "sin retry prematuro",
+      "cumplido": true,
+      "detalle": "Auditor REJECTED con qa/red_team pendientes -> espera triple paralelo; sin devops."
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}{
+  "eval_id": "eval-018",
+  "version": "full",
+  "fecha": "2026-04-16T00:00:00Z",
+  "resultado": "PASS",
+  "criterios": [
+    {
+      "detalle": "Espera triple paralelo.",
+      "criterio": "sin retry temprano",
+      "cumplido": true
+    },
+    {
+      "detalle": "Sin evaluacion final.",
+      "criterio": "retry_count no incrementa",
+      "cumplido": true
+    },
+    {
+      "detalle": "Auditor REJECTED.",
+      "criterio": "sin devops",
+      "cumplido": true
+    }
+  ],
+  "peso": "alto",
+  "tiempo_ejecucion_ms": 0
+}
