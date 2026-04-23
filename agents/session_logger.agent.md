@@ -58,7 +58,7 @@ task_state: <TASK_STATE JSON actualizado>
 ## Reglas de operacion
 
 0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
-0. **Append-only.** Nunca sobreescribas `session_log.md`. Solo anades lineas al final.
+0. **Append-only con lock.** Nunca sobreescribas `session_log.md`. Solo anades lineas al final, **siempre via `scripts/lock.append_atomic`** (file lock cross-platform). Si dos session_loggers corren en paralelo, el lock garantiza no corromper. Comando equivalente CLI: `python -c "from scripts.lock import append_atomic; append_atomic('session_log.md', '<linea>')"`. Misma regla aplica a `session_spans.jsonl`.
 0b. **Usa TASK_STATE como shared state.** Si se adjunta `task_state`, úsalo para registrar `current_step`, `attempts` y el resumen del evento; añade a `history` la confirmación del log cuando corresponda, sin sobrescribir entradas previas.
 1. **Formato de entrada:**
    ```

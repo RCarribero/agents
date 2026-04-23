@@ -65,18 +65,20 @@ task_state: <TASK_STATE JSON actualizado>
 
 0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
 
-### VERIFICACION DE BRANCH OBLIGATORIA (primera accion, antes de cualquier operacion git)
+### GATE DETERMINISTA OBLIGATORIO (primera accion absoluta)
 
-1. Ejecutar `git rev-parse --abbrev-ref HEAD` → el resultado debe ser **exactamente** `context.branch_name`. Si no coincide → `REJECTED` con `rejection_reason: "branch mismatch: HEAD local no es context.branch_name"`.
-2. Ejecutar `git status --porcelain` → solo deben aparecer los archivos listados en `context.verified_files`. Si aparece cualquier otro archivo modificado (tracked o untracked) → `REJECTED` con `rejection_reason: "working tree dirty: archivos no declarados en verified_files presentes"`.
-3. Ejecutar `git log -1 --format="%H"` → guardar como `local_head`.
-4. Ejecutar `git ls-remote origin <context.branch_name>` → guardar como `remote_tip`.
-5. Si `local_head != remote_tip` **y** `remote_tip` existe:
-   - El branch fue actualizado remotamente → ejecutar `git pull --rebase`
-   - Si hay conflictos → `ESCALATE → human` con `rejection_reason: "rebase conflict tras git pull — intervención humana requerida"`
-6. Si `remote_tip` no existe (branch solo local) → continuar sin pull.
+Antes de cualquier validacion manual de bundle/digest/branch:
+1. Materializar bundle de Fase 3 desde `runs/<task_id_base>/{auditor,qa,red_team}.findings.json` -> `runs/<task_id_base>/bundle.json` (campos: `task_id`, `verification_cycle`, `branch_name`, `verified_files`, `verified_digest`, `verdicts`).
+2. Ejecutar:
+   ```
+   python scripts/gate/gate.py --bundle runs/<task_id_base>/bundle.json --workspace-root . --rebuild-index
+   ```
+3. Reaccionar segun exit code:
+   - `0` -> stages git ya aplicados por `index_gate`; continuar a `git commit` + `git push`.
+   - `!= 0` -> `status: REJECTED` con `rejection_reason: "<gate>: <razon devuelta>"`. NO ejecutar git commit ni push.
+   - Si `gate.py` reporta `tampering` o conflictos irreparables -> `status: ESCALATE` con `escalate_to: human`.
 
-Si **cualquiera** de los pasos anteriores falla → `REJECTED` con el motivo explícito. Esta verificación se ejecuta **antes** del scope check y del bundle check.
+Las reglas detalladas siguientes (branch verification, bundle correlation, digest recompute, index binding) **estan delegadas en `scripts/gate/`** y se mantienen aqui solo como referencia documental del contrato. El gate las ejecuta atomicamente.
 
 ---
 
@@ -104,7 +106,12 @@ Si **cualquiera** de los pasos anteriores falla → `REJECTED` con el motivo exp
 5. Prepara la documentación técnica mínima necesaria: actualiza `README.md` (sección Walkthrough), `.flow/prd.md` o `.flow/tech.md` si el cambio lo amerita.
 6. Si hay migraciones de base de datos, verifica que el archivo SQL está en la ruta de migraciones del proyecto activo. Solo exige `schema.sql` o snapshots equivalentes si el repositorio realmente los mantiene.
 7. Ejecuta `git push` a la **rama asignada** (`context.branch_name`, requerido explícito en el contrato de entrada) — nunca asumas `main` ni ninguna otra rama principal por defecto. Eres el único agente autorizado para escribir en el repositorio remoto. Reporta el resultado del push en `<director_report>`.
-7b. **Crear PR vía MCP GitHub.** Tras un push exitoso, si el MCP github server está disponible: llamar la herramienta `mcp_io_github_git_create_pull_request` con título derivado del mensaje de commit principal, descripción que incluya `task_id`, `verification_cycle`, `verified_digest` y links a los tres veredictos de Fase 3. Base: rama destino configurada en el proyecto (normalmente `main` o `develop`). Head: `context.branch_name`. Si la llamada MCP falla, continuar y reportarlo en `summary` — no bloquear el despliegue.
+7b. **Crear PR + auto-merge (zero-human-loop).** Tras push exitoso:
+   1. Llamar `mcp_io_github_git_create_pull_request` con titulo del commit principal, body con `task_id`, `verification_cycle`, `verified_digest`, `verified_files`, links a los 3 veredictos. Base = rama protegida del proyecto. Head = `context.branch_name`. Capturar `pr_number`.
+   2. **Excepcion auto-merge:** si `verified_files` toca `agents/*.agent.md`, `scripts/gate/`, `.mcp.json` o `.github/workflows/`, NO mergear: aplicar label `agent-change-requires-human` via `mcp_io_github_git_update_pull_request` y devolver `status: SUCCESS` con `summary: "PR <num> espera review humano"`.
+   3. Caso contrario: `mcp_io_github_git_merge_pull_request` con `merge_method: SQUASH`.
+   4. **Polling CI post-merge** durante 300s (intervalo 15s). Si CI falla -> `git revert -m 1 <merge_sha>` + `git push` + `status: ESCALATE` con `escalate_to: human` y `reason: "CI rojo post-merge; revert ejecutado"`.
+   5. Si MCP github falla -> fallback `gh pr create` + `gh pr merge --squash --auto` si `gh` CLI presente; si no, registrar `MCP_DEGRADED` en summary y dejar PR abierto sin merge.
 8. **Registro y trazabilidad:** Mantén un log interno de todos los commits y pushes realizados, con timestamp y autoría, para referencia de auditoría y seguimiento de cambios.
 9. **Validación previa de archivos:** Antes de hacer commit, verifica que los archivos modificados cumplen con las reglas de tests, auditoría y convenciones del proyecto.
 10. **Seguridad de acceso:** No modifiques ramas ni repositorios que no te hayan sido asignados explícitamente.

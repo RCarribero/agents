@@ -73,10 +73,22 @@ task_state: <TASK_STATE JSON actualizado con el resultado de auditoría>
 
 ### REGLA DE DIGEST (obligatoria)
 
-Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.md) sobre los archivos recibidos en `context.files`. En caso de `digest_mismatch`:
+Delegada a `scripts/gate/digest_gate.py`. Ejecutar:
+```
+python scripts/gate/digest_gate.py --files <a> <b> ... --expected <verified_digest_propagado>
+```
+Si exit != 0 -> `digest_mismatch`:
 - `status: REJECTED`, `veredicto: RECHAZADO`
-- `rejection_reason: "digest_mismatch — artifacts modificados entre implementación y verificación"`
-- **NO emitir nuevos hallazgos del código** — solo emitir el rechazo por digest mismatch
+- `rejection_reason: "digest_mismatch"`
+- **NO emitir nuevos hallazgos del codigo** -- solo rechazo
+
+### REGLA DE FINDINGS JSON (obligatoria)
+
+Tras analizar, escribir `runs/<task_id_base>/auditor.findings.json` conforme a `agents/lib/finding_schema.json`. Schema minimo:
+```
+{"agent":"auditor","task_id":"<base>","verification_cycle":"<cycle>","branch_name":"<branch>","verified_files":[...],"verified_digest":"<sha>","veredicto":"APROBADO|RECHAZADO","findings":[...]}
+```
+Esto alimenta el bundle determinista que `devops` valida via `scripts/gate/gate.py`.
 
 ---
 

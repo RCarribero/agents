@@ -74,10 +74,21 @@ task_state: <TASK_STATE JSON actualizado con el resultado del ataque>
 
 ### REGLA DE DIGEST (obligatoria)
 
-Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.md) sobre los archivos recibidos en `context.files`. En caso de `digest_mismatch`:
+Delegada a `scripts/gate/digest_gate.py`. Ejecutar:
+```
+python scripts/gate/digest_gate.py --files <a> <b> ... --expected <verified_digest_propagado>
+```
+Si exit != 0 -> `digest_mismatch`:
 - `status: ESCALATE`, `veredicto: NO EVALUADO`
 - `vulnerabilities: []`
-- **NO emitir nuevos hallazgos del codigo** — solo emitir el rechazo por digest mismatch, escalando al orchestrator
+- **NO emitir nuevos hallazgos** -- escalar al orchestrator
+
+### REGLA DE FINDINGS JSON (obligatoria)
+
+Tras analizar, escribir `runs/<task_id_base>/red_team.findings.json` conforme a `agents/lib/finding_schema.json`. Schema minimo:
+```
+{"agent":"red_team","task_id":"<base>","verification_cycle":"<cycle>","branch_name":"<branch>","verified_files":[...],"verified_digest":"<sha>","veredicto":"RESISTENTE|VULNERABLE","vulnerabilities":[...]}
+```
 
 ---
 

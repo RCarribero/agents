@@ -107,7 +107,7 @@ task_state: <TASK_STATE JSON actualizado>
      "stale": false
    }
    ```
-   Este archivo es **exclusivo de la sesión activa** — no modificar ni leer `research_cache.json` de otras sesiones. Usa el MCP filesystem si está disponible; si no, anota el payload en el campo `notes` del `director_report` para que el orchestrator lo persista. No bloques si la escritura falla — anota el error en `issues` y continúa.
+   Este archivo es **exclusivo de la sesión activa** — no modificar ni leer `research_cache.json` de otras sesiones. **Acceso bajo lock obligatorio:** envolver el read-modify-write en `with file_lock(path):` de `scripts/lock` para evitar corrupcion cuando varios researchers corren en paralelo. Equivalente CLI: `python -c "from scripts.lock import file_lock; ..."`. Usa el MCP filesystem si está disponible; si no, anota el payload en el campo `notes` del `director_report` para que el orchestrator lo persista. No bloques si la escritura falla — anota el error en `issues` y continúa.
 
 ## Cadena de handoff
 

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Wrapper installed as .git/hooks/pre-commit
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+exec python "$ROOT/scripts/hooks/pre-commit.py" "$@"

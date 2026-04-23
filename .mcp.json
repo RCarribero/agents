@@ -1,0 +1,20 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp.schema.json",
+  "servers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "${workspaceFolder}"],
+      "description": "Read/write within workspace root."
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${env:GITHUB_TOKEN}"
+      },
+      "description": "GitHub repo ops: branches, PRs, issues."
+    }
+  }
+}

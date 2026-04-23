@@ -63,6 +63,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Validate agent model IDs
+        run: python scripts/validate-models.py
+
       - name: Run structural agent evals
         run: python scripts/eval_runner_ci.py --output eval-results.json
 
@@ -73,3 +76,27 @@ jobs:
           name: agent-eval-results
           path: eval-results.json
           retention-days: 7
+
+  validate-mcp:
+    name: Validate .mcp.json
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Lint .mcp.json schema
+        run: |
+          python -c "import json,sys; json.load(open('.mcp.json'))" || (echo 'invalid .mcp.json'; exit 1)
+
+  smoke-deterministic-plane:
+    name: Smoke deterministic plane (gate + eval_runner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run full_cycle smoke
+        run: python scripts/smoke/full_cycle.py

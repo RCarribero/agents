@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VerifierFindings",
+  "type": "object",
+  "required": ["agent", "task_id", "verification_cycle", "branch_name", "verified_files", "verified_digest", "veredicto"],
+  "properties": {
+    "agent": { "enum": ["auditor", "qa", "red_team"] },
+    "task_id": { "type": "string" },
+    "task_id_base": { "type": "string" },
+    "verification_cycle": { "type": "string" },
+    "branch_name": { "type": "string" },
+    "verified_files": { "type": "array", "items": { "type": "string" } },
+    "verified_digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "veredicto": { "enum": ["APROBADO", "RECHAZADO", "CUMPLE", "NO CUMPLE", "RESISTENTE", "VULNERABLE", "NO EVALUADO"] },
+    "test_status": { "enum": ["GREEN", "FAILED", "NOT_APPLICABLE"] },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "file", "rule", "message"],
+        "properties": {
+          "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+          "file": { "type": "string" },
+          "line": { "type": ["integer", "null"] },
+          "rule": { "type": "string" },
+          "message": { "type": "string" },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "vulnerabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "vector", "description"],
+        "properties": {
+          "severity": { "enum": ["critical", "high", "medium", "low"] },
+          "vector": { "type": "string" },
+          "file": { "type": "string" },
+          "description": { "type": "string" },
+          "exploit_steps": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "missing_cases": { "type": "array", "items": { "type": "string" } }
+  }
+}

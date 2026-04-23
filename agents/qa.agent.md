@@ -79,10 +79,21 @@ Este agente se ejecuta simultáneamente con `auditor` y `red_team`. Los tres rec
 
 ### REGLA DE DIGEST (obligatoria)
 
-Aplicar el protocolo definido en [`lib/digest_protocol.md`](lib/digest_protocol.md) sobre los archivos recibidos en `context.files`. En caso de `digest_mismatch`:
+Delegada a `scripts/gate/digest_gate.py`. Ejecutar:
+```
+python scripts/gate/digest_gate.py --files <a> <b> ... --expected <verified_digest_propagado>
+```
+Si exit != 0 -> `digest_mismatch`:
 - `status: REJECTED`, `veredicto: NO CUMPLE`, `test_status: NOT_APPLICABLE`
 - `missing_cases`: una unica entrada explicando `digest_mismatch`
-- **NO emitir nuevos gaps funcionales** — solo emitir el rechazo por digest mismatch
+- **NO emitir nuevos gaps funcionales** -- solo rechazo
+
+### REGLA DE FINDINGS JSON (obligatoria)
+
+Tras verificar, escribir `runs/<task_id_base>/qa.findings.json` conforme a `agents/lib/finding_schema.json`. Schema minimo:
+```
+{"agent":"qa","task_id":"<base>","verification_cycle":"<cycle>","branch_name":"<branch>","verified_files":[...],"verified_digest":"<sha>","veredicto":"CUMPLE|NO CUMPLE","test_status":"GREEN|RED|NOT_APPLICABLE","missing_cases":[...]}
+```
 
 ---
 

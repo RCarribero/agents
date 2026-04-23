@@ -62,7 +62,6 @@ El sistema está coordinado por `orchestrator` y usa un flujo por fases con veri
 ```mermaid
 flowchart TD
     U[Usuario] --> O[orchestrator]
-    O -.->|Fase -1| SI[skill_installer]
     O -->|Fase 0a| R[researcher]
     O -->|Fase 0| A[analyst]
     O -->|Fase 1| DB[dbmanager]
@@ -82,6 +81,27 @@ flowchart TD
 ```
 
 La especificación completa del flujo, reintentos, gates y handoffs vive en `SISTEMA_COMPLETO.md`.
+
+## Zero-human-loop
+
+El sistema está disenado para que **un solo prompt del usuario produzca un PR mergeado** (o un `ESCALATE` motivado), sin confirmaciones intermedias.
+
+- `orchestrator` **nunca** pregunta aclaraciones; ante ambiguedad materializa la asuncion mas razonable y la registra en `task_state.assumptions`.
+- Todas las verificaciones de Fase 3 (digest, bundle correlation, branch state, index binding, tools) viven en `scripts/gate/` y son **deterministicas** — no LLM-as-judge.
+- `devops` invoca `python scripts/gate/gate.py --bundle <bundle.json> --rebuild-index` como primera accion. Si exit != 0 → `REJECTED` con causa concreta.
+- Tras commit + push, `devops` crea PR via MCP GitHub y hace **auto-merge** salvo cuando `verified_files` toca `agents/*.agent.md`, `scripts/gate/`, `.mcp.json` o `.github/workflows/` (en cuyo caso queda con label `agent-change-requires-human`).
+- Polling CI post-merge: si falla, `devops` ejecuta `git revert` + `ESCALATE`.
+- `escalate_to: human` solo se permite en 4 casos: `retry_count >= 2` con causa raiz no resoluble, `cycle_budget_seconds` agotado, gate detecta tampering irreparable, o accion irreversible sobre datos productivos sin DRY-RUN.
+
+### Plano deterministico
+
+```
+findings JSON  ->  bundle.json  ->  scripts/gate/gate.py  ->  commit  ->  PR  ->  auto-merge  ->  CI poll
+                                          |
+                          bundle_gate -> digest_gate -> branch_gate -> index_gate -> tool_gate
+```
+
+Smoke E2E: `python scripts/smoke/full_cycle.py` (parte del CI en job `smoke-deterministic-plane`).
 
 ## TASK_STATE
 

@@ -56,7 +56,7 @@ task_state: <TASK_STATE JSON actualizado>
 ## Reglas de operacion
 
 0z. **Caveman:** aplica [`lib/caveman_protocol.md`](lib/caveman_protocol.md) (modo ultra). Auto-Clarity solo en warnings seguridad criticos.
-0. **Fase -1 -- Primera accion de sesion.** Siempre se ejecuta antes que cualquier otro agente.
+0. **Invocacion manual unicamente.** Solo se ejecuta cuando el usuario invoca el prompt `/skill-installer`. NO es Fase -1 ni se ejecuta automaticamente al inicio de sesion.
 0b. **Usa TASK_STATE como estado compartido.** Si el orquestador ya inicializó `task_state`, añade a `history` el stack detectado y el estado de `skill_context`; no reinicies el objeto ni sobrescribas el historial previo.
 1. **Verifica cache primero.** Lee `skills_cache.md` en la raíz del workspace. Si existe y tiene menos de 24 horas, usa los datos cacheados y salta al paso de construcción de `skill_context`.
 2. **Detecta el stack.** En orden de preferencia:
@@ -87,7 +87,7 @@ task_state: <TASK_STATE JSON actualizado>
 
 ## Cadena de handoff
 
-Invocado por **`orchestrator`** como Fase -1. Output (`skill_context`) se propaga como campo adicional del `context` a todos los agentes subsiguientes.
+Invocado **manualmente** por el usuario via prompt `/skill-installer`. Output (`skill_context`) se propaga como campo adicional del `context` a los agentes subsiguientes del ciclo en curso.
 
 <!-- AUTONOMOUS_LEARNINGS_START -->
 ## Notas operativas aprendidas
