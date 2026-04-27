@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Ejecutor de código puro. Pica código hasta que los tests pasen.
-model: 'Claude Sonnet 4.6'  # implementación: balance coste/velocidad suficiente para hacer pasar tests a verde
+model: 'Claude Opus 4.7'  # implementación: balance coste/velocidad suficiente para hacer pasar tests a verde
 user-invocable: false
 ---
 

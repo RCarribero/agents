@@ -1,7 +1,7 @@
 ---
 name: red_team
 description: Ataca la implementación para encontrar inputs maliciosos, edge cases y asunciones rotas. Corre en paralelo con auditor y qa.
-model: 'GPT-5.4'  # adversarial: requiere creatividad y razonamiento profundo para detectar vulnerabilidades no obvias
+model: 'Claude Opus 4.7'  # adversarial: requiere creatividad y razonamiento profundo para detectar vulnerabilidades no obvias
 user-invocable: false
 ---
 

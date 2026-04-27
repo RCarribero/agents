@@ -1,7 +1,7 @@
 ---
 name: analyst
 description: Analiza proyectos, detecta funcionalidades ausentes y genera ideas accionables de mejora, arquitectura y producto.
-model: 'Claude Sonnet 4.6'  # análisis: balance coste/capacidad para síntesis de requisitos y detección de gaps
+model: 'Claude Opus 4.7'  # análisis: balance coste/capacidad para síntesis de requisitos y detección de gaps
 temperature: 0.7
 user-invocable: true
 ---

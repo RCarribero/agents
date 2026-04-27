@@ -1,7 +1,7 @@
 ---
 name: memory_curator
 description: Extrae lecciones aprendidas y actualiza la memoria global.
-model: 'GPT-5.4'  # curación: requiere síntesis abstracta y generalización de patrones cross-proyecto
+model: 'Claude Opus 4.7'  # curación: requiere síntesis abstracta y generalización de patrones cross-proyecto
 user-invocable: false
 ---
 

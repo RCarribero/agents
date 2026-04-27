@@ -1,7 +1,7 @@
 ---
 name: auditor
 description: Seguridad y Calidad. Busca vulnerabilidades y antipatrones.
-model: 'Claude Sonnet 4.6'  # seguridad: balance coste/profundidad suficiente para análisis de vulnerabilidades OWASP
+model: 'Claude Opus 4.7'  # seguridad: balance coste/profundidad suficiente para análisis de vulnerabilidades OWASP
 user-invocable: false
 ---
 

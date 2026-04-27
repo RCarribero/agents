@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Verificación funcional. Comprueba que la implementación cumple el objetivo definido antes de hacer commit.
-model: 'Claude Sonnet 4.6'  # verificación funcional: balance coste/profundidad para análisis de requisitos cumplidos
+model: 'Claude Opus 4.7'  # verificación funcional: balance coste/profundidad para análisis de requisitos cumplidos
 user-invocable: false
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Director de orquesta. Recibe tareas del usuario, crea el plan de ejecución y delega a los sub-agentes correctos en el orden correcto.
-model: 'GPT-5.4'  # orquestación: requiere razonamiento largo, planificación multi-paso y coordinación de estado complejo
+model: 'Claude Opus 4.7'  # orquestación: requiere razonamiento largo, planificación multi-paso y coordinación de estado complejo
 user-invocable: true
 ---
 

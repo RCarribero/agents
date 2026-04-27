@@ -39,6 +39,22 @@ Existen dos capas de servidores MCP:
 - **MCP locales del repo:** definidos en `.mcp.json` (filesystem, GitHub, Postgres u otros según el workspace activo). Siempre disponibles si están en ese archivo.
 - **MCP del perfil global:** sincronizados por `install-copilot-layout` cuando el layout está instalado — actualmente GitHub (`io.github.github/github-mcp-server`), Supabase (`com.supabase/mcp`), Vercel (`com.vercel/vercel-mcp`) y Stripe (`com.stripe/mcp`). Solo usar estos si están efectivamente disponibles en la sesión; no asumir disponibilidad ciega.
 
+## Hooks de ciclo de vida (refuerzo automático)
+
+Los guards y behaviors de estas instrucciones están **duplicados como hooks** en `.github/hooks/orchestra.json` + `scripts/hooks/`. Los hooks se ejecutan automáticamente sin intervención del agente:
+
+| Hook | Refuerza |
+|---|---|
+| `sessionStart` | Regla 0 (stack.md), init spans, invalidar research cache stale |
+| `userPromptSubmitted` | Redacción de secrets en audit log |
+| `preToolUse` | Git guard (esta regla), comandos destructivos, secret scan |
+| `postToolUse` | MCP circuit breaker, invalidación de research cache |
+| `subagentStop` / `agentStop` | Logging de ciclo de vida |
+| `sessionEnd` | Persistencia de research cache con commit_sha |
+| `errorOccurred` | Logging de errores, MCP circuit breaker |
+
+> Los hooks son una capa de seguridad adicional — no sustituyen las reglas del agente.
+
 ## Archivo autoritativo de instrucciones
 
 El archivo canónico de instrucciones de Copilot es `.github/copilot-instructions.md` en la raíz del repositorio (GitHub Copilot lo lee nativamente desde esa ruta). El archivo `copilot-instructions.md` en la raíz del workspace es un duplicado obsoleto — no editar ni crear; usar únicamente `.github/copilot-instructions.md`.

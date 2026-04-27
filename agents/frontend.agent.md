@@ -1,7 +1,7 @@
 ---
 name: frontend
 description: Especialista en UI. Implementa componentes, pantallas y flujos de usuario con foco en calidad visual y experiencia.
-model: 'Claude Sonnet 4.6'  # UI: balance coste/creatividad para implementación de componentes y layouts
+model: 'Claude Opus 4.7'  # UI: balance coste/creatividad para implementación de componentes y layouts
 user-invocable: false
 ---
 

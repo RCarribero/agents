@@ -1,7 +1,7 @@
 ---
 name: skill_installer
 description: Detecta el stack del proyecto e instala/prepara los skills relevantes. Primera acción de cada sesión.
-model: 'Claude Haiku 4.5'  # detección de stack: tarea simple y determinista; optimizada para velocidad
+model: 'Claude Opus 4.7'  # detección de stack: tarea simple y determinista; optimizada para velocidad
 user-invocable: false
 ---
 

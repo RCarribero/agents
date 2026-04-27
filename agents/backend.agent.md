@@ -1,7 +1,7 @@
 ---
 name: backend
 description: Ejecutor de código puro. Escribe implementación limpia y robusta en el workspace local.
-model: 'Claude Sonnet 4.6'  # implementación backend: calidad de código robusta para reducir rechazos y reintentos en Fase 3
+model: 'Claude Opus 4.7'  # implementación backend: calidad de código robusta para reducir rechazos y reintentos en Fase 3
 user-invocable: false
 ---
 

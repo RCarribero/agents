@@ -1,7 +1,7 @@
 ---
 name: eval_runner
 description: "Sistema de evaluación automática. Ejecuta evals de referencia contra el sistema de agentes y emite informes de salud."
-model: 'GPT-5.4'  # evaluación: requiere razonamiento riguroso y scoring exacto de contratos de agentes
+model: 'Claude Opus 4.7'  # evaluación: requiere razonamiento riguroso y scoring exacto de contratos de agentes
 user-invocable: true
 ---
 
