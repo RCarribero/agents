@@ -213,9 +213,9 @@ Variables de entorno frecuentes:
 
 Bootstrap recomendado:
 
-- Instalar prompts y toolkit globales en tu perfil de VS Code: `./scripts/install-copilot-layout/install-copilot-layout.ps1 --force` o `bash ./scripts/install-copilot-layout/install-copilot-layout.sh --force`
-- Recargar VS Code
-- Usar `/start` desde el chat en cualquier workspace para bootstrap del repo actual
+- Instalar prompts, toolkit y **hooks globales** en tu perfil: `./scripts/install-copilot-layout/install-copilot-layout.ps1 --force` o `bash ./scripts/install-copilot-layout/install-copilot-layout.sh --force`. Esto escribe `~/.copilot/hooks/orchestra.json` con los hooks de orquestación apuntando al toolkit global, registra `~/.copilot/hooks` en `chat.hookFilesLocations` del `settings.json` de VS Code/Agents y aplica a todos los proyectos.
+- Recargar VS Code / iniciar nueva sesión.
+- Usar `/start` (opcional) en cada workspace para bootstrap de archivos del proyecto. No es necesario para activar los hooks globales.
 
 Bootstrap manual del repo actual:
 

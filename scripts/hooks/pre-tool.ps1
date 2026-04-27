@@ -18,7 +18,15 @@ function Write-Log($msg) {
 
 function Deny-Tool($reason) {
     Write-Log "[$date_str] PRE_TOOL_DENY | tool: $tool_name | reason: $reason"
-    @{ permissionDecision = "deny"; permissionDecisionReason = $reason } | ConvertTo-Json -Compress
+    @{
+        permissionDecision       = "deny"
+        permissionDecisionReason = $reason
+        hookSpecificOutput       = @{
+            hookEventName            = "PreToolUse"
+            permissionDecision       = "deny"
+            permissionDecisionReason = $reason
+        }
+    } | ConvertTo-Json -Compress -Depth 5
     exit 0
 }
 

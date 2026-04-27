@@ -5,6 +5,15 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# PS 5.1 compat: $IsWindows/$IsMacOS/$IsLinux only exist in PS 6+
+if (-not (Test-Path variable:IsWindows)) {
+    $IsWindows = [System.Environment]::OSVersion.Platform -eq 'Win32NT'
+    $IsMacOS   = [System.Environment]::OSVersion.Platform -eq 'Unix' -and
+                 (uname -s 2>$null) -eq 'Darwin'
+    $IsLinux   = [System.Environment]::OSVersion.Platform -eq 'Unix' -and
+                 -not $IsMacOS
+}
+
 $overwriteExisting = $true
 
 function Detect-UserPromptsDirectory {
@@ -327,6 +336,318 @@ function Invoke-McpSyncLayout {
     }
 }
 
+function Get-GlobalHookEntries {
+    param([string]$HookScriptsDir)
+
+    # mapping: EventName -> list of @{ name; script_basename; timeout }
+    return [ordered]@{
+        SessionStart     = @(@{ name = 'session-start'; timeout = 15 })
+        UserPromptSubmit = @(@{ name = 'user-prompt';   timeout = 10 })
+        PreToolUse       = @(@{ name = 'pre-tool';      timeout = 10 })
+        PostToolUse      = @(@{ name = 'post-tool';     timeout = 15 })
+        SubagentStop     = @(@{ name = 'subagent-stop'; timeout = 10 })
+        Stop             = @(
+            @{ name = 'agent-stop';   timeout = 10 },
+            @{ name = 'session-end';  timeout = 15 }
+        )
+    }
+}
+
+function New-GlobalHookEntry {
+    param(
+        [string]$HookScriptsDir,
+        [string]$Name,
+        [int]$Timeout
+    )
+
+    $ps1 = Join-Path $HookScriptsDir ("$Name.ps1")
+    $sh  = Join-Path $HookScriptsDir ("$Name.sh")
+    $shUnix = Get-BashFriendlyPath -Path $sh
+
+    $winCmd   = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$ps1`""
+    $unixCmd  = "bash `"$shUnix`""
+
+    return [ordered]@{
+        type    = 'command'
+        command = $winCmd
+        windows = $winCmd
+        linux   = $unixCmd
+        osx     = $unixCmd
+        timeout = $Timeout
+        env     = [ordered]@{
+            COPILOT_ORCHESTRA_GLOBAL_HOOK = '1'
+            COPILOT_ORCHESTRA_HOOK_NAME   = $Name
+        }
+    }
+}
+
+function Get-PythonExe {
+    foreach ($candidate in @('python','python3','py')) {
+        $cmd = Get-Command $candidate -ErrorAction SilentlyContinue
+        if ($cmd) { return $cmd.Source }
+    }
+    return $null
+}
+
+function Sync-GlobalHooks {
+    param(
+        [string]$HookScriptsDir,
+        [ref]$StatusRef,
+        [ref]$DetailsRef,
+        [ref]$PathRef
+    )
+
+    $hooksDir = Join-Path $HOME '.copilot/hooks'
+    $orchestraPath = Join-Path $hooksDir 'orchestra.json'
+    $PathRef.Value = $orchestraPath
+
+    if (-not (Test-Path $hooksDir -PathType Container)) {
+        New-Item -ItemType Directory -Path $hooksDir -Force | Out-Null
+    }
+
+    $py = Get-PythonExe
+    if (-not $py) {
+        $StatusRef.Value  = 'SKIPPED'
+        $DetailsRef.Value = 'python no disponible (necesario para merge JSON seguro)'
+        return
+    }
+
+    $entries = Get-GlobalHookEntries -HookScriptsDir $HookScriptsDir
+    $managed = [ordered]@{}
+    foreach ($evt in $entries.Keys) {
+        $list = @()
+        foreach ($spec in $entries[$evt]) {
+            $list += ,(New-GlobalHookEntry -HookScriptsDir $HookScriptsDir -Name $spec.name -Timeout $spec.timeout)
+        }
+        $managed[$evt] = $list
+    }
+    $managedJson = $managed | ConvertTo-Json -Depth 10 -Compress
+
+    $pyScript = @'
+import sys, json, os
+target = sys.argv[1]
+managed = json.loads(sys.argv[2])
+
+data = {}
+if os.path.isfile(target):
+    try:
+        with open(target, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except Exception as e:
+        print("PARSE_ERROR:" + str(e))
+        sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+if not isinstance(data.get("hooks"), dict):
+    data["hooks"] = {}
+
+added, replaced = 0, 0
+for event, mlist in managed.items():
+    existing = data["hooks"].get(event)
+    if not isinstance(existing, list):
+        existing = []
+    kept = []
+    for item in existing:
+        env = item.get("env") if isinstance(item, dict) else None
+        if isinstance(env, dict) and str(env.get("COPILOT_ORCHESTRA_GLOBAL_HOOK","")) == "1":
+            replaced += 1
+            continue
+        kept.append(item)
+    kept.extend(mlist)
+    added += len(mlist)
+    data["hooks"][event] = kept
+
+os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+print("OK:added=%d;replaced=%d" % (added, replaced))
+'@
+
+    $tmp = New-TemporaryFile
+    try {
+        Set-Content -Path $tmp -Value $pyScript -Encoding UTF8
+        $out = & $py $tmp.FullName $orchestraPath $managedJson 2>&1
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0) {
+            $StatusRef.Value  = 'WARN'
+            $DetailsRef.Value = "no se pudo escribir orchestra.json (exit=$exit): $out"
+            return
+        }
+        $StatusRef.Value  = 'OK'
+        $DetailsRef.Value = "$out"
+    }
+    finally {
+        Remove-Item $tmp.FullName -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Update-VSCodeHookSettings {
+    param(
+        [string]$UserRootDir,
+        [ref]$StatusRef,
+        [ref]$DetailsRef,
+        [ref]$PathRef
+    )
+
+    $settingsPath = Join-Path $UserRootDir 'settings.json'
+    $PathRef.Value = $settingsPath
+
+    $py = Get-PythonExe
+    if (-not $py) {
+        $StatusRef.Value  = 'SKIPPED'
+        $DetailsRef.Value = 'python no disponible'
+        return
+    }
+
+    $pyScript = @'
+import sys, json, os
+target = sys.argv[1]
+hook_loc = "~/.copilot/hooks"
+
+data = {}
+if os.path.isfile(target):
+    try:
+        with open(target, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except Exception as e:
+        print("PARSE_ERROR:" + str(e))
+        sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+locs = data.get("chat.hookFilesLocations")
+if not isinstance(locs, dict):
+    locs = {}
+prev = locs.get(hook_loc)
+locs[hook_loc] = True
+data["chat.hookFilesLocations"] = locs
+
+os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=4, ensure_ascii=False)
+    f.write("\n")
+
+if prev is True:
+    print("OK:unchanged")
+else:
+    print("OK:registered=%s" % hook_loc)
+'@
+
+    $tmp = New-TemporaryFile
+    try {
+        Set-Content -Path $tmp -Value $pyScript -Encoding UTF8
+        $out = & $py $tmp.FullName $settingsPath 2>&1
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0) {
+            $StatusRef.Value  = 'WARN'
+            $DetailsRef.Value = "settings.json no actualizado (exit=$exit): $out"
+            return
+        }
+        $StatusRef.Value  = 'OK'
+        $DetailsRef.Value = "$out"
+    }
+    finally {
+        Remove-Item $tmp.FullName -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Clear-LegacyClaudeManagedHooks {
+    param(
+        [ref]$StatusRef,
+        [ref]$DetailsRef,
+        [ref]$PathRef
+    )
+
+    $legacyPath = Join-Path $HOME '.claude/settings.json'
+    $PathRef.Value = $legacyPath
+
+    if (-not (Test-Path $legacyPath -PathType Leaf)) {
+        $StatusRef.Value  = 'SKIPPED'
+        $DetailsRef.Value = 'no existe ~/.claude/settings.json'
+        return
+    }
+
+    $py = Get-PythonExe
+    if (-not $py) {
+        $StatusRef.Value  = 'SKIPPED'
+        $DetailsRef.Value = 'python no disponible'
+        return
+    }
+
+    $pyScript = @'
+import sys, json, os
+target = sys.argv[1]
+
+if not os.path.isfile(target):
+    print("OK:absent")
+    sys.exit(0)
+
+try:
+    with open(target, encoding="utf-8-sig") as f:
+        data = json.load(f)
+except Exception as e:
+    print("PARSE_ERROR:" + str(e))
+    sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+removed = 0
+hooks = data.get("hooks")
+if isinstance(hooks, dict):
+    for event in list(hooks.keys()):
+        items = hooks.get(event)
+        if not isinstance(items, list):
+            continue
+        kept = []
+        for item in items:
+            env = item.get("env") if isinstance(item, dict) else None
+            if isinstance(env, dict) and str(env.get("COPILOT_ORCHESTRA_GLOBAL_HOOK","")) == "1":
+                removed += 1
+                continue
+            kept.append(item)
+        if kept:
+            hooks[event] = kept
+        else:
+            del hooks[event]
+    if not hooks:
+        del data["hooks"]
+
+if removed == 0:
+    print("OK:removed=0")
+    sys.exit(0)
+
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+print("OK:removed=%d" % removed)
+'@
+
+    $tmp = New-TemporaryFile
+    try {
+        Set-Content -Path $tmp -Value $pyScript -Encoding UTF8
+        $out = & $py $tmp.FullName $legacyPath 2>&1
+        $exit = $LASTEXITCODE
+        if ($exit -ne 0) {
+            $StatusRef.Value  = 'WARN'
+            $DetailsRef.Value = "no se pudo limpiar settings.json legacy (exit=$exit): $out"
+            return
+        }
+        $StatusRef.Value  = 'OK'
+        $DetailsRef.Value = "$out"
+    }
+    finally {
+        Remove-Item $tmp.FullName -Force -ErrorAction SilentlyContinue
+    }
+}
+
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $sourceRoot = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $userPromptsDir = Detect-UserPromptsDirectory
@@ -346,6 +667,15 @@ $mcpDetails   = 'n/a'
 $mcpSynced    = [System.Collections.Generic.List[string]]::new()
 $mcpUnchanged = [System.Collections.Generic.List[string]]::new()
 $mcpWarned    = [System.Collections.Generic.List[string]]::new()
+$globalHooksStatus  = 'SKIPPED'
+$globalHooksDetails = 'n/a'
+$globalHooksPath    = ''
+$vscodeSettingsStatus  = 'SKIPPED'
+$vscodeSettingsDetails = 'n/a'
+$vscodeSettingsPath    = ''
+$legacyClaudeStatus    = 'SKIPPED'
+$legacyClaudeDetails   = 'n/a'
+$legacyClaudePath      = ''
 
 foreach ($promptDir in $promptInstallDirs) {
     New-Item -ItemType Directory -Path $promptDir -Force | Out-Null
@@ -436,8 +766,8 @@ $globalPrompts = @(
     @{
         FileName = 'start.prompt.md'
         Name = 'start'
-        Description = 'Bootstrap global mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills'
-        Intro = 'Inicializa el repositorio actual usando el toolkit global y resume el resultado.'
+        Description = 'Bootstrap minimo del proyecto (copilot-instructions, stack.md, plantillas opcionales). Los hooks globales se instalan via install-copilot-layout, no via /start.'
+        Intro = 'Inicializa el repositorio actual usando el toolkit global y resume el resultado. Nota: los hooks de orquestacion globales viven en ~/.copilot/hooks/orchestra.json y NO requieren /start; este prompt solo materializa archivos del proyecto.'
         WindowsCommands = @(
             ('& "{0}" .' -f (Join-Path $toolsScriptsDir 'start/start.ps1'))
         )
@@ -445,14 +775,16 @@ $globalPrompts = @(
             ('bash "{0}/start/start.sh" .' -f $bashScriptsDir)
         )
         ExpectedBehavior = @(
-            'Ejecuta solo el bootstrap mínimo del proyecto actual.',
-            'Sobrescribe archivos existentes.',
+            'Ejecuta solo el bootstrap minimo del proyecto actual.',
+            'No sobrescribe archivos existentes; solo crea los que falten.',
             'Crea .github/copilot-instructions.md si falta.',
-            'Crea .github/hooks/*.json y scripts/hooks/* si faltan.',
+            'Crea .github/hooks/*.json (plantillas workspace, opcionales) si faltan.',
+            'Crea scripts/hooks/* (pre-tool, post-tool, etc.) si faltan en el repo.',
             'Crea stack.md si falta.',
-            'Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.',
-            'No copies .github/prompts, .github/workflows, scripts fuera de scripts/hooks ni archivos .env* al repo destino.',
-            'Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.'
+            'Intenta descargar skills con autoskills si esta disponible, sin bloquear si falla.',
+            'No instala hooks globales: estos vienen de install-copilot-layout y viven en ~/.copilot/hooks/orchestra.json.',
+            'No copia .github/prompts, .github/workflows, otros scripts/ fuera de scripts/hooks ni archivos .env* al repo destino.',
+            'Resume que archivos se crearon o ya existian y el estado de la descarga de skills.'
         )
     }
 )
@@ -497,6 +829,49 @@ try {
 catch {
     $mcpStatus  = 'WARN'
     $mcpDetails = "error en sync: $_"
+}
+
+try {
+    $hookScriptsAbs = Join-Path $copilotToolsDir 'scripts/hooks'
+    $sRef = [ref]$globalHooksStatus
+    $dRef = [ref]$globalHooksDetails
+    $pRef = [ref]$globalHooksPath
+    Sync-GlobalHooks -HookScriptsDir $hookScriptsAbs -StatusRef $sRef -DetailsRef $dRef -PathRef $pRef
+    $globalHooksStatus  = $sRef.Value
+    $globalHooksDetails = $dRef.Value
+    $globalHooksPath    = $pRef.Value
+}
+catch {
+    $globalHooksStatus  = 'WARN'
+    $globalHooksDetails = "error en sync hooks globales: $_"
+}
+
+try {
+    $sRef = [ref]$vscodeSettingsStatus
+    $dRef = [ref]$vscodeSettingsDetails
+    $pRef = [ref]$vscodeSettingsPath
+    Update-VSCodeHookSettings -UserRootDir $userRootDir -StatusRef $sRef -DetailsRef $dRef -PathRef $pRef
+    $vscodeSettingsStatus  = $sRef.Value
+    $vscodeSettingsDetails = $dRef.Value
+    $vscodeSettingsPath    = $pRef.Value
+}
+catch {
+    $vscodeSettingsStatus  = 'WARN'
+    $vscodeSettingsDetails = "error actualizando VS Code settings.json: $_"
+}
+
+try {
+    $sRef = [ref]$legacyClaudeStatus
+    $dRef = [ref]$legacyClaudeDetails
+    $pRef = [ref]$legacyClaudePath
+    Clear-LegacyClaudeManagedHooks -StatusRef $sRef -DetailsRef $dRef -PathRef $pRef
+    $legacyClaudeStatus  = $sRef.Value
+    $legacyClaudeDetails = $dRef.Value
+    $legacyClaudePath    = $pRef.Value
+}
+catch {
+    $legacyClaudeStatus  = 'WARN'
+    $legacyClaudeDetails = "error limpiando legacy ~/.claude/settings.json: $_"
 }
 
 Write-Output '=== install-copilot-layout.ps1 ==='
@@ -556,4 +931,26 @@ if ($mcpWarned.Count -gt 0) {
 }
 
 Write-Output ''
-Write-Output 'Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize, /skill-installer y /create-project como prompts globales.'
+Write-Output 'Global hooks:'
+Write-Output "  - estado: $globalHooksStatus"
+Write-Output "  - settings: $globalHooksPath"
+Write-Output "  - detalle: $globalHooksDetails"
+
+Write-Output ''
+Write-Output 'VS Code hook location:'
+Write-Output "  - estado: $vscodeSettingsStatus"
+Write-Output "  - settings: $vscodeSettingsPath"
+Write-Output "  - detalle: $vscodeSettingsDetails"
+
+Write-Output ''
+Write-Output 'Legacy Claude managed hooks cleanup:'
+Write-Output "  - estado: $legacyClaudeStatus"
+Write-Output "  - settings: $legacyClaudePath"
+Write-Output "  - detalle: $legacyClaudeDetails"
+
+Write-Output ''
+Write-Output 'Siguiente paso:'
+Write-Output '  1. Recarga VS Code / inicia nueva sesion para que los prompts globales y los hooks globales queden activos.'
+Write-Output ("  2. Los hooks de orquestacion estan instalados en {0} y aplican a TODOS los proyectos." -f $globalHooksPath)
+Write-Output '  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md, plantillas .github/hooks). No es necesario para que los hooks globales funcionen.'
+Write-Output ('     Bootstrap manual: & "{0}" .' -f (Join-Path $toolsScriptsDir 'start/start.ps1'))

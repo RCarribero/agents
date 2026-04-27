@@ -313,6 +313,299 @@ run_mcp_sync_layout() {
   fi
 }
 
+# ─── Global hooks (~/.copilot/hooks/orchestra.json) sync ──────────────────────
+
+GLOBAL_HOOKS_STATUS="SKIPPED"
+GLOBAL_HOOKS_DETAILS="n/a"
+GLOBAL_HOOKS_PATH=""
+VSCODE_SETTINGS_STATUS="SKIPPED"
+VSCODE_SETTINGS_DETAILS="n/a"
+VSCODE_SETTINGS_PATH=""
+LEGACY_CLAUDE_STATUS="SKIPPED"
+LEGACY_CLAUDE_DETAILS="n/a"
+LEGACY_CLAUDE_PATH=""
+
+run_global_hooks_sync() {
+  local hook_dir="$1"
+  local py=""
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1; then py="$cand"; break; fi
+  done
+  if [ -z "$py" ]; then
+    GLOBAL_HOOKS_STATUS="SKIPPED"
+    GLOBAL_HOOKS_DETAILS="python no disponible"
+    return 0
+  fi
+
+  local hooks_dir="$HOME/.copilot/hooks"
+  local target="$hooks_dir/orchestra.json"
+  GLOBAL_HOOKS_PATH="$target"
+  mkdir -p "$hooks_dir"
+
+  local hook_dir_unix="$hook_dir"
+  if command -v cygpath >/dev/null 2>&1; then
+    hook_dir_unix="$(cygpath -u "$hook_dir")"
+  fi
+
+  local result
+  result="$("$py" - "$target" "$hook_dir" "$hook_dir_unix" <<'PYEOF'
+import sys, json, os
+
+target, hook_dir_native, hook_dir_unix = sys.argv[1], sys.argv[2], sys.argv[3]
+
+MAPPING = [
+  ("SessionStart",     [("session-start", 15)]),
+  ("UserPromptSubmit", [("user-prompt",   10)]),
+  ("PreToolUse",       [("pre-tool",      10)]),
+  ("PostToolUse",      [("post-tool",     15)]),
+  ("SubagentStop",     [("subagent-stop", 10)]),
+  ("Stop",             [("agent-stop",    10), ("session-end", 15)]),
+]
+
+def make_entry(name, timeout):
+    ps1 = os.path.join(hook_dir_native, name + ".ps1")
+    sh  = hook_dir_unix.rstrip("/") + "/" + name + ".sh"
+    win = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%s"' % ps1
+    unix = 'bash "%s"' % sh
+    return {
+      "type": "command",
+      "command": unix,
+      "windows": win,
+      "linux": unix,
+      "osx": unix,
+      "timeout": timeout,
+      "env": {
+        "COPILOT_ORCHESTRA_GLOBAL_HOOK": "1",
+        "COPILOT_ORCHESTRA_HOOK_NAME": name,
+      }
+    }
+
+data = {}
+if os.path.isfile(target):
+    try:
+        with open(target, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except Exception as e:
+        print("PARSE_ERROR:" + str(e))
+        sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+if not isinstance(data.get("hooks"), dict):
+    data["hooks"] = {}
+
+added = 0
+replaced = 0
+for event, specs in MAPPING:
+    new_entries = [make_entry(n, t) for (n, t) in specs]
+    existing = data["hooks"].get(event)
+    if not isinstance(existing, list):
+        existing = []
+    kept = []
+    for item in existing:
+        env = item.get("env") if isinstance(item, dict) else None
+        if isinstance(env, dict) and str(env.get("COPILOT_ORCHESTRA_GLOBAL_HOOK","")) == "1":
+            replaced += 1
+            continue
+        kept.append(item)
+    kept.extend(new_entries)
+    added += len(new_entries)
+    data["hooks"][event] = kept
+
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+print("OK:added=%d;replaced=%d" % (added, replaced))
+PYEOF
+)" || {
+    GLOBAL_HOOKS_STATUS="WARN"
+    GLOBAL_HOOKS_DETAILS="merge fallo: ${result:-error}"
+    return 0
+  }
+
+  case "$result" in
+    PARSE_ERROR:*)
+      GLOBAL_HOOKS_STATUS="WARN"
+      GLOBAL_HOOKS_DETAILS="orchestra.json no parseable, no se sobrescribe (${result#PARSE_ERROR:})"
+      ;;
+    OK:*)
+      GLOBAL_HOOKS_STATUS="OK"
+      GLOBAL_HOOKS_DETAILS="${result#OK:}"
+      ;;
+    *)
+      GLOBAL_HOOKS_STATUS="WARN"
+      GLOBAL_HOOKS_DETAILS="resultado inesperado: $result"
+      ;;
+  esac
+}
+
+run_vscode_settings_update() {
+  local user_root="$1"
+  local py=""
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1; then py="$cand"; break; fi
+  done
+  if [ -z "$py" ]; then
+    VSCODE_SETTINGS_STATUS="SKIPPED"
+    VSCODE_SETTINGS_DETAILS="python no disponible"
+    return 0
+  fi
+
+  local target="$user_root/settings.json"
+  VSCODE_SETTINGS_PATH="$target"
+
+  local result
+  result="$("$py" - "$target" <<'PYEOF'
+import sys, json, os
+target = sys.argv[1]
+hook_loc = "~/.copilot/hooks"
+
+data = {}
+if os.path.isfile(target):
+    try:
+        with open(target, encoding="utf-8-sig") as f:
+            data = json.load(f)
+    except Exception as e:
+        print("PARSE_ERROR:" + str(e))
+        sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+locs = data.get("chat.hookFilesLocations")
+if not isinstance(locs, dict):
+    locs = {}
+prev = locs.get(hook_loc)
+locs[hook_loc] = True
+data["chat.hookFilesLocations"] = locs
+
+os.makedirs(os.path.dirname(os.path.abspath(target)), exist_ok=True)
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=4, ensure_ascii=False)
+    f.write("\n")
+
+if prev is True:
+    print("OK:unchanged")
+else:
+    print("OK:registered=%s" % hook_loc)
+PYEOF
+)" || {
+    VSCODE_SETTINGS_STATUS="WARN"
+    VSCODE_SETTINGS_DETAILS="actualizacion fallo: ${result:-error}"
+    return 0
+  }
+
+  case "$result" in
+    PARSE_ERROR:*)
+      VSCODE_SETTINGS_STATUS="WARN"
+      VSCODE_SETTINGS_DETAILS="settings.json no parseable, no se sobrescribe (${result#PARSE_ERROR:})"
+      ;;
+    OK:*)
+      VSCODE_SETTINGS_STATUS="OK"
+      VSCODE_SETTINGS_DETAILS="${result#OK:}"
+      ;;
+    *)
+      VSCODE_SETTINGS_STATUS="WARN"
+      VSCODE_SETTINGS_DETAILS="resultado inesperado: $result"
+      ;;
+  esac
+}
+
+run_legacy_claude_cleanup() {
+  local target="$HOME/.claude/settings.json"
+  LEGACY_CLAUDE_PATH="$target"
+
+  if [ ! -f "$target" ]; then
+    LEGACY_CLAUDE_STATUS="SKIPPED"
+    LEGACY_CLAUDE_DETAILS="no existe ~/.claude/settings.json"
+    return 0
+  fi
+
+  local py=""
+  for cand in python3 python; do
+    if command -v "$cand" >/dev/null 2>&1; then py="$cand"; break; fi
+  done
+  if [ -z "$py" ]; then
+    LEGACY_CLAUDE_STATUS="SKIPPED"
+    LEGACY_CLAUDE_DETAILS="python no disponible"
+    return 0
+  fi
+
+  local result
+  result="$("$py" - "$target" <<'PYEOF'
+import sys, json, os
+target = sys.argv[1]
+
+if not os.path.isfile(target):
+    print("OK:absent")
+    sys.exit(0)
+
+try:
+    with open(target, encoding="utf-8-sig") as f:
+        data = json.load(f)
+except Exception as e:
+    print("PARSE_ERROR:" + str(e))
+    sys.exit(2)
+
+if not isinstance(data, dict):
+    print("PARSE_ERROR:root not object")
+    sys.exit(2)
+
+removed = 0
+hooks = data.get("hooks")
+if isinstance(hooks, dict):
+    for event in list(hooks.keys()):
+        items = hooks.get(event)
+        if not isinstance(items, list):
+            continue
+        kept = []
+        for item in items:
+            env = item.get("env") if isinstance(item, dict) else None
+            if isinstance(env, dict) and str(env.get("COPILOT_ORCHESTRA_GLOBAL_HOOK","")) == "1":
+                removed += 1
+                continue
+            kept.append(item)
+        if kept:
+            hooks[event] = kept
+        else:
+            del hooks[event]
+    if not hooks:
+        del data["hooks"]
+
+if removed == 0:
+    print("OK:removed=0")
+    sys.exit(0)
+
+with open(target, "w", encoding="utf-8") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+print("OK:removed=%d" % removed)
+PYEOF
+)" || {
+    LEGACY_CLAUDE_STATUS="WARN"
+    LEGACY_CLAUDE_DETAILS="cleanup fallo: ${result:-error}"
+    return 0
+  }
+
+  case "$result" in
+    PARSE_ERROR:*)
+      LEGACY_CLAUDE_STATUS="WARN"
+      LEGACY_CLAUDE_DETAILS="legacy settings.json no parseable, no se sobrescribe (${result#PARSE_ERROR:})"
+      ;;
+    OK:*)
+      LEGACY_CLAUDE_STATUS="OK"
+      LEGACY_CLAUDE_DETAILS="${result#OK:}"
+      ;;
+    *)
+      LEGACY_CLAUDE_STATUS="WARN"
+      LEGACY_CLAUDE_DETAILS="resultado inesperado: $result"
+      ;;
+  esac
+}
+
 collect_prompt_install_dirs
 COPILOT_TOOLS_DIR="${COPILOT_GLOBAL_TOOLS_DIR:-$USER_ROOT_DIR/copilot-tools}"
 TOOLS_SCRIPTS_DIR="$COPILOT_TOOLS_DIR/scripts"
@@ -402,11 +695,13 @@ fi
 for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
 write_prompt "start" "$prompt_dir/start.prompt.md" "---
 name: \"start\"
-description: \"Bootstrap global mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills\"
+description: \"Bootstrap minimo del proyecto (copilot-instructions, stack.md, plantillas opcionales). Los hooks globales se instalan via install-copilot-layout, no via /start.\"
 agent: \"agent\"
 ---
 
 Inicializa el repositorio actual usando el toolkit global y resume el resultado.
+
+Nota: los hooks de orquestacion globales viven en \`~/.copilot/hooks/orchestra.json\` y NO requieren \`/start\`; este prompt solo materializa archivos del proyecto.
 
 Reglas de ejecución:
 
@@ -418,13 +713,15 @@ Reglas de ejecución:
 Comportamiento esperado:
 
 - Ejecuta solo el bootstrap mínimo del proyecto actual.
-- Sobrescribe archivos existentes.
+- No sobrescribe archivos existentes; solo crea los que falten.
 - Crea .github/copilot-instructions.md si falta.
-- Crea .github/hooks/*.json y scripts/hooks/* si faltan.
+- Crea .github/hooks/*.json (plantillas workspace, opcionales) si faltan.
+- Crea scripts/hooks/* (pre-tool, post-tool, etc.) si faltan en el repo.
 - Crea stack.md si falta.
 - Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.
-- No copies .github/prompts, .github/workflows, scripts fuera de scripts/hooks ni archivos .env* al repo destino.
-- Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.
+- No instala hooks globales: estos vienen de install-copilot-layout y viven en ~/.copilot/hooks/orchestra.json.
+- No copia .github/prompts, .github/workflows, otros scripts/ fuera de scripts/hooks ni archivos .env* al repo destino.
+- Resume qué archivos se crearon o ya existían y el estado de la descarga de skills.
 " "$(prompt_label "$prompt_dir" "start")"
 done
 
@@ -446,6 +743,9 @@ else
 fi
 
 run_mcp_sync_layout || true
+run_global_hooks_sync "$TOOLS_SCRIPTS_DIR/hooks" || true
+run_vscode_settings_update "$USER_ROOT_DIR" || true
+run_legacy_claude_cleanup || true
 
 echo "=== install-copilot-layout.sh ==="
 echo "Origen:           $SOURCE_ROOT"
@@ -516,4 +816,26 @@ if [ ${#mcp_warned[@]} -gt 0 ]; then
 fi
 
 echo ""
-echo "Siguiente paso: recarga VS Code para ver /start, /dockerize, /productionize, /skill-installer y /create-project como prompts globales."
+echo "Global hooks:"
+echo "  - estado: $GLOBAL_HOOKS_STATUS"
+echo "  - settings: $GLOBAL_HOOKS_PATH"
+echo "  - detalle: $GLOBAL_HOOKS_DETAILS"
+
+echo ""
+echo "VS Code hook location:"
+echo "  - estado: $VSCODE_SETTINGS_STATUS"
+echo "  - settings: $VSCODE_SETTINGS_PATH"
+echo "  - detalle: $VSCODE_SETTINGS_DETAILS"
+
+echo ""
+echo "Legacy Claude managed hooks cleanup:"
+echo "  - estado: $LEGACY_CLAUDE_STATUS"
+echo "  - settings: $LEGACY_CLAUDE_PATH"
+echo "  - detalle: $LEGACY_CLAUDE_DETAILS"
+
+echo ""
+echo "Siguiente paso:"
+echo "  1. Recarga VS Code / inicia nueva sesion para que los prompts globales y los hooks globales queden activos."
+echo "  2. Los hooks de orquestacion estan instalados en $GLOBAL_HOOKS_PATH y aplican a TODOS los proyectos."
+echo "  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md, plantillas .github/hooks); no es necesario para que los hooks globales funcionen."
+echo "     Bootstrap manual: bash \"$BASH_SCRIPTS_DIR/start/start.sh\" ."

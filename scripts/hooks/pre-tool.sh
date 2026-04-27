@@ -14,26 +14,14 @@ log_path="$cwd/session_log.md"
 deny() {
   local reason="$1"
   echo "[$date_str] PRE_TOOL_DENY | tool: $tool_name | reason: $reason" >> "$log_path"
-  printf '{"permissionDecision":"deny","permissionDecisionReason":"%s"}' "$reason"
+  # JSON-escape reason
+  local esc
+  esc=$(printf '%s' "$reason" | python3 -c "import sys,json; sys.stdout.write(json.dumps(sys.stdin.read()))" 2>/dev/null || printf '"%s"' "$reason")
+  printf '{"permissionDecision":"deny","permissionDecisionReason":%s,"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":%s}}' "$esc" "$esc"
   exit 0
 }
 
 # --- Secret scan ---
-python3 - "$tool_args" <<'PYEOF'
-import sys, re, json
-text = sys.argv[1] if len(sys.argv) > 1 else ""
-patterns = {
-    "OpenAI API key": r'sk-[A-Za-z0-9]{20,}',
-    "GitHub token":   r'ghp_[A-Za-z0-9]{36}',
-    "AWS Access Key": r'AKIA[A-Z0-9]{16}',
-    "Google API key": r'AIza[0-9A-Za-z\-_]{35}',
-    "Slack token":    r'xox[bpoa]-[0-9A-Za-z\-]+',
-}
-for label, p in patterns.items():
-    if re.search(p, text):
-        print(f"SECRET:{label}")
-        sys.exit(0)
-PYEOF
 secret_found=$(python3 - "$tool_args" 2>/dev/null <<'PYEOF'
 import sys, re
 text = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -64,7 +52,16 @@ if echo "$tool_args" | grep -qE 'git\s+(commit|push|reset\s+--hard|clean\s+-fd)'
   authorized="false"
   session_state="$cwd/.copilot-session-state.json"
   if [ -f "$session_state" ]; then
-    authorized=$(python3 -c "import json; d=json.load(open('$session_state')); print('true' if d.get('devops_authorized') else 'false')" 2>/dev/null || echo "false")
+    authorized=$(python3 - "$session_state" 2>/dev/null <<'PYEOF' || echo "false"
+import sys, json
+try:
+    with open(sys.argv[1]) as f:
+        d = json.load(f)
+    print('true' if d.get('devops_authorized') else 'false')
+except Exception:
+    print('false')
+PYEOF
+)
   fi
   if [ "$authorized" != "true" ]; then
     deny "Git write requires devops_authorized=true in .copilot-session-state.json"

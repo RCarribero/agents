@@ -7,6 +7,7 @@
 /restart/
 /runs/
 /session-state/
+/hooks/
 
 # Local backup files
 /instructions/*.bak.*

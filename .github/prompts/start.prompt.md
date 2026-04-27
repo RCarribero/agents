@@ -1,10 +1,12 @@
 ---
 name: "start"
-description: "Bootstrap mínimo del proyecto: crea copilot-instructions, detecta stack e intenta descargar skills sin instalar el layout completo"
+description: "Bootstrap mínimo del proyecto (copilot-instructions, stack.md, plantillas opcionales). Los hooks globales se instalan vía install-copilot-layout, no vía /start."
 agent: "agent"
 ---
 
 Inicializa la configuración mínima del proyecto y resume el resultado.
+
+Nota: los hooks de orquestación globales viven en `~/.copilot/hooks/orchestra.json` y NO requieren `/start`. `install-copilot-layout` es el responsable de instalarlos. `/start` solo materializa archivos a nivel proyecto (incluidas plantillas workspace opcionales en `.github/hooks/`).
 
 Reglas de ejecución:
 
@@ -16,9 +18,12 @@ Reglas de ejecución:
 Comportamiento esperado:
 
 - Ejecuta solo el bootstrap mínimo del proyecto.
-- No sobrescribas archivos existentes.
+- No sobrescribe archivos existentes; solo crea los que falten.
 - Crea `.github/copilot-instructions.md` si falta.
+- Crea `.github/hooks/*.json` (plantillas workspace, opcionales) si faltan.
+- Crea `scripts/hooks/*` (pre-tool, post-tool, etc.) si faltan.
 - Crea `stack.md` si falta.
 - Intenta descargar skills con `autoskills` si está disponible, sin bloquear si falla.
-- No copies `.github/prompts`, `.github/workflows`, `scripts/` ni archivos `.env*` al repo destino.
+- No instala hooks globales: estos vienen de `install-copilot-layout` y viven en `~/.copilot/hooks/orchestra.json`.
+- No copia `.github/prompts`, `.github/workflows`, otros `scripts/` fuera de `scripts/hooks` ni archivos `.env*` al repo destino.
 - Resume qué archivos se crearon, cuáles ya existían y el estado de la descarga de skills.
