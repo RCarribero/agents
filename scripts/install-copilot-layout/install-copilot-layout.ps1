@@ -16,15 +16,21 @@ function Detect-UserPromptsDirectory {
 
     if ($IsWindows) {
         if ($env:APPDATA) {
+            $candidates += (Join-Path $env:APPDATA 'Agents - Insiders\User\prompts')
+            $candidates += (Join-Path $env:APPDATA 'Agents\User\prompts')
             $candidates += (Join-Path $env:APPDATA 'Code - Insiders\User\prompts')
             $candidates += (Join-Path $env:APPDATA 'Code\User\prompts')
         }
     }
     elseif ($IsMacOS) {
+        $candidates += (Join-Path $HOME 'Library/Application Support/Agents - Insiders/User/prompts')
+        $candidates += (Join-Path $HOME 'Library/Application Support/Agents/User/prompts')
         $candidates += (Join-Path $HOME 'Library/Application Support/Code - Insiders/User/prompts')
         $candidates += (Join-Path $HOME 'Library/Application Support/Code/User/prompts')
     }
     else {
+        $candidates += (Join-Path $HOME '.config/Agents - Insiders/User/prompts')
+        $candidates += (Join-Path $HOME '.config/Agents/User/prompts')
         $candidates += (Join-Path $HOME '.config/Code - Insiders/User/prompts')
         $candidates += (Join-Path $HOME '.config/Code/User/prompts')
     }
@@ -346,6 +352,7 @@ foreach ($promptDir in $promptInstallDirs) {
 }
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/prompts') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/workflows') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/hooks') -Force | Out-Null
 
 $canonicalInstructions = Join-Path $sourceRoot '.github/copilot-instructions.md'
 if (Test-Path $canonicalInstructions -PathType Leaf) {
@@ -373,6 +380,16 @@ if (Test-Path $sourceWorkflowsDir -PathType Container) {
 }
 else {
     $missing.Add('toolkit:.github/workflows/*')
+}
+
+$sourceHooksDir = Join-Path $sourceRoot '.github/hooks'
+if (Test-Path $sourceHooksDir -PathType Container) {
+    Get-ChildItem -Path $sourceHooksDir -Filter '*.json' -File | Sort-Object Name | ForEach-Object {
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/hooks' $_.Name)) -Label "toolkit:.github/hooks/$($_.Name)" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
+    }
+}
+else {
+    $missing.Add('toolkit:.github/hooks/*')
 }
 
 $rootEnvTemplate = Join-Path $sourceRoot '.env.example'
@@ -405,6 +422,16 @@ foreach ($relativePath in $relativeFiles) {
     }
 }
 
+$sourceHookScriptsDir = Join-Path $sourceRoot 'scripts/hooks'
+if (Test-Path $sourceHookScriptsDir -PathType Container) {
+    Get-ChildItem -Path $sourceHookScriptsDir -File | Sort-Object Name | ForEach-Object {
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $copilotToolsDir (Join-Path 'scripts/hooks' $_.Name)) -Label "toolkit:scripts/hooks/$($_.Name)" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
+    }
+}
+else {
+    $missing.Add('toolkit:scripts/hooks/*')
+}
+
 $globalPrompts = @(
     @{
         FileName = 'start.prompt.md'
@@ -421,9 +448,10 @@ $globalPrompts = @(
             'Ejecuta solo el bootstrap mínimo del proyecto actual.',
             'Sobrescribe archivos existentes.',
             'Crea .github/copilot-instructions.md si falta.',
+            'Crea .github/hooks/*.json y scripts/hooks/* si faltan.',
             'Crea stack.md si falta.',
             'Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.',
-            'No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.',
+            'No copies .github/prompts, .github/workflows, scripts fuera de scripts/hooks ni archivos .env* al repo destino.',
             'Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.'
         )
     }

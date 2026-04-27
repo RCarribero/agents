@@ -33,6 +33,31 @@ copy_if_missing() {
   fi
 }
 
+copy_dir_files_if_missing() {
+  local source_dir="$1"
+  local target_dir="$2"
+  local label_prefix="$3"
+  local name_pattern="${4:-*}"
+
+  if [ ! -d "$source_dir" ]; then
+    missing_templates+=("$label_prefix/*")
+    return 0
+  fi
+
+  local found=0
+  local source_file target_file file_name
+  while IFS= read -r source_file; do
+    found=1
+    file_name="$(basename "$source_file")"
+    target_file="$target_dir/$file_name"
+    copy_if_missing "$source_file" "$target_file" "$label_prefix/$file_name"
+  done < <(find "$source_dir" -maxdepth 1 -type f -name "$name_pattern" | sort)
+
+  if [ "$found" -eq 0 ]; then
+    missing_templates+=("$label_prefix/*")
+  fi
+}
+
 resolve_copilot_instructions_source() {
   # Archivo canónico: .github/copilot-instructions.md (GitHub Copilot lo lee nativamente).
   # El fallback a copilot-instructions.md raíz fue eliminado (FIX-002).
@@ -41,6 +66,33 @@ resolve_copilot_instructions_source() {
     "$SOURCE_ROOT/.github/copilot-instructions.md"
   do
     if [ -f "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_hooks_source() {
+  for candidate in \
+    "$SOURCE_ROOT/repo-templates/.github/hooks" \
+    "$SOURCE_ROOT/.github/hooks"
+  do
+    if [ -d "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+resolve_hook_scripts_source() {
+  for candidate in \
+    "$SOURCE_ROOT/scripts/hooks"
+  do
+    if [ -d "$candidate" ]; then
       echo "$candidate"
       return 0
     fi
@@ -264,6 +316,20 @@ if [ -n "$copilot_instructions_source" ]; then
   copy_if_missing "$copilot_instructions_source" "$PROJECT_ROOT/.github/copilot-instructions.md" ".github/copilot-instructions.md"
 else
   missing_templates+=(".github/copilot-instructions.md")
+fi
+
+hooks_source="$(resolve_hooks_source || true)"
+if [ -n "$hooks_source" ]; then
+  copy_dir_files_if_missing "$hooks_source" "$PROJECT_ROOT/.github/hooks" ".github/hooks" "*.json"
+else
+  missing_templates+=(".github/hooks/*")
+fi
+
+hook_scripts_source="$(resolve_hook_scripts_source || true)"
+if [ -n "$hook_scripts_source" ]; then
+  copy_dir_files_if_missing "$hook_scripts_source" "$PROJECT_ROOT/scripts/hooks" "scripts/hooks" "*"
+else
+  missing_templates+=("scripts/hooks/*")
 fi
 
 stack_file_before="$(detect_stack_file || true)"

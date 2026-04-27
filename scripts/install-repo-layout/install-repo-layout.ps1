@@ -135,6 +135,7 @@ $missing = [System.Collections.Generic.List[string]]::new()
 $copilotInstructionsSource = Resolve-SourceFile -SourceRoot $sourceRoot -CanonicalRelativePath 'copilot-instructions.md' -LegacyRelativePath 'copilot-instructions.md'
 $promptsSource = Resolve-SourceDirectory -SourceRoot $sourceRoot -CanonicalRelativePath 'prompts' -LegacyRelativePath 'prompts'
 $workflowsSource = Resolve-SourceDirectory -SourceRoot $sourceRoot -CanonicalRelativePath 'workflows' -LegacyRelativePath 'workflows'
+$hooksSource = Resolve-SourceDirectory -SourceRoot $sourceRoot -CanonicalRelativePath 'hooks' -LegacyRelativePath 'hooks'
 $rootEnvTemplate = Resolve-RootTemplate -SourceRoot $sourceRoot -RelativePath '.env.example'
 
 if ($copilotInstructionsSource) {
@@ -162,6 +163,15 @@ else {
     $missing.Add('.github/workflows/*')
 }
 
+if ($hooksSource) {
+    Get-ChildItem -Path $hooksSource -File | Sort-Object Name | ForEach-Object {
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $resolvedTargetRoot (Join-Path '.github/hooks' $_.Name)) -Label ".github/hooks/$($_.Name)" -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    }
+}
+else {
+    $missing.Add('.github/hooks/*')
+}
+
 if ($rootEnvTemplate) {
     Copy-TemplateFile -Source $rootEnvTemplate -Target (Join-Path $resolvedTargetRoot '.env.example') -Label '.env.example' -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
 }
@@ -186,6 +196,16 @@ $relativeFiles = @(
 
 foreach ($relativePath in $relativeFiles) {
     Install-RelativeFile -SourceRoot $sourceRoot -TargetRoot $resolvedTargetRoot -RelativePath $relativePath -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped -Missing $missing
+}
+
+$sourceHookScriptsDir = Join-Path $sourceRoot 'scripts/hooks'
+if (Test-Path $sourceHookScriptsDir -PathType Container) {
+    Get-ChildItem -Path $sourceHookScriptsDir -File | Sort-Object Name | ForEach-Object {
+        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $resolvedTargetRoot (Join-Path 'scripts/hooks' $_.Name)) -Label "scripts/hooks/$($_.Name)" -Overwrite $Force.IsPresent -Created $created -Updated $updated -Skipped $skipped
+    }
+}
+else {
+    $missing.Add('scripts/hooks/*')
 }
 
 Write-Output '=== install-repo-layout.ps1 ==='

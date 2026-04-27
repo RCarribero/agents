@@ -65,15 +65,21 @@ detect_user_prompts_dir() {
 
   case "$system_name" in
     Darwin)
+      candidates+=("$HOME/Library/Application Support/Agents - Insiders/User/prompts")
+      candidates+=("$HOME/Library/Application Support/Agents/User/prompts")
       candidates+=("$HOME/Library/Application Support/Code - Insiders/User/prompts")
       candidates+=("$HOME/Library/Application Support/Code/User/prompts")
       ;;
     Linux)
+      candidates+=("$HOME/.config/Agents - Insiders/User/prompts")
+      candidates+=("$HOME/.config/Agents/User/prompts")
       candidates+=("$HOME/.config/Code - Insiders/User/prompts")
       candidates+=("$HOME/.config/Code/User/prompts")
       ;;
     MINGW*|MSYS*|CYGWIN*)
       if [ -n "${APPDATA:-}" ]; then
+        candidates+=("$APPDATA/Agents - Insiders/User/prompts")
+        candidates+=("$APPDATA/Agents/User/prompts")
         candidates+=("$APPDATA/Code - Insiders/User/prompts")
         candidates+=("$APPDATA/Code/User/prompts")
       fi
@@ -323,6 +329,7 @@ done
 mkdir -p "$TOOLS_SCRIPTS_DIR"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/prompts"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/workflows"
+mkdir -p "$TOOLS_TEMPLATES_DIR/.github/hooks"
 
 if [ -f "$SOURCE_ROOT/.github/copilot-instructions.md" ]; then
   copy_file "$SOURCE_ROOT/.github/copilot-instructions.md" "$TOOLS_TEMPLATES_DIR/.github/copilot-instructions.md" "toolkit:.github/copilot-instructions.md"
@@ -346,6 +353,15 @@ if [ -d "$SOURCE_ROOT/.github/workflows" ]; then
   done < <(find "$SOURCE_ROOT/.github/workflows" -maxdepth 1 -type f -name '*.yml' -print0 | sort -z)
 else
   missing+=("toolkit:.github/workflows/*")
+fi
+
+if [ -d "$SOURCE_ROOT/.github/hooks" ]; then
+  while IFS= read -r -d '' hook_file; do
+    file_name="$(basename "$hook_file")"
+    copy_file "$hook_file" "$TOOLS_TEMPLATES_DIR/.github/hooks/$file_name" "toolkit:.github/hooks/$file_name"
+  done < <(find "$SOURCE_ROOT/.github/hooks" -maxdepth 1 -type f -name '*.json' -print0 | sort -z)
+else
+  missing+=("toolkit:.github/hooks/*")
 fi
 
 if [ -f "$SOURCE_ROOT/.env.example" ]; then
@@ -374,6 +390,15 @@ do
   fi
 done
 
+if [ -d "$SOURCE_ROOT/scripts/hooks" ]; then
+  while IFS= read -r -d '' hook_script; do
+    file_name="$(basename "$hook_script")"
+    copy_file "$hook_script" "$COPILOT_TOOLS_DIR/scripts/hooks/$file_name" "toolkit:scripts/hooks/$file_name"
+  done < <(find "$SOURCE_ROOT/scripts/hooks" -maxdepth 1 -type f -print0 | sort -z)
+else
+  missing+=("toolkit:scripts/hooks/*")
+fi
+
 for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
 write_prompt "start" "$prompt_dir/start.prompt.md" "---
 name: \"start\"
@@ -395,9 +420,10 @@ Comportamiento esperado:
 - Ejecuta solo el bootstrap mínimo del proyecto actual.
 - Sobrescribe archivos existentes.
 - Crea .github/copilot-instructions.md si falta.
+- Crea .github/hooks/*.json y scripts/hooks/* si faltan.
 - Crea stack.md si falta.
 - Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.
-- No copies .github/prompts, .github/workflows, scripts ni archivos .env* al repo destino.
+- No copies .github/prompts, .github/workflows, scripts fuera de scripts/hooks ni archivos .env* al repo destino.
 - Resume qué archivos se crearon o actualizaron y el estado de la descarga de skills.
 " "$(prompt_label "$prompt_dir" "start")"
 done
