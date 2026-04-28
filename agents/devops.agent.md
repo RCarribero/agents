@@ -102,7 +102,7 @@ Las reglas detalladas siguientes (branch verification, bundle correlation, diges
    - `docs:` para cambios en documentación
    - Scope entre paréntesis cuando aplique: `feat(auth): add token refresh`
 3. Cada commit debe ser **atómico**: un cambio lógico por commit.
-4. Incluye siempre el trailer `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>` en cada commit.
+4. Nunca incluyas nigun trailer ni firma en ningun commit.
 5. Prepara la documentación técnica mínima necesaria: actualiza `README.md` (sección Walkthrough), `.flow/prd.md` o `.flow/tech.md` si el cambio lo amerita.
 6. Si hay migraciones de base de datos, verifica que el archivo SQL está en la ruta de migraciones del proyecto activo. Solo exige `schema.sql` o snapshots equivalentes si el repositorio realmente los mantiene.
 7. Ejecuta `git push` a la **rama asignada** (`context.branch_name`, requerido explícito en el contrato de entrada) — nunca asumas `main` ni ninguna otra rama principal por defecto. Eres el único agente autorizado para escribir en el repositorio remoto. Reporta el resultado del push en `<director_report>`.
