@@ -346,10 +346,9 @@ function Get-GlobalHookEntries {
         PreToolUse       = @(@{ name = 'pre-tool';      timeout = 10 })
         PostToolUse      = @(@{ name = 'post-tool';     timeout = 15 })
         SubagentStop     = @(@{ name = 'subagent-stop'; timeout = 10 })
-        Stop             = @(
-            @{ name = 'agent-stop';   timeout = 10 },
-            @{ name = 'session-end';  timeout = 15 }
-        )
+        Stop             = @(@{ name = 'agent-stop';    timeout = 10 })
+        SessionEnd       = @(@{ name = 'session-end';   timeout = 15 })
+        Error            = @(@{ name = 'error-occurred'; timeout = 10 })
     }
 }
 

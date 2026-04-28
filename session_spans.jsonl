@@ -404,3 +404,39 @@
 {"timestamp_iso":"2026-04-27T13:49:18.295Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
 {"result_type":"unknown","event_type":"POST_TOOL","tool":"","timestamp_iso":"2026-04-27T15:49:20Z"}
 {"timestamp_iso":"2026-04-27T15:49:41Z","event_type":"SESSION_END","reason":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:18.300Z","stack_md":"OK","event_type":"SESSION_START","source":"new","cwd":"c:\\Users\\RBX\\.copilot"}
+{"timestamp_iso":"2026-04-28T06:15:18.966Z","event_type":"USER_PROMPT","prompt_preview":"el instalador goblal de hooks no instala todos lo que hay ahi"}
+{"timestamp_iso":"2026-04-28T06:15:26.845Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:32.411Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:32.457Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:36.171Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:38.909Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:45.253Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:48.804Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:15:58.690Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:12.642Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:18.055Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:23.247Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:26.965Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:36.874Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:16:43.235Z","event_type":"AGENT_STOP"}
+{"timestamp_iso":"2026-04-28T06:16:43.235Z","event_type":"SESSION_END","reason":"unknown"}
+{"timestamp_iso":"2026-04-28T06:17:13.544Z","event_type":"USER_PROMPT","prompt_preview":"y me instalo 2 veces stop y ninguna session end"}
+{"timestamp_iso":"2026-04-28T06:17:19.410Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:17:46.862Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:18:07.845Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:18:28.937Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:18:41.137Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:18:48.859Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:18:54.281Z","event_type":"AGENT_STOP"}
+{"timestamp_iso":"2026-04-28T06:18:54.281Z","event_type":"SESSION_END","reason":"unknown"}
+{"timestamp_iso":"2026-04-28T06:26:36.688Z","event_type":"USER_PROMPT","prompt_preview":"el problema es que en este orchestra en el de stop hay 2 comandos"}
+{"timestamp_iso":"2026-04-28T06:26:45.641Z","event_type":"AGENT_STOP"}
+{"timestamp_iso":"2026-04-28T06:26:45.641Z","event_type":"SESSION_END","reason":"unknown"}
+{"timestamp_iso":"2026-04-28T06:28:11.224Z","event_type":"USER_PROMPT","prompt_preview":"revisa si coinciden los hooks"}
+{"timestamp_iso":"2026-04-28T06:28:24.017Z","event_type":"POST_TOOL","tool":"","result_type":"unknown"}
+{"timestamp_iso":"2026-04-28T06:28:31.184Z","event_type":"AGENT_STOP"}
+{"timestamp_iso":"2026-04-28T06:28:59.226Z","event_type":"USER_PROMPT","prompt_preview":"es que hay 8 ps1 y 7 hooks"}
+{"timestamp_iso":"2026-04-28T06:29:04.139Z","event_type":"AGENT_STOP"}
+{"timestamp_iso":"2026-04-28T06:30:34.730Z","event_type":"USER_PROMPT","prompt_preview":"el de error no me lo coge"}
+{"timestamp_iso":"2026-04-28T06:30:42.372Z","event_type":"AGENT_STOP"}

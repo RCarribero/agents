@@ -439,3 +439,39 @@ IMPORTANT: this context may or may not be relevant to your tasks. You should not
 [2026-04-27 15:49] PRE_TOOL_ALLOW | tool: 
 [2026-04-27 15:49] PRE_TOOL_ALLOW | tool: 
 [2026-04-27 15:49] SESSION_END | reason: unknown
+[2026-04-28 08:15] SESSION_START | source: new | stack.md: OK
+[2026-04-28 08:15] USER_PROMPT | preview: el instalador goblal de hooks no instala todos lo que hay ahi
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:15] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:16] AGENT_STOP
+[2026-04-28 08:16] SESSION_END | reason: unknown
+[2026-04-28 08:17] USER_PROMPT | preview: y me instalo 2 veces stop y ninguna session end
+[2026-04-28 08:17] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:17] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:18] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:18] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:18] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:18] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:18] AGENT_STOP
+[2026-04-28 08:18] SESSION_END | reason: unknown
+[2026-04-28 08:26] USER_PROMPT | preview: el problema es que en este orchestra en el de stop hay 2 comandos
+[2026-04-28 08:26] AGENT_STOP
+[2026-04-28 08:26] SESSION_END | reason: unknown
+[2026-04-28 08:28] USER_PROMPT | preview: revisa si coinciden los hooks
+[2026-04-28 08:28] PRE_TOOL_ALLOW | tool: 
+[2026-04-28 08:28] AGENT_STOP
+[2026-04-28 08:28] USER_PROMPT | preview: es que hay 8 ps1 y 7 hooks
+[2026-04-28 08:29] AGENT_STOP
+[2026-04-28 08:30] USER_PROMPT | preview: el de error no me lo coge
+[2026-04-28 08:30] AGENT_STOP

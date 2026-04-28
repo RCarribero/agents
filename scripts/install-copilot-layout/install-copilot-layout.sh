@@ -359,7 +359,9 @@ MAPPING = [
   ("PreToolUse",       [("pre-tool",      10)]),
   ("PostToolUse",      [("post-tool",     15)]),
   ("SubagentStop",     [("subagent-stop", 10)]),
-  ("Stop",             [("agent-stop",    10), ("session-end", 15)]),
+  ("Stop",             [("agent-stop",    10)]),
+  ("SessionEnd",       [("session-end",   15)]),
+  ("Error",            [("error-occurred", 10)]),
 ]
 
 def make_entry(name, timeout):
