@@ -41,7 +41,7 @@ Existen dos capas de servidores MCP:
 
 ## Hooks de ciclo de vida (refuerzo automático)
 
-Los guards y behaviors de estas instrucciones están **duplicados como hooks** en `.github/hooks/orchestra.json` + `scripts/hooks/`. Los hooks se ejecutan automáticamente sin intervención del agente:
+Los guards y behaviors de estas instrucciones están instalados como hooks globales en `~/.copilot/hooks/orchestra.json`, apuntando a `scripts/hooks/` del toolkit global. Los hooks se ejecutan automáticamente sin intervención del agente:
 
 | Hook | Refuerza |
 |---|---|

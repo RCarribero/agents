@@ -74,32 +74,7 @@ resolve_copilot_instructions_source() {
   return 1
 }
 
-resolve_hooks_source() {
-  for candidate in \
-    "$SOURCE_ROOT/repo-templates/.github/hooks" \
-    "$SOURCE_ROOT/.github/hooks"
-  do
-    if [ -d "$candidate" ]; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-resolve_hook_scripts_source() {
-  for candidate in \
-    "$SOURCE_ROOT/scripts/hooks"
-  do
-    if [ -d "$candidate" ]; then
-      echo "$candidate"
-      return 0
-    fi
-  done
-
-  return 1
-}
+# Hook-related functions removed: hooks are global only, installed via install-copilot-layout, not /start
 
 detect_stack_file() {
   if [ -f "$PROJECT_ROOT/stack.md" ]; then
@@ -318,19 +293,7 @@ else
   missing_templates+=(".github/copilot-instructions.md")
 fi
 
-hooks_source="$(resolve_hooks_source || true)"
-if [ -n "$hooks_source" ]; then
-  copy_dir_files_if_missing "$hooks_source" "$PROJECT_ROOT/.github/hooks" ".github/hooks" "*.json"
-else
-  missing_templates+=(".github/hooks/*")
-fi
-
-hook_scripts_source="$(resolve_hook_scripts_source || true)"
-if [ -n "$hook_scripts_source" ]; then
-  copy_dir_files_if_missing "$hook_scripts_source" "$PROJECT_ROOT/scripts/hooks" "scripts/hooks" "*"
-else
-  missing_templates+=("scripts/hooks/*")
-fi
+# Hook installation removed: hooks are global only (~/.copilot/hooks/orchestra.json via install-copilot-layout), not workspace
 
 stack_file_before="$(detect_stack_file || true)"
 ensure_stack_file

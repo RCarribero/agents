@@ -622,7 +622,7 @@ done
 mkdir -p "$TOOLS_SCRIPTS_DIR"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/prompts"
 mkdir -p "$TOOLS_TEMPLATES_DIR/.github/workflows"
-mkdir -p "$TOOLS_TEMPLATES_DIR/.github/hooks"
+rm -rf "$TOOLS_TEMPLATES_DIR/.github/hooks"
 
 if [ -f "$SOURCE_ROOT/.github/copilot-instructions.md" ]; then
   copy_file "$SOURCE_ROOT/.github/copilot-instructions.md" "$TOOLS_TEMPLATES_DIR/.github/copilot-instructions.md" "toolkit:.github/copilot-instructions.md"
@@ -646,15 +646,6 @@ if [ -d "$SOURCE_ROOT/.github/workflows" ]; then
   done < <(find "$SOURCE_ROOT/.github/workflows" -maxdepth 1 -type f -name '*.yml' -print0 | sort -z)
 else
   missing+=("toolkit:.github/workflows/*")
-fi
-
-if [ -d "$SOURCE_ROOT/.github/hooks" ]; then
-  while IFS= read -r -d '' hook_file; do
-    file_name="$(basename "$hook_file")"
-    copy_file "$hook_file" "$TOOLS_TEMPLATES_DIR/.github/hooks/$file_name" "toolkit:.github/hooks/$file_name"
-  done < <(find "$SOURCE_ROOT/.github/hooks" -maxdepth 1 -type f -name '*.json' -print0 | sort -z)
-else
-  missing+=("toolkit:.github/hooks/*")
 fi
 
 if [ -f "$SOURCE_ROOT/.env.example" ]; then
@@ -695,13 +686,13 @@ fi
 for prompt_dir in "${PROMPT_INSTALL_DIRS[@]}"; do
 write_prompt "start" "$prompt_dir/start.prompt.md" "---
 name: \"start\"
-description: \"Bootstrap minimo del proyecto (copilot-instructions, stack.md, plantillas opcionales). Los hooks globales se instalan via install-copilot-layout, no via /start.\"
+description: \"Bootstrap minimo del proyecto (copilot-instructions, stack.md). Hooks son SOLO globales via install-copilot-layout; /start NO crea hooks workspace.\"
 agent: \"agent\"
 ---
 
 Inicializa el repositorio actual usando el toolkit global y resume el resultado.
 
-Nota: los hooks de orquestacion globales viven en \`~/.copilot/hooks/orchestra.json\` y NO requieren \`/start\`; este prompt solo materializa archivos del proyecto.
+**Nota importante sobre hooks:** Los hooks de orquestacion son **SOLO GLOBALES** (\`~/.copilot/hooks/orchestra.json\`) e instalados por \`install-copilot-layout\`. \`/start\` **NO crea ni copia hooks workspace** (\`.github/hooks/\`, \`scripts/hooks/\`).
 
 Reglas de ejecución:
 
@@ -715,12 +706,9 @@ Comportamiento esperado:
 - Ejecuta solo el bootstrap mínimo del proyecto actual.
 - No sobrescribe archivos existentes; solo crea los que falten.
 - Crea .github/copilot-instructions.md si falta.
-- Crea .github/hooks/*.json (plantillas workspace, opcionales) si faltan.
-- Crea scripts/hooks/* (pre-tool, post-tool, etc.) si faltan en el repo.
 - Crea stack.md si falta.
 - Intenta descargar skills con autoskills si está disponible, sin bloquear si falla.
-- No instala hooks globales: estos vienen de install-copilot-layout y viven en ~/.copilot/hooks/orchestra.json.
-- No copia .github/prompts, .github/workflows, otros scripts/ fuera de scripts/hooks ni archivos .env* al repo destino.
+- **NO crea** .github/hooks/, scripts/hooks/, .github/prompts, .github/workflows, ni archivos .env* en el repo destino.
 - Resume qué archivos se crearon o ya existían y el estado de la descarga de skills.
 " "$(prompt_label "$prompt_dir" "start")"
 done
@@ -837,5 +825,5 @@ echo ""
 echo "Siguiente paso:"
 echo "  1. Recarga VS Code / inicia nueva sesion para que los prompts globales y los hooks globales queden activos."
 echo "  2. Los hooks de orquestacion estan instalados en $GLOBAL_HOOKS_PATH y aplican a TODOS los proyectos."
-echo "  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md, plantillas .github/hooks); no es necesario para que los hooks globales funcionen."
+echo "  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md); no es necesario para que los hooks globales funcionen."
 echo "     Bootstrap manual: bash \"$BASH_SCRIPTS_DIR/start/start.sh\" ."

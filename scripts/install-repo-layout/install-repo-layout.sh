@@ -164,7 +164,6 @@ install_script() {
 copilot_instructions_source="$(resolve_source_file 'copilot-instructions.md' 'copilot-instructions.md' || true)"
 prompts_source_dir="$(resolve_source_dir 'prompts' 'prompts' || true)"
 workflows_source_dir="$(resolve_source_dir 'workflows' 'workflows' || true)"
-hooks_source_dir="$(resolve_source_dir 'hooks' 'hooks' || true)"
 root_env_template="$(resolve_root_template '.env.example' || true)"
 
 if [ -n "$copilot_instructions_source" ]; then
@@ -185,12 +184,6 @@ else
   missing+=(".github/workflows/*")
 fi
 
-if [ -n "$hooks_source_dir" ]; then
-  copy_directory_files "$hooks_source_dir" "$TARGET_ROOT/.github/hooks" ".github/hooks"
-else
-  missing+=(".github/hooks/*")
-fi
-
 if [ -n "$root_env_template" ]; then
   copy_file "$root_env_template" "$TARGET_ROOT/.env.example" ".env.example"
 else
@@ -209,12 +202,6 @@ install_script "scripts/docker-launcher/build.sh"
 install_script "scripts/docker-launcher/build.ps1"
 install_script "scripts/docker-launcher/launch.sh"
 install_script "scripts/docker-launcher/launch.ps1"
-
-if [ -d "$SOURCE_ROOT/scripts/hooks" ]; then
-  copy_directory_files "$SOURCE_ROOT/scripts/hooks" "$TARGET_ROOT/scripts/hooks" "scripts/hooks"
-else
-  missing+=("scripts/hooks/*")
-fi
 
 echo "=== install-repo-layout.sh ==="
 echo "Origen:  $SOURCE_ROOT"

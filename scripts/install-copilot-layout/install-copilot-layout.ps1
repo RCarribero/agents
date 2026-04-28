@@ -682,7 +682,11 @@ foreach ($promptDir in $promptInstallDirs) {
 }
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/prompts') -Force | Out-Null
 New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/workflows') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $toolsTemplatesDir '.github/hooks') -Force | Out-Null
+
+$legacyWorkspaceHooksTemplateDir = Join-Path $toolsTemplatesDir '.github/hooks'
+if (Test-Path $legacyWorkspaceHooksTemplateDir -PathType Container) {
+    Remove-Item -Path $legacyWorkspaceHooksTemplateDir -Recurse -Force
+}
 
 $canonicalInstructions = Join-Path $sourceRoot '.github/copilot-instructions.md'
 if (Test-Path $canonicalInstructions -PathType Leaf) {
@@ -710,16 +714,6 @@ if (Test-Path $sourceWorkflowsDir -PathType Container) {
 }
 else {
     $missing.Add('toolkit:.github/workflows/*')
-}
-
-$sourceHooksDir = Join-Path $sourceRoot '.github/hooks'
-if (Test-Path $sourceHooksDir -PathType Container) {
-    Get-ChildItem -Path $sourceHooksDir -Filter '*.json' -File | Sort-Object Name | ForEach-Object {
-        Copy-TemplateFile -Source $_.FullName -Target (Join-Path $toolsTemplatesDir (Join-Path '.github/hooks' $_.Name)) -Label "toolkit:.github/hooks/$($_.Name)" -Overwrite $overwriteExisting -Created $created -Updated $updated -Skipped $skipped
-    }
-}
-else {
-    $missing.Add('toolkit:.github/hooks/*')
 }
 
 $rootEnvTemplate = Join-Path $sourceRoot '.env.example'
@@ -766,8 +760,8 @@ $globalPrompts = @(
     @{
         FileName = 'start.prompt.md'
         Name = 'start'
-        Description = 'Bootstrap minimo del proyecto (copilot-instructions, stack.md, plantillas opcionales). Los hooks globales se instalan via install-copilot-layout, no via /start.'
-        Intro = 'Inicializa el repositorio actual usando el toolkit global y resume el resultado. Nota: los hooks de orquestacion globales viven en ~/.copilot/hooks/orchestra.json y NO requieren /start; este prompt solo materializa archivos del proyecto.'
+        Description = 'Bootstrap minimo del proyecto (copilot-instructions, stack.md). Hooks son SOLO globales via install-copilot-layout; /start NO crea hooks workspace.'
+        Intro = 'Inicializa el repositorio actual usando el toolkit global y resume el resultado. IMPORTANTE: Los hooks de orquestacion son SOLO GLOBALES (~/.copilot/hooks/orchestra.json) e instalados por install-copilot-layout. /start NO crea ni copia hooks workspace (.github/hooks/, scripts/hooks/).'
         WindowsCommands = @(
             ('& "{0}" .' -f (Join-Path $toolsScriptsDir 'start/start.ps1'))
         )
@@ -778,12 +772,9 @@ $globalPrompts = @(
             'Ejecuta solo el bootstrap minimo del proyecto actual.',
             'No sobrescribe archivos existentes; solo crea los que falten.',
             'Crea .github/copilot-instructions.md si falta.',
-            'Crea .github/hooks/*.json (plantillas workspace, opcionales) si faltan.',
-            'Crea scripts/hooks/* (pre-tool, post-tool, etc.) si faltan en el repo.',
             'Crea stack.md si falta.',
             'Intenta descargar skills con autoskills si esta disponible, sin bloquear si falla.',
-            'No instala hooks globales: estos vienen de install-copilot-layout y viven en ~/.copilot/hooks/orchestra.json.',
-            'No copia .github/prompts, .github/workflows, otros scripts/ fuera de scripts/hooks ni archivos .env* al repo destino.',
+            'NO crea .github/hooks/, scripts/hooks/, .github/prompts, .github/workflows, ni archivos .env* en el repo destino.',
             'Resume que archivos se crearon o ya existian y el estado de la descarga de skills.'
         )
     }
@@ -952,5 +943,5 @@ Write-Output ''
 Write-Output 'Siguiente paso:'
 Write-Output '  1. Recarga VS Code / inicia nueva sesion para que los prompts globales y los hooks globales queden activos.'
 Write-Output ("  2. Los hooks de orquestacion estan instalados en {0} y aplican a TODOS los proyectos." -f $globalHooksPath)
-Write-Output '  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md, plantillas .github/hooks). No es necesario para que los hooks globales funcionen.'
+Write-Output '  3. /start sigue siendo opcional para bootstrap de proyecto (copilot-instructions, stack.md). No es necesario para que los hooks globales funcionen.'
 Write-Output ('     Bootstrap manual: & "{0}" .' -f (Join-Path $toolsScriptsDir 'start/start.ps1'))
